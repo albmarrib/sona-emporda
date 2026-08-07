@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Reglas para la colección 'users' (Usuarios, Músicos y Locales)
+    match /users/{userId} {
+      // Un usuario SOLO puede leer y escribir sus propios datos (su rol, etc.)
+      // Nadie más puede acceder a la cuenta de otro.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 2. Reglas para la colección 'events' (Agenda de Conciertos)
+    match /events/{eventId} {
+      // Cualquiera (incluso sin login) puede leer los eventos para ver la agenda pública
+      allow read: if true;
+      // Por ahora bloqueamos la escritura desde la web. (Más adelante daremos permiso
+      // aquí a los usuarios con rol 'venue' para crear bolos).
+      allow write: if false; 
+    }
+    
+    // 3. Bloqueo por defecto para cualquier otra colección (Máxima seguridad)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
