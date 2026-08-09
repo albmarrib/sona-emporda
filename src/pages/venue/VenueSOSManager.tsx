@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiAlertTriangle, FiPlus, FiX, FiCheckCircle } from 'react-icons/fi';
-import { mockSosUrgencies, type SosUrgency } from '../../data/mockSosData';
+import { db } from '../../firebase/firebase';
+import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export const VenueSOSManager = () => {
-  // Mostramos SOLO los SOS creados por este local (filtramos por nombre)
-  const [urgencies, setUrgencies] = useState<SosUrgency[]>(mockSosUrgencies.filter(u => u.venueName === 'Sala Soho'));
-  
+  const [urgencies, setUrgencies] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -16,39 +15,71 @@ export const VenueSOSManager = () => {
     description: ''
   });
 
-  const handleCreateSos = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Listen to real-time SOS alerts created by this venue
+    const q = query(
+      collection(db, 'sos_alerts'), 
+      where('venueName', '==', 'Sala Soho'),
+      // Note: If orderBy is used with where, it requires a composite index in Firestore.
+      // To avoid index errors during prototyping, we won't use orderBy here and just sort in JS.
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sosList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort by postedAt descending
+      sosList.sort((a: any, b: any) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+      setUrgencies(sosList);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleCreateSos = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    setTimeout(() => {
-      const newSos: SosUrgency = {
-        id: `sos-${Date.now()}`,
+    try {
+      const newSos = {
         title: formData.title,
         venueName: 'Sala Soho',
-        location: 'Palamós',
+        location: 'Palamós', // Hardcoded for demo
         dateStr: formData.dateStr,
         price: formData.price || 'A convenir',
         requiredVibes: ['🎸 Urgente'],
         description: formData.description,
         isUrgent: true,
-        postedAt: new Date().toISOString()
+        postedAt: new Date().toISOString(),
+        applications: [] // Array of musician IDs who applied
       };
       
-      setUrgencies([newSos, ...urgencies]);
+      await addDoc(collection(db, 'sos_alerts'), newSos);
+      
       setIsSubmitting(false);
       setIsModalOpen(false);
       setFormData({ title: '', dateStr: '', price: '', description: '' });
 
+      // Trigger local alarm visual (Optional, as the listener on the other side will handle it)
       const alertEvent = new CustomEvent('sos-alert', {
         detail: { title: newSos.title, message: newSos.description }
       });
       window.dispatchEvent(alertEvent);
-    }, 1000);
+
+    } catch (error) {
+      console.error("Error adding SOS:", error);
+      setIsSubmitting(false);
+    }
   };
 
-  const handleCancelSos = (id: string) => {
+  const handleCancelSos = async (id: string) => {
     if(confirm('¿Seguro que quieres cancelar esta alerta?')) {
-      setUrgencies(urgencies.filter(u => u.id !== id));
+      try {
+        await deleteDoc(doc(db, 'sos_alerts', id));
+      } catch (error) {
+        console.error("Error deleting SOS:", error);
+      }
     }
   };
 
@@ -76,14 +107,14 @@ export const VenueSOSManager = () => {
 
       <div className="flex flex-col gap-6">
         {urgencies.length === 0 ? (
-          <div className="text-center py-20 bg-zinc-950 border border-white/10">
+          <div className="text-center py-20 bg-black border border-white/10">
             <FiCheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-serif text-white mb-2">Todo bajo control</h3>
-            <p className="text-white/40 text-sm">No tienes ninguna alerta SOS activa.</p>
+            <p className="text-white/40 text-sm">No tienes ninguna alerta SOS activa en la base de datos.</p>
           </div>
         ) : (
           urgencies.map(sos => (
-            <div key={sos.id} className="bg-zinc-950 border border-red-900/50 p-6 flex flex-col md:flex-row gap-6 items-start justify-between relative overflow-hidden group">
+            <div key={sos.id} className="bg-black border border-red-900/50 p-6 flex flex-col md:flex-row gap-6 items-start justify-between relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
               
               <div className="flex-1">
@@ -100,8 +131,8 @@ export const VenueSOSManager = () => {
               </div>
 
               <div className="flex flex-col gap-2 w-full md:w-64 shrink-0 relative z-10">
-                <div className="bg-black border border-white/10 p-4 text-center">
-                  <p className="text-3xl font-serif text-gold">0</p>
+                <div className="bg-white/5 border border-white/10 p-4 text-center">
+                  <p className="text-3xl font-serif text-gold">{sos.applications?.length || 0}</p>
                   <p className="text-[9px] uppercase tracking-widest text-white/40">Candidatos Aplicados</p>
                 </div>
                 <button 
@@ -118,8 +149,8 @@ export const VenueSOSManager = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-zinc-950 border border-white/10 p-8 max-w-lg w-full">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-black border border-white/10 p-8 max-w-lg w-full shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-serif text-white">Lanzar Pánico SOS</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
@@ -129,7 +160,7 @@ export const VenueSOSManager = () => {
             
             <form onSubmit={handleCreateSos} className="flex flex-col gap-4">
               <div className="bg-red-900/20 border border-red-500/50 p-4 text-xs text-red-200 leading-relaxed mb-2">
-                <strong>Atención:</strong> Esto enviará una notificación Push a todos los músicos disponibles en la zona. Úsalo solo para urgencias reales (cancelaciones a menos de 48h).
+                <strong>Atención:</strong> Esto creará una alerta real en la base de datos y notificará a los músicos.
               </div>
 
               <div className="flex flex-col gap-2">
@@ -158,7 +189,7 @@ export const VenueSOSManager = () => {
                 disabled={isSubmitting}
                 className="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-4 text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
               >
-                {isSubmitting ? 'Lanzando alerta...' : 'Disparar Alarma a Músicos'}
+                {isSubmitting ? 'Guardando en Base de Datos...' : 'Disparar Alarma a Músicos'}
               </button>
             </form>
           </div>

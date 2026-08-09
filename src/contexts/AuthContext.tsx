@@ -6,12 +6,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 interface AuthContextType {
   currentUser: User | null;
   userRole: string | null;
+  userData: any | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   currentUser: null,
   userRole: null,
+  userData: null,
   loading: true,
 });
 
@@ -20,6 +22,7 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userData, setUserData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,20 +37,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           doc(db, 'users', user.uid),
           (docSnap) => {
             if (docSnap.exists()) {
-              setUserRole(docSnap.data().role);
+              const data = docSnap.data();
+              setUserRole(data.role);
+              setUserData(data);
             } else {
               setUserRole('public');
+              setUserData(null);
             }
             setLoading(false);
           },
           (error) => {
             console.error("Error fetching user role:", error);
             setUserRole('public');
+            setUserData(null);
             setLoading(false);
           }
         );
       } else {
         setUserRole(null);
+        setUserData(null);
         setLoading(false);
         if (unsubscribeSnapshot) {
           unsubscribeSnapshot();
@@ -66,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     currentUser,
     userRole,
+    userData,
     loading,
   };
 

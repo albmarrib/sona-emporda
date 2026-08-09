@@ -5,6 +5,7 @@ import { EventDetail } from './pages/public/EventDetail';
 import { Login } from './pages/auth/Login';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { SosAlarm } from './components/shared/SosAlarm';
+import { LoadingScreen } from './components/shared/LoadingScreen';
 import { MusicianLayout } from './layouts/MusicianLayout';
 import { DashboardHome } from './pages/musician/DashboardHome';
 import { EPKManager } from './pages/musician/EPKManager';
@@ -17,12 +18,13 @@ import { EventManager } from './pages/venue/EventManager';
 import { VenueProfile } from './pages/venue/VenueProfile';
 import { VenueSOSManager } from './pages/venue/VenueSOSManager';
 import { VenueCalendar } from './pages/venue/VenueCalendar';
+import { SeedDatabase } from './pages/SeedDatabase';
 
 function App() {
   const { loading } = useAuth();
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center bg-black text-gold font-serif text-2xl tracking-widest animate-pulse">Cargando SONA EMPORDÀ...</div>;
+    return <LoadingScreen />;
   }
 
   return (
@@ -34,6 +36,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/event/:id" element={<EventDetail />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/seed" element={<SeedDatabase />} />
           
           {/* Área de Músicos */}
           <Route path="/musician" element={

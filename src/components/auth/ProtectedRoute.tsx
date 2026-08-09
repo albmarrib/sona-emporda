@@ -1,8 +1,9 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import React from 'react';
 
 interface ProtectedRouteProps {
-  children: JSX.Element;
+  children: React.ReactNode;
   allowedRole: 'musician' | 'venue' | 'admin';
 }
 

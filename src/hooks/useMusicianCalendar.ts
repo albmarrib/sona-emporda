@@ -1,25 +1,26 @@
 import { useState, useEffect } from 'react';
 import { type MusicianCalendar, type DayStatus, mockMusicianCalendar } from '../data/mockMusicianData';
-import { mockEvents } from '../data/mockEvents';
+import { useEvents } from './useEvents';
 
 export const useMusicianCalendar = (musicianId?: string) => {
   const [calendar, setCalendar] = useState<MusicianCalendar>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const { events, loading: eventsLoading } = useEvents(true);
 
   useEffect(() => {
+    if (eventsLoading) return;
+
     const fetchCalendar = async () => {
       setLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 600));
-        
         // Empezamos con el calendario base del músico
         const baseCalendar = { ...mockMusicianCalendar };
         
         // Inyectamos dinámicamente todos sus eventos confirmados como 'booked'
-        // Similamos ser "musician-123" por defecto
         const myMusicianId = musicianId || "musician-123";
-        const myEvents = mockEvents.filter(e => e.musicianId === myMusicianId);
+        const myEvents = events.filter(e => e.musicianId === myMusicianId);
         
         myEvents.forEach(event => {
           // Extraemos YYYY-MM-DD de la fecha ISO
@@ -36,7 +37,7 @@ export const useMusicianCalendar = (musicianId?: string) => {
     };
     
     fetchCalendar();
-  }, [musicianId]);
+  }, [musicianId, events, eventsLoading]);
 
   const updateDayStatus = async (dateIso: string, status: DayStatus | null) => {
     // Optimistic UI update (actualizamos la UI al instante, luego en Firebase en background)
@@ -54,5 +55,24 @@ export const useMusicianCalendar = (musicianId?: string) => {
     await new Promise(resolve => setTimeout(resolve, 300));
   };
 
-  return { calendar, loading, error, updateDayStatus };
+  const markAllAvailable = async (datesIso: string[]) => {
+    const newCalendar = { ...calendar };
+    let hasChanges = false;
+    
+    datesIso.forEach(dateIso => {
+      // Solo sobreescribir si NO está booked
+      if (newCalendar[dateIso] !== 'booked') {
+        newCalendar[dateIso] = 'available';
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      setCalendar(newCalendar);
+      // Simular escritura batch en Firestore
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  };
+
+  return { calendar, loading, error, updateDayStatus, markAllAvailable };
 };

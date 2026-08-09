@@ -5,11 +5,12 @@ import { FiChevronLeft, FiChevronRight, FiInfo } from 'react-icons/fi';
 import { useMusicianCalendar } from '../../hooks/useMusicianCalendar';
 import type { DayStatus } from '../../data/mockMusicianData';
 import { useNavigate } from 'react-router-dom';
-import { mockEvents } from '../../data/mockEvents';
+import { useEvents } from '../../hooks/useEvents';
 
 export const AvailabilityCalendar = () => {
   const navigate = useNavigate();
-  const { calendar, loading, updateDayStatus } = useMusicianCalendar();
+  const { events } = useEvents();
+  const { calendar, loading, updateDayStatus, markAllAvailable } = useMusicianCalendar();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -42,10 +43,10 @@ export const AvailabilityCalendar = () => {
 
   const getStatusColor = (status?: DayStatus) => {
     switch (status) {
-      case 'available': return 'bg-green-900/40 text-green-400 border-green-500/50';
-      case 'unavailable': return 'bg-red-900/40 text-red-400 border-red-500/50';
-      case 'booked': return 'bg-gold/20 text-gold border-gold font-bold';
-      default: return 'bg-white/5 text-white/70 border-white/10 hover:bg-white/10';
+      case 'available': return 'bg-green-800/60 text-green-300 border-green-400 shadow-[inset_0_0_10px_rgba(74,222,128,0.2)]';
+      case 'unavailable': return 'bg-red-800/60 text-red-300 border-red-400 shadow-[inset_0_0_10px_rgba(248,113,113,0.2)]';
+      case 'booked': return 'bg-gold/20 text-gold border-gold font-bold shadow-[inset_0_0_15px_rgba(197,160,89,0.3)]';
+      default: return 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10 hover:border-white/40';
     }
   };
 
@@ -54,41 +55,23 @@ export const AvailabilityCalendar = () => {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl">
+    <div className="flex flex-col gap-6 max-w-5xl overflow-hidden w-full">
       
-      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2">Mi Disponibilidad</h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">
-            Marca los días que tienes libres o bloqueados.
-          </p>
-        </div>
-        
-        {/* Leyenda */}
-        <div className="flex gap-4 text-[9px] uppercase tracking-widest font-bold">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-white/5 border border-white/20"></div> No definido
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-900/40 border border-green-500/50"></div> Buscando Bolo
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-900/40 border border-red-500/50"></div> No Disponible
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gold/20 border border-gold"></div> Confirmado
-          </div>
-        </div>
+      <div className="border-b border-white/10 pb-4">
+        <h1 className="text-3xl font-serif text-white mb-2">Mi Disponibilidad</h1>
+        <p className="text-white/50 text-xs uppercase tracking-widest">
+          Asegura tus fechas para recibir propuestas.
+        </p>
       </div>
 
-      <div className="bg-black border border-white/10 p-6 md:p-10 shadow-2xl">
+      <div className="bg-black border border-white/10 p-4 md:p-10 shadow-2xl w-full overflow-hidden">
         
         {/* Header Calendario */}
         <div className="flex items-center justify-between mb-8">
           <button onClick={prevMonth} className="p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold">
             <FiChevronLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-2xl font-serif text-white capitalize">
+          <h2 className="text-xl md:text-2xl font-serif text-white capitalize text-center">
             {format(currentMonth, 'MMMM yyyy', { locale: es })}
           </h2>
           <button onClick={nextMonth} className="p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold">
@@ -97,19 +80,19 @@ export const AvailabilityCalendar = () => {
         </div>
 
         {/* Días de la semana */}
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 w-full">
           {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-            <div key={day} className="text-center text-gold text-[10px] uppercase tracking-widest font-bold pb-2 border-b border-white/10">
+            <div key={day} className="text-center text-gold text-[9px] md:text-[10px] uppercase tracking-widest font-bold pb-2 border-b border-white/10 truncate">
               {day}
             </div>
           ))}
         </div>
 
         {/* Cuadrícula */}
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 md:gap-2 w-full">
           {/* Espacios vacíos al principio del mes */}
           {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, idx) => (
-            <div key={`empty-${idx}`} className="h-24 md:h-32 opacity-0"></div>
+            <div key={`empty-${idx}`} className="aspect-square opacity-0"></div>
           ))}
 
           {/* Días del mes */}
@@ -119,7 +102,7 @@ export const AvailabilityCalendar = () => {
             const isToday = isSameDay(day, new Date());
 
             // Check if there is an event on this date
-            const myEvents = mockEvents.filter(e => e.musicianId === "musician-123");
+            const myEvents = events.filter(e => e.musicianId === "musician-123");
             const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === dateKey);
 
             return (
@@ -132,23 +115,23 @@ export const AvailabilityCalendar = () => {
                     toggleDayStatus(day);
                   }
                 }}
-                className={`h-24 md:h-32 p-2 border transition-colors cursor-pointer flex flex-col justify-between
+                className={`aspect-square p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden
                   ${getStatusColor(status)}
-                  ${isToday ? 'ring-2 ring-white ring-inset' : ''}
+                  ${isToday ? 'ring-1 md:ring-2 ring-white ring-inset' : ''}
                   ${status === 'booked' ? 'hover:bg-gold hover:text-black hover:border-white transition-all group' : ''}
                 `}
               >
-                <span className="text-lg font-serif">{format(day, 'd')}</span>
+                <span className="text-xs md:text-lg font-serif">{format(day, 'd')}</span>
                 
                 {status === 'booked' && (
-                  <span className="text-[9px] uppercase tracking-widest font-bold mt-auto hidden md:block group-hover:text-black transition-colors">
-                    Ver Evento
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest font-bold mt-auto hidden sm:block group-hover:text-black transition-colors truncate">
+                    Evento
                   </span>
                 )}
                 
                 {status === 'available' && (
-                  <span className="text-[9px] uppercase tracking-widest mt-auto hidden md:block opacity-70">
-                    Buscando
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest mt-auto hidden sm:block opacity-70 truncate">
+                    Libre
                   </span>
                 )}
               </div>
@@ -158,11 +141,38 @@ export const AvailabilityCalendar = () => {
 
       </div>
       
-      <div className="bg-white/5 border border-white/10 p-4 flex gap-4 items-start">
-        <FiInfo className="text-gold w-5 h-5 shrink-0 mt-0.5" />
-        <p className="text-xs text-white/60 leading-relaxed">
-          Haz clic en cualquier día para alternar entre <strong className="text-green-400">Buscando Bolo</strong> (verde) y <strong className="text-red-400">No Disponible</strong> (rojo). Si dejas el día en blanco, simplemente significa que no tienes preferencia. Los días dorados son conciertos que ya tienes confirmados a través de Sona Empordà y no se pueden modificar manualmente.
-        </p>
+      <div className="flex flex-col gap-4">
+        <button 
+          onClick={async () => {
+            const datesIso = days.map(day => format(day, dateFormat));
+            await markAllAvailable(datesIso);
+          }}
+          className="bg-green-800/60 hover:bg-green-700/80 text-green-300 hover:text-white border border-green-400 transition-colors px-4 py-4 md:py-3 text-[10px] md:text-xs uppercase tracking-widest font-bold w-full md:w-auto self-start flex justify-center items-center shadow-lg"
+        >
+          + Marcar todo el mes disponible
+        </button>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-[9px] uppercase tracking-widest font-bold bg-white/5 p-4 border border-white/10 w-full">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-white/5 border border-white/20 shrink-0"></div> No definido
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-green-800/60 border border-green-400 shrink-0 shadow-[inset_0_0_5px_rgba(74,222,128,0.3)]"></div> Disponible
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-800/60 border border-red-400 shrink-0 shadow-[inset_0_0_5px_rgba(248,113,113,0.3)]"></div> No Disponible
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-gold/20 border border-gold shrink-0 shadow-[inset_0_0_5px_rgba(197,160,89,0.4)]"></div> Confirmado
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 p-4 flex gap-4 items-start">
+          <FiInfo className="text-gold w-5 h-5 shrink-0 mt-0.5" />
+          <p className="text-xs text-white/60 leading-relaxed">
+            Haz clic en cualquier día para alternar entre <strong className="text-green-400">Disponible</strong> (verde) y <strong className="text-red-400">No Disponible</strong> (rojo). Si dejas el día <strong className="text-white">No Definido</strong>, los locales no sabrán tu estado y dudarán en contactarte. Los días dorados son conciertos ya confirmados.
+          </p>
+        </div>
       </div>
 
     </div>

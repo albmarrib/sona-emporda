@@ -1,4 +1,6 @@
 export interface SonaEvent {
+  status?: 'draft' | 'published';
+  tags?: string[];
   id: string;
   title: string;
   musicianId?: string;

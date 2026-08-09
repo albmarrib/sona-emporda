@@ -68,11 +68,12 @@ export const EPKManager = () => {
                 onChange={(e) => handleChange('mainGenre', e.target.value)}
                 className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors appearance-none cursor-pointer"
               >
-                <option value="indie">Indie / Alternativo</option>
-                <option value="rock">Rock</option>
-                <option value="pop">Pop</option>
-                <option value="electronic">Electrónica / DJ</option>
-                <option value="acoustic">Acústico / Cantautor</option>
+                <option value="Indie" className="bg-zinc-950 text-white">Indie / Alternativo</option>
+                <option value="Rock" className="bg-zinc-950 text-white">Rock</option>
+                <option value="Pop" className="bg-zinc-950 text-white">Pop</option>
+                <option value="Electrónica" className="bg-zinc-950 text-white">Electrónica / DJ</option>
+                <option value="Acústico" className="bg-zinc-950 text-white">Acústico / Cantautor</option>
+                <option value="Jazz" className="bg-zinc-950 text-white">Jazz / Soul</option>
               </select>
             </div>
 
@@ -83,9 +84,9 @@ export const EPKManager = () => {
                 onChange={(e) => handleChange('formationType', e.target.value)}
                 className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors appearance-none cursor-pointer"
               >
-                <option value="solo">Solista</option>
-                <option value="duo">Dúo</option>
-                <option value="band">Banda / Grupo</option>
+                <option value="solo" className="bg-zinc-950 text-white">Solista</option>
+                <option value="duo" className="bg-zinc-950 text-white">Dúo</option>
+                <option value="band" className="bg-zinc-950 text-white">Banda / Grupo</option>
               </select>
             </div>
 

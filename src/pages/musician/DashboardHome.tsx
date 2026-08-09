@@ -1,90 +1,112 @@
 import { useState } from "react";
-import { FiClock, FiCheckCircle, FiAlertCircle } from "react-icons/fi";
-import { mockEvents } from "../../data/mockEvents";
+import { FiClock, FiCheckCircle, FiMapPin, FiEye, FiEyeOff } from "react-icons/fi";
+import { useEvents } from "../../hooks/useEvents";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 export const DashboardHome = () => {
   const navigate = useNavigate();
+  const { events } = useEvents(true);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [eventToEvaluate, setEventToEvaluate] = useState<any>(null);
+  const [showPastEvents, setShowPastEvents] = useState(false);
 
   // Simulamos que el músico logueado es "musician-123" (Acústico Sunset)
-  const myEvents = mockEvents.filter(event => event.musicianId === "musician-123");
+  const myEvents = events.filter(event => event.musicianId === "musician-123");
   
-  // Bolos confirmados
-  const confirmedGigsCount = myEvents.length;
+  // Filtrar según el toggle
+  const visibleEvents = myEvents.filter(event => {
+    if (showPastEvents) return true;
+    return parseISO(event.date) >= new Date();
+  });
+  
+  // Bolos confirmados (contamos solo los futuros o todos?)
+  const confirmedGigsCount = myEvents.filter(e => parseISO(e.date) >= new Date()).length;
 
   return (
     <div className="flex flex-col gap-12">
       
-      <div className="border-b border-white/10 pb-6">
-        <h1 className="text-3xl font-serif text-white mb-2">Bienvenido de nuevo</h1>
-        <p className="text-white/50 text-xs uppercase tracking-widest">Resumen de tu actividad en Sona Empordà</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Stats Cards */}
-        <div className="bg-black border border-white/10 p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-3 text-gold">
-            <FiCheckCircle className="w-6 h-6" />
-            <h3 className="text-[10px] uppercase tracking-widest font-bold">Bolos Confirmados</h3>
-          </div>
-          <p className="text-4xl font-serif text-white">{confirmedGigsCount}</p>
-          <p className="text-xs text-white/40">Programados</p>
-        </div>
-
-        <div className="bg-black border border-white/10 p-6 flex flex-col gap-4">
-          <div className="flex items-center gap-3 text-gold">
-            <FiClock className="w-6 h-6" />
-            <h3 className="text-[10px] uppercase tracking-widest font-bold">Pendientes de Confirmar</h3>
-          </div>
-          <p className="text-4xl font-serif text-white">0</p>
-          <p className="text-xs text-white/40">Revisa tu calendario</p>
-        </div>
-
-        <div className="bg-black border border-white/10 p-6 flex flex-col gap-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gold/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
-          <div className="flex items-center gap-3 text-gold relative z-10">
-            <FiAlertCircle className="w-6 h-6" />
-            <h3 className="text-[10px] uppercase tracking-widest font-bold">Estado del EPK</h3>
-          </div>
-          <p className="text-4xl font-serif text-white relative z-10">75%</p>
-          <p className="text-xs text-gold relative z-10">Añade tu Technical Rider</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Next Gigs List */}
+      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-xl font-serif text-white mb-6 border-b border-white/10 pb-4">Tus próximos eventos</h2>
+          <h1 className="text-3xl font-serif text-white mb-2">Bienvenido de nuevo</h1>
+          <p className="text-white/50 text-xs uppercase tracking-widest">Resumen de tu actividad en Sona Empordà</p>
+        </div>
+        
+        {/* Ultra-Compact Stats Header */}
+        <div className="flex items-center gap-4 mt-2 md:mt-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-white/50 uppercase tracking-widest">Próximos confirmados:</span>
+            <span className="text-sm font-bold text-white">{confirmedGigsCount}</span>
+          </div>
+          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+            <div className="w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(197,160,89,0.8)]"></div>
+            <span className="text-[9px] text-gold uppercase tracking-widest font-bold">EPK 75%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Prominent SOS Urgent Banner */}
+      <div 
+        onClick={() => navigate('/musician/sos')}
+        className="relative overflow-hidden border border-red-900/50 bg-gradient-to-r from-red-950/40 to-black p-6 md:p-8 cursor-pointer group rounded-xl shadow-2xl"
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/20 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-red-900/30 transition-colors"></div>
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="bg-red-600 text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold animate-pulse rounded-sm">
+                🚨 URGENCIA ALTA: HOY 22:00h
+              </span>
+            </div>
+            <h2 className="text-2xl font-serif text-white">Sustituto de última hora requerido</h2>
+            <p className="text-white/60 text-sm">Se busca DJ para sesión de tardeo electrónico en Sala Soho (Palamós). ¡Postúlate rápido!</p>
+          </div>
+          <button className="whitespace-nowrap bg-red-900 hover:bg-red-800 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all hover:scale-105 rounded-sm">
+            Ver Tablón SOS
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-8">
+        {/* Next Gigs List (Prominent) */}
+        <div>
+          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+            <h2 className="text-xl font-serif text-white">Tus eventos</h2>
+            <button 
+              onClick={() => setShowPastEvents(!showPastEvents)}
+              className="flex items-center gap-2 text-white/50 hover:text-gold transition-colors text-lg"
+              title={showPastEvents ? "Ocultar pasados" : "Ver pasados"}
+            >
+              {showPastEvents ? <FiEyeOff /> : <FiEye />}
+            </button>
+          </div>
           <div className="flex flex-col gap-4">
-            {myEvents.length === 0 && (
-              <p className="text-white/40 text-sm italic">No tienes eventos programados aún.</p>
+            {visibleEvents.length === 0 && (
+              <p className="text-white/40 text-sm italic">No hay eventos para mostrar.</p>
             )}
             
-            {myEvents.map((event) => {
+            {visibleEvents.map((event) => {
               const eventDate = parseISO(event.date);
               const isPast = eventDate < new Date();
               
               return (
                 <div 
                   key={event.id} 
-                  className={`bg-black border border-white/10 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-white/5 transition-colors group ${isPast ? 'opacity-70' : ''}`}
+                  className={`bg-black border border-white/10 p-5 md:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-gold/50 transition-colors group rounded-lg ${isPast ? 'opacity-70' : ''}`}
                 >
-                  <div className="flex items-center gap-6 cursor-pointer" onClick={() => navigate(`/event/${event.id}`)}>
-                    <div className="text-center group-hover:text-gold transition-colors">
-                      <p className="text-gold text-[10px] uppercase tracking-widest group-hover:text-white transition-colors">
-                        {format(eventDate, "MMM", { locale: es })}
-                      </p>
-                      <p className="text-2xl font-serif text-white group-hover:text-gold transition-colors">
-                        {format(eventDate, "dd")}
-                      </p>
+                  <div className="flex items-center gap-4 md:gap-5 cursor-pointer w-full sm:w-auto" onClick={() => navigate(`/event/${event.id}`)}>
+                    <div className="flex flex-col items-center justify-center w-14 h-14 bg-white/5 border border-white/10 rounded-sm group-hover:bg-gold group-hover:border-gold transition-all shrink-0 shadow-lg">
+                      <span className="text-[9px] uppercase tracking-widest text-gold group-hover:text-black font-bold -mb-1">{format(eventDate, "MMM", { locale: es })}</span>
+                      <span className="text-xl font-serif text-white group-hover:text-black leading-none mt-1">{format(eventDate, "dd")}</span>
                     </div>
-                    <div>
-                      <p className="text-white text-sm font-bold tracking-wide group-hover:text-gold transition-colors">{event.title}</p>
-                      <p className="text-white/40 text-[10px] uppercase tracking-widest">{event.venueName}</p>
+                    <div className="flex flex-col gap-1 overflow-hidden min-w-0 w-full">
+                      <p className="text-white text-base md:text-lg font-bold tracking-wide group-hover:text-gold transition-colors truncate">{event.title}</p>
+                      <p className="text-white/50 text-[10px] uppercase tracking-widest flex items-center gap-2 truncate">
+                        <FiClock className="w-3 h-3 text-gold shrink-0" /> {format(eventDate, "HH:mm")}h 
+                        <span className="text-white/20">|</span> 
+                        <FiMapPin className="w-3 h-3 text-gold shrink-0" /> <span className="truncate">{event.venueName}, {event.venueLocation}</span>
+                      </p>
                     </div>
                   </div>
                   
@@ -94,39 +116,18 @@ export const DashboardHome = () => {
                         setEventToEvaluate(event);
                         setIsRatingModalOpen(true);
                       }}
-                      className="w-full sm:w-auto bg-gold text-black hover:bg-white px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors text-center"
+                      className="w-full sm:w-auto bg-gold text-black hover:bg-white px-5 py-3 text-[10px] uppercase tracking-widest font-bold transition-colors text-center rounded-sm"
                     >
                       Evaluar Local
                     </button>
                   ) : (
-                    <span className="w-full sm:w-auto bg-green-900/30 text-green-500 border border-green-900 px-3 py-1 text-[10px] uppercase tracking-widest text-center">
-                      Confirmado
+                    <span className="w-full sm:w-auto bg-green-900/30 text-green-500 border border-green-900 px-5 py-2 text-[10px] uppercase tracking-widest font-bold text-center rounded-sm flex items-center justify-center gap-2">
+                      <FiCheckCircle className="w-4 h-4" /> Confirmado
                     </span>
                   )}
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* SOS Board Teaser */}
-        <div>
-          <h2 className="text-xl font-serif text-white mb-6 border-b border-white/10 pb-4 flex items-center justify-between">
-            <span>Urgencias en tu zona</span>
-            <button onClick={() => navigate('/musician/sos')} className="text-gold text-[10px] uppercase tracking-widest cursor-pointer hover:text-white transition-colors">Ver Tablón SOS</button>
-          </h2>
-          <div className="bg-black border border-red-900/30 p-6 flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <span className="bg-red-900 text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold animate-pulse">URGENTE: Hoy 22:00h</span>
-            </div>
-            <p className="text-white text-sm font-serif">Se busca DJ sustituto para sesión de tardeo electrónico.</p>
-            <p className="text-white/40 text-[10px] uppercase tracking-widest">Sala Soho, Palamós</p>
-            <button 
-              onClick={() => navigate('/musician/sos')}
-              className="mt-2 border border-gold text-gold hover:bg-gold hover:text-black py-2 text-[10px] uppercase tracking-widest font-bold transition-colors"
-            >
-              Postularse
-            </button>
           </div>
         </div>
       </div>

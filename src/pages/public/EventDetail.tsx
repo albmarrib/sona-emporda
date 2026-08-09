@@ -38,7 +38,8 @@ export const EventDetail = () => {
     );
   }
 
-  const dateObj = parseISO(event.date);
+  const dateObj = event.date ? parseISO(event.date) : new Date();
+  if (isNaN(dateObj.getTime())) return <div className="text-white text-center p-20">Error: Fecha de evento inválida</div>;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -78,7 +79,7 @@ export const EventDetail = () => {
           {/* Main Info */}
           <div className="md:col-span-2">
             <div className="flex flex-wrap gap-3 mb-6">
-              {event.vibes.map((vibe) => (
+              {event.vibes?.map((vibe: any) => (
                 <span key={vibe} className="text-white/40 text-[10px] uppercase tracking-[0.2em] border border-white/10 px-3 py-1">
                   {vibe.replace(/[^\w\s]/gi, '')}
                 </span>

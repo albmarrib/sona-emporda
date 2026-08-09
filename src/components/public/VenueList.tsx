@@ -5,7 +5,6 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { addDays, isWithinInterval, parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { FiLayers } from "react-icons/fi";
 import type { SonaEvent } from "../../data/mockEvents";
 
 // Fix Leaflet default icon issues in React
@@ -27,10 +26,9 @@ const userIcon = new L.DivIcon({
   iconAnchor: [12, 12],
 });
 
-const VIBES = ["TODOS", "BAILAR", "TARDEO", "ACÚSTICO", "ELECTRÓNICA", "CENA"];
-
 interface VenueMapProps {
   events: SonaEvent[];
+  selectedVibes: string[];
 }
 
 const DEFAULT_CENTER: [number, number] = [41.85, 3.10]; 
@@ -45,7 +43,7 @@ const MapUpdater = ({ center }: { center: [number, number] | null }) => {
   return null;
 };
 
-export const VenueList = ({ events }: VenueMapProps) => {
+export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
   const navigate = useNavigate();
   const MOCK_TODAY = new Date("2026-08-14"); // Simulated "today"
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -53,10 +51,6 @@ export const VenueList = ({ events }: VenueMapProps) => {
   // Date filters
   const [startDate, setStartDate] = useState(MOCK_TODAY);
   const [endDate, setEndDate] = useState(addDays(MOCK_TODAY, 7));
-  
-  // Vibe/Layer filter
-  const [activeVibe, setActiveVibe] = useState("TODOS");
-  const [showLayers, setShowLayers] = useState(false);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -70,9 +64,11 @@ export const VenueList = ({ events }: VenueMapProps) => {
   }, []);
 
   const filteredEvents = events.filter(event => {
+    if (!event.date) return false;
     const eventDate = parseISO(event.date);
+    if (isNaN(eventDate.getTime())) return false;
     const matchesDate = isWithinInterval(eventDate, { start: startDate, end: endDate });
-    const matchesVibe = activeVibe === "TODOS" || event.vibes.some(v => v.toUpperCase().includes(activeVibe));
+    const matchesVibe = selectedVibes.length === 0 || (event.vibes || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
     return matchesDate && matchesVibe;
   });
 
@@ -109,48 +105,17 @@ export const VenueList = ({ events }: VenueMapProps) => {
       </div>
 
       {/* Contenedor del Mapa */}
-      <div className="h-[650px] w-full border border-white/10 relative z-0 shadow-2xl">
+      <div className="h-[60vh] md:h-[650px] w-full border border-white/10 relative z-0 shadow-2xl">
         {!userLocation && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm">
             <span className="text-gold font-serif text-xl animate-pulse">Ubicando...</span>
           </div>
         )}
-
-        {/* Floating Layers Control */}
-        <div className="absolute top-4 right-4 z-[400] flex flex-col items-end">
-          <button 
-            onClick={() => setShowLayers(!showLayers)}
-            className="w-12 h-12 bg-black border border-white/20 flex items-center justify-center hover:border-gold transition-colors shadow-2xl"
-          >
-            <FiLayers className="text-gold w-6 h-6" />
-          </button>
-          
-          {showLayers && (
-            <div className="mt-2 bg-black border border-white/20 p-4 shadow-2xl animate-in slide-in-from-top-2 w-48">
-              <p className="text-white/40 text-[9px] uppercase tracking-widest mb-3 border-b border-white/10 pb-2">Capas de Eventos</p>
-              <div className="flex flex-col gap-2">
-                {VIBES.map(vibe => (
-                  <button
-                    key={vibe}
-                    onClick={() => {
-                      setActiveVibe(vibe);
-                      setShowLayers(false);
-                    }}
-                    className={`text-[10px] uppercase tracking-[0.2em] text-left px-2 py-2 transition-colors duration-300 ${
-                      activeVibe === vibe ? "bg-white/10 text-gold font-bold" : "text-white/60 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    {vibe}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
         
         <MapContainer 
           center={mapCenter} 
           zoom={12} 
+          scrollWheelZoom={false}
           style={{ height: '100%', width: '100%' }}
           className="z-0 grayscale contrast-125 brightness-75"
         >
@@ -172,7 +137,9 @@ export const VenueList = ({ events }: VenueMapProps) => {
           )}
 
           {/* Marcadores de eventos */}
-          {filteredEvents.map(event => (
+          {filteredEvents.map(event => {
+            if(!event.coordinates) return null;
+            return (
             <Marker key={event.id} position={[event.coordinates.lat, event.coordinates.lng]}>
               <Popup className="font-sans min-w-[200px] shadow-2xl">
                 <div className="flex flex-col gap-2 p-1">
@@ -204,7 +171,7 @@ export const VenueList = ({ events }: VenueMapProps) => {
                 </div>
               </Popup>
             </Marker>
-          ))}
+          );})}
         </MapContainer>
       </div>
     </div>

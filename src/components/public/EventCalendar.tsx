@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import type { SonaEvent } from "../../data/mockEvents";
@@ -7,16 +7,33 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 interface EventCalendarProps {
   events: SonaEvent[];
+  selectedVibes: string[];
 }
 
-export const EventCalendar = ({ events }: EventCalendarProps) => {
+export const EventCalendar = ({ events, selectedVibes }: EventCalendarProps) => {
   const MOCK_TODAY = new Date("2026-08-14");
   const [currentDate, setCurrentDate] = useState(startOfMonth(MOCK_TODAY));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const eventsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll en móvil al seleccionar una fecha
+  useEffect(() => {
+    if (selectedDate && window.innerWidth < 1024 && eventsContainerRef.current) {
+      setTimeout(() => {
+        eventsContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [selectedDate]);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // Filtrar eventos globalmente por vibes
+  const filteredEvents = events.filter(e => {
+    if (selectedVibes.length === 0) return true;
+    return (e.vibes || e.tags || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
+  });
 
   const handlePrevMonth = () => {
     if (!isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(MOCK_TODAY))) {
@@ -31,11 +48,11 @@ export const EventCalendar = ({ events }: EventCalendarProps) => {
   const canGoBack = !isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(MOCK_TODAY));
 
   const selectedDayEvents = selectedDate 
-    ? events.filter(e => isSameDay(parseISO(e.date), selectedDate))
+    ? filteredEvents.filter(e => (e.date && !isNaN(parseISO(e.date).getTime()) && isSameDay(parseISO(e.date), selectedDate)))
     : [];
 
   return (
-    <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 items-start h-[80vh] min-h-[600px]">
+    <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 items-start lg:h-[80vh] min-h-screen lg:min-h-[600px]">
       {/* Calendario (Izquierda en Desktop) */}
       <div className="w-full lg:w-[420px] shrink-0 bg-black border border-white/10 p-6 md:p-8 shadow-2xl h-fit">
         <div className="flex items-center justify-between mb-8">
@@ -69,7 +86,7 @@ export const EventCalendar = ({ events }: EventCalendarProps) => {
           ))}
           
           {daysInMonth.map(day => {
-            const hasEvents = events.some(e => isSameDay(parseISO(e.date), day));
+            const hasEvents = filteredEvents.some(e => (e.date && !isNaN(parseISO(e.date).getTime()) && isSameDay(parseISO(e.date), day)));
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             
             return (
@@ -96,7 +113,10 @@ export const EventCalendar = ({ events }: EventCalendarProps) => {
       </div>
 
       {/* Eventos (Derecha en Desktop) */}
-      <div className="flex-1 w-full h-full overflow-y-auto overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pr-4">
+      <div 
+        ref={eventsContainerRef}
+        className="flex-1 w-full lg:h-full lg:overflow-y-auto lg:overscroll-y-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] lg:pr-4"
+      >
         {selectedDate ? (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
             <h4 className="text-xl md:text-2xl font-serif text-white mb-8 flex items-center gap-4 border-b border-white/10 pb-6 sticky top-0 bg-black z-10 pt-4">

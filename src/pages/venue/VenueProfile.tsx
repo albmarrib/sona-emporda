@@ -1,140 +1,128 @@
-import { useState } from 'react';
-import { FiSave, FiMapPin, FiPhone, FiGlobe, FiInstagram } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { db } from '../../firebase/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { FiSave, FiMapPin, FiPhone, FiInfo } from 'react-icons/fi';
 
 export const VenueProfile = () => {
-  useAuth();
+  const { currentUser, userData } = useAuth();
   
-  const [formData, setFormData] = useState({
-    name: 'Sala Soho',
-    address: 'Carrer Major 12, Palamós, Girona',
-    phone: '+34 600 000 000',
-    whatsapp: '+34 600 000 000',
-    website: 'https://salasoho.com',
-    instagram: '@salasoho',
-    acceptsReservations: true,
-  });
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => {
+    if (userData) {
+      setName(userData.name || '');
+      setEmail(userData.email || currentUser?.email || '');
+      setAddress(userData.address || '');
+      setContactPhone(userData.contactPhone || '');
+    }
+  }, [userData, currentUser]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setTimeout(() => setIsSaving(false), 800);
+  const handleSave = async () => {
+    if (!currentUser) return;
+    setLoading(true);
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        name,
+        email,
+        address,
+        contactPhone
+      });
+      alert('Perfil actualizado con éxito. ¡Esta es la dirección que aparecerá en tus eventos y alertas SOS!');
+    } catch (e) {
+      console.error(e);
+      alert('Error guardando perfil');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-3xl mx-auto">
-      
-      <div className="border-b border-white/10 pb-6">
-        <h1 className="text-3xl font-serif text-white mb-2">Perfil del Local</h1>
+    <div className="flex flex-col gap-8 max-w-2xl mx-auto h-[calc(100vh-8rem)]">
+      <div>
+        <h1 className="text-3xl font-serif text-white mb-2">Mi Local</h1>
         <p className="text-white/50 text-xs uppercase tracking-widest">
-          Configura la identidad de tu sala para los músicos y promotores
+          Gestiona los datos públicos de tu establecimiento.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-8 bg-zinc-950 border border-white/10 p-8 shadow-2xl">
-        
-        {/* Basic Info */}
-        <div className="flex flex-col gap-4">
-          <h2 className="text-gold text-[10px] uppercase tracking-widest font-bold border-b border-white/10 pb-2">Información Básica</h2>
-          
-          <div className="flex flex-col gap-2">
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Nombre del Local / Promotor</label>
-            <input 
-              required type="text" 
-              value={formData.name} 
-              onChange={e => setFormData({...formData, name: e.target.value})} 
-              className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-            />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"><FiMapPin /> Dirección Completa</label>
-            <input 
-              required type="text" 
-              value={formData.address} 
-              onChange={e => setFormData({...formData, address: e.target.value})} 
-              className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-            />
-          </div>
+      {!userData?.address && (
+        <div className="bg-red-900/30 border border-red-500/50 p-4 flex gap-4 items-start text-red-200 text-sm">
+          <FiInfo className="w-5 h-5 shrink-0 mt-0.5 text-red-400" />
+          <p>
+            <strong>Es obligatorio configurar la dirección de tu local</strong> para poder publicar eventos o crear alertas SOS. Los músicos y el público necesitan saber dónde estás.
+          </p>
         </div>
+      )}
 
-        {/* Contact */}
-        <div className="flex flex-col gap-4">
-          <h2 className="text-gold text-[10px] uppercase tracking-widest font-bold border-b border-white/10 pb-2">Contacto Directo</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"><FiPhone /> Teléfono Fijo</label>
-              <input 
-                type="text" 
-                value={formData.phone} 
-                onChange={e => setFormData({...formData, phone: e.target.value})} 
-                className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2">WhatsApp (Booking)</label>
-              <input 
-                required type="text" 
-                value={formData.whatsapp} 
-                onChange={e => setFormData({...formData, whatsapp: e.target.value})} 
-                className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Links & Rules */}
-        <div className="flex flex-col gap-4">
-          <h2 className="text-gold text-[10px] uppercase tracking-widest font-bold border-b border-white/10 pb-2">Redes y Normas</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"><FiGlobe /> Sitio Web</label>
-              <input 
-                type="url" 
-                value={formData.website} 
-                onChange={e => setFormData({...formData, website: e.target.value})} 
-                className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex items-center gap-2"><FiInstagram /> Instagram</label>
-              <input 
-                type="text" 
-                value={formData.instagram} 
-                onChange={e => setFormData({...formData, instagram: e.target.value})} 
-                className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" 
-              />
-            </div>
-          </div>
-
-          <label className="flex items-center gap-4 mt-2 cursor-pointer group">
-            <div className={`w-12 h-6 rounded-full transition-colors relative ${formData.acceptsReservations ? 'bg-gold' : 'bg-white/10'}`}>
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-black transition-transform ${formData.acceptsReservations ? 'left-7' : 'left-1'}`}></div>
-            </div>
-            <input 
-              type="checkbox" 
-              className="sr-only" 
-              checked={formData.acceptsReservations} 
-              onChange={e => setFormData({...formData, acceptsReservations: e.target.checked})} 
-            />
-            <span className="text-sm text-white/80 group-hover:text-white transition-colors">Aceptamos reserva de mesas para los conciertos</span>
+      <div className="bg-black border border-white/10 p-6 md:p-8 flex flex-col gap-6 shadow-2xl">
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50">
+            Nombre del Establecimiento
           </label>
+          <input 
+            type="text" 
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ej: Sala Soho"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
         </div>
 
-        <button 
-          type="submit" 
-          disabled={isSaving}
-          className="mt-6 bg-gold hover:bg-white text-black font-bold py-4 text-xs uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
-        >
-          {isSaving ? 'Guardando...' : <><FiSave /> Guardar Perfil</>}
-        </button>
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50">
+            Email Público
+          </label>
+          <input 
+            type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Ej: contacto@salasoho.com"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
 
-      </form>
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 flex items-center gap-2">
+            <FiMapPin /> Dirección Física Completa
+          </label>
+          <input 
+            type="text" 
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Ej: Carrer Mayor 12, Palafrugell"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+          <p className="text-[10px] text-white/30 italic">Esta dirección se usará automáticamente en el buscador de "Lugares" para la web pública.</p>
+        </div>
 
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 flex items-center gap-2">
+            <FiPhone /> WhatsApp / Teléfono de Contacto
+          </label>
+          <input 
+            type="text" 
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            placeholder="Ej: +34 600 000 000"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+
+        <div className="pt-6 border-t border-white/10 flex justify-end">
+          <button 
+            onClick={handleSave}
+            disabled={loading || !address.trim()}
+            className="flex items-center gap-2 bg-gold text-black px-6 py-3 font-bold text-[10px] uppercase tracking-widest hover:bg-white transition-colors disabled:opacity-50"
+          >
+            <FiSave /> {loading ? 'Guardando...' : 'Guardar Perfil'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

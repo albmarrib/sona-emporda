@@ -1,50 +1,62 @@
 import { useState, useEffect } from 'react';
 import { FiBell, FiSmartphone, FiX } from 'react-icons/fi';
+import { db } from '../../firebase/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 export const SosAlarm = () => {
   const [activeAlert, setActiveAlert] = useState<{title: string, message: string} | null>(null);
 
   useEffect(() => {
-    const handleSosAlert = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const { title, message } = customEvent.detail || { title: 'Urgencia', message: 'Se ha disparado un evento' };
-      
-      setActiveAlert({ title, message });
-
-      // Simulate a sound alarm (using a generic beep using Web Audio API to avoid local asset issues)
-      try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
-        oscillator.frequency.setValueAtTime(440, audioCtx.currentTime + 0.1); // A4
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.2); // A5
-        
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Low volume
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.4);
-      } catch (err) {
-        console.warn('AudioContext no soportado o bloqueado por el navegador');
-      }
-
-      // Auto-hide after 8 seconds
-      setTimeout(() => {
-        setActiveAlert(null);
-      }, 8000);
-    };
-
-    window.addEventListener('sos-alert', handleSosAlert);
+    // Escuchar nuevos SOS en Firestore
+    const q = query(collection(db, 'sos_alerts'));
     
-    return () => {
-      window.removeEventListener('sos-alert', handleSosAlert);
-    };
+    // Almacenamos el timestamp de montaje para solo alertar de los NUEVOS SOS
+    const mountTime = new Date().toISOString();
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const sos = change.doc.data();
+          // Si el SOS fue creado DESPUÉS de cargar la página, es nuevo
+          if (sos.postedAt > mountTime) {
+            triggerAlarm(sos.title, sos.description);
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const triggerAlarm = (title: string, message: string) => {
+    setActiveAlert({ title, message });
+
+    // Simulate a sound alarm
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.type = 'square';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+      oscillator.frequency.setValueAtTime(440, audioCtx.currentTime + 0.1); // A4
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.2); // A5
+      
+      gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime); // Low volume
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.4);
+    } catch (err) {
+      console.warn('AudioContext no soportado o bloqueado por el navegador');
+    }
+
+    setTimeout(() => {
+      setActiveAlert(null);
+    }, 8000);
+  };
 
   if (!activeAlert) return null;
 

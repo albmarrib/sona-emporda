@@ -9,7 +9,8 @@ interface EventCardProps {
 
 export const EventCard = ({ event }: EventCardProps) => {
   const navigate = useNavigate();
-  const dateObj = parseISO(event.date);
+  const dateObj = event.date ? parseISO(event.date) : new Date();
+  if (isNaN(dateObj.getTime())) return null;
 
   return (
     <article 
@@ -31,7 +32,7 @@ export const EventCard = ({ event }: EventCardProps) => {
         <img 
           src={event.imageUrl} 
           alt={event.title} 
-          className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
+          className="w-full h-full object-cover grayscale opacity-70 group-hover:scale-105 group-hover:opacity-100 transition-all duration-700"
         />
         {/* Date Overlay (Mobile) */}
         <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-2 md:hidden border border-white/10">
@@ -43,7 +44,7 @@ export const EventCard = ({ event }: EventCardProps) => {
       <div className="flex-1 flex flex-col justify-between py-2">
         <div>
           <div className="flex flex-wrap gap-2 mb-4">
-            {event.vibes.map((vibe) => (
+            {(event.vibes || event.tags || []).map((vibe) => (
               <span key={vibe} className="text-white/40 text-[9px] uppercase tracking-[0.2em] border border-white/10 px-2 py-1">
                 {vibe.replace(/[^\w\s]/gi, '')}
               </span>
