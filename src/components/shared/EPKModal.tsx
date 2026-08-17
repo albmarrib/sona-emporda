@@ -1,8 +1,29 @@
-import { FiX, FiStar, FiMessageSquare } from 'react-icons/fi';
+import { FiX, FiStar, FiMessageSquare, FiCalendar } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useEvents } from '../../hooks/useEvents';
+import { useState, useEffect } from 'react';
 
-export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }: { artist: any, dateKey: string, currentUser: any, onClose: () => void, onContacted?: () => void }) => {
+export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void }) => {
+  const { events } = useEvents(true); // true to include drafts
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
+
+  const venueOpenEvents = events.filter(e => 
+    (e.venueId === currentUser?.uid || e.venueName === currentUser?.email) && 
+    (e.status === 'published' || e.status === 'draft') && 
+    !e.musicianId
+  );
+
+  // Auto-select event if dateKey matches
+  useEffect(() => {
+    if (dateKey && venueOpenEvents.length > 0) {
+      const matchingEvent = venueOpenEvents.find(e => e.date && e.date.startsWith(dateKey));
+      if (matchingEvent && !selectedEventId) {
+        setSelectedEventId(matchingEvent.id);
+      }
+    }
+  }, [dateKey, venueOpenEvents, selectedEventId]);
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-black border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
@@ -85,36 +106,70 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
             </div>
           )}
 
-          <a 
-            href={`https://wa.me/${artist.contactWhatsapp || '34600000000'}?text=${encodeURIComponent(`Hola ${artist.stageName}, te escribo desde Sona Empordà. Nos gustaría ofrecerte un bolo ${dateKey ? 'para el día ' + dateKey : 'próximamente'}.`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={async () => {
-              alert(`Abriendo WhatsApp... Se enviará también una Alarma SOS a ${artist.stageName} en su panel de control.`);
-              try {
-                await addDoc(collection(db, 'sos_alerts'), {
-                  title: `Propuesta de Booking Directa`,
-                  venueName: currentUser?.email || 'Sala Soho',
-                  location: 'Sala Soho',
-                  dateStr: dateKey || 'A convenir',
-                  price: 'A convenir',
-                  requiredVibes: ['📅 Booking'],
-                  description: `¡Hola ${artist.stageName}! Sala Soho está interesada en vuestro perfil. Por favor, revisa esta propuesta y envíanos tu EPK.`,
-                  isUrgent: false,
-                  postedAt: new Date().toISOString(),
-                  applications: [],
-                  authorId: currentUser?.uid || 'venue-123'
-                });
-                onClose();
-                if (onContacted) onContacted();
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-            className="mt-4 w-full bg-gold text-black font-bold uppercase tracking-widest text-[12px] py-4 hover:bg-white transition-colors flex items-center justify-center gap-2"
-          >
-            <FiMessageSquare className="w-5 h-5" /> Enviar Propuesta por WhatsApp
-          </a>
+            <div className="mt-4 border-t border-white/10 pt-6">
+              <h3 className="text-[10px] uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
+                <FiCalendar /> Invitar a un Evento
+              </h3>
+              
+              {venueOpenEvents.length === 0 ? (
+                <div className="bg-white/5 border border-white/10 p-4 text-sm text-white/50 text-center">
+                  No tienes eventos publicados o en borrador buscando músicos. Crea uno en tu calendario primero.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <select 
+                    value={selectedEventId}
+                    onChange={(e) => setSelectedEventId(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none"
+                  >
+                    <option value="" className="bg-black">-- Selecciona un evento --</option>
+                    {venueOpenEvents.map(evt => (
+                      <option key={evt.id} value={evt.id} className="bg-black">
+                        {evt.title} ({evt.date})
+                      </option>
+                    ))}
+                  </select>
+
+                  <button 
+                    disabled={!selectedEventId}
+                    onClick={async () => {
+                      if (!selectedEventId) return;
+                      
+                      const selectedEvt = venueOpenEvents.find(e => e.id === selectedEventId);
+                      const evtDate = selectedEvt?.date || 'próximamente';
+
+                      const confirmMsg = `¿Estás seguro de invitar a ${artist.stageName} a tu evento "${selectedEvt?.title}"?`;
+                      if (!window.confirm(confirmMsg)) return;
+
+                      try {
+                        // Update the existing event
+                        await updateDoc(doc(db, 'events', selectedEventId), {
+                          status: 'pending_musician',
+                          musicianId: artist.id,
+                          musicianName: artist.stageName
+                        });
+                        
+                        onClose();
+                        if (onContacted) onContacted();
+
+                        // Open WhatsApp
+                        const waText = encodeURIComponent(`¡Hola ${artist.stageName}! Te escribo desde Sona Empordà. Te he enviado una invitación oficial para tocar en nuestro evento "${selectedEvt?.title}" el ${evtDate}. Por favor, entra en la app y acéptala si te interesa.`);
+                        window.open(`https://wa.me/${artist.contactWhatsapp || '34600000000'}?text=${waText}`, '_blank');
+
+                      } catch (e) {
+                        console.error(e);
+                        alert('Error al invitar al músico.');
+                      }
+                    }}
+                    className={`w-full font-bold uppercase tracking-widest text-[12px] py-4 transition-colors flex items-center justify-center gap-2 ${
+                      selectedEventId ? 'bg-gold text-black hover:bg-white' : 'bg-white/10 text-white/30 cursor-not-allowed'
+                    }`}
+                  >
+                    <FiMessageSquare className="w-5 h-5" /> Invitar y Abrir WhatsApp
+                  </button>
+                </div>
+              )}
+            </div>
         </div>
       </div>
     </div>

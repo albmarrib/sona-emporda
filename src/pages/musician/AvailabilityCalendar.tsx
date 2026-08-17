@@ -104,6 +104,8 @@ export const AvailabilityCalendar = () => {
             // Check if there is an event on this date
             const myEvents = events.filter(e => e.musicianId === "musician-123");
             const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === dateKey);
+            const isConfirmedEvent = eventOnThisDay && (eventOnThisDay.status === 'confirmed' || (eventOnThisDay.status === 'published' && eventOnThisDay.musicianId) || !eventOnThisDay.venueId);
+            const isPendingNegotiation = eventOnThisDay && !isConfirmedEvent && (eventOnThisDay.status === 'pending_musician' || eventOnThisDay.status === 'musician_accepted');
 
             return (
               <div 
@@ -111,26 +113,38 @@ export const AvailabilityCalendar = () => {
                 onClick={() => {
                   if (status === 'booked' && eventOnThisDay) {
                     navigate(`/event/${eventOnThisDay.id}`);
+                  } else if (isPendingNegotiation && eventOnThisDay) {
+                    navigate(`/musician/offers`);
                   } else {
                     toggleDayStatus(day);
                   }
                 }}
-                className={`aspect-square p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden
+                className={`aspect-square p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden relative
                   ${getStatusColor(status)}
                   ${isToday ? 'ring-1 md:ring-2 ring-white ring-inset' : ''}
-                  ${status === 'booked' ? 'hover:bg-gold hover:text-black hover:border-white transition-all group' : ''}
+                  ${status === 'booked' || isPendingNegotiation ? 'hover:bg-gold/40 hover:text-white hover:border-white transition-all group' : ''}
                 `}
               >
-                <span className="text-xs md:text-lg font-serif">{format(day, 'd')}</span>
+                {isPendingNegotiation && (
+                  <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-20"></div>
+                )}
+                
+                <span className="text-xs md:text-lg font-serif z-10 relative">{format(day, 'd')}</span>
                 
                 {status === 'booked' && (
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest font-bold mt-auto hidden sm:block group-hover:text-black transition-colors truncate">
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest font-bold mt-auto hidden sm:block group-hover:text-black transition-colors truncate z-10 relative">
                     Evento
                   </span>
                 )}
                 
-                {status === 'available' && (
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest mt-auto hidden sm:block opacity-70 truncate">
+                {isPendingNegotiation && (
+                  <span className="text-[7px] md:text-[9px] text-red-300 uppercase tracking-widest font-bold mt-auto hidden sm:block transition-colors truncate z-10 relative">
+                    Invitación
+                  </span>
+                )}
+                
+                {status === 'available' && !isPendingNegotiation && (
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest mt-auto hidden sm:block opacity-70 truncate z-10 relative">
                     Libre
                   </span>
                 )}
@@ -164,6 +178,12 @@ export const AvailabilityCalendar = () => {
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-gold/20 border border-gold shrink-0 shadow-[inset_0_0_5px_rgba(197,160,89,0.4)]"></div> Confirmado
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-white/5 border border-white/20 shrink-0 flex items-center justify-center relative">
+               <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(239,68,68,0.8)]"></div>
+            </div> 
+            Pendiente Local
           </div>
         </div>
 

@@ -26,6 +26,8 @@ export const EventManager = () => {
     title: '',
     date: '',
     time: '',
+    musicianName: '',
+    musicianId: '',
     ticketType: 'Entrada Libre',
     imageUrl: '', // For manual URL if they prefer
     vibes: [] as string[],
@@ -73,8 +75,8 @@ export const EventManager = () => {
   
   const handleSaveEvent = async () => {
     // Basic validation
-    if(!newEvent.title || !newEvent.date || !newEvent.time) {
-      alert("Por favor, rellena el título, fecha y hora.");
+    if(!newEvent.title || !newEvent.date || !newEvent.time || !newEvent.musicianName) {
+      alert("Por favor, rellena el título, músico, fecha y hora.");
       return;
     }
 
@@ -101,6 +103,8 @@ export const EventManager = () => {
         coordinates: { lat: 41.85, lng: 3.10 },
         description: "Sin descripción por ahora.",
         title: newEvent.title,
+        musicianName: newEvent.musicianName,
+        musicianId: newEvent.musicianId || null,
         date: `${newEvent.date}T${newEvent.time}:00Z`,
         time: newEvent.time,
         ticketType: newEvent.ticketType,
@@ -116,7 +120,7 @@ export const EventManager = () => {
       if (editingEventId) {
         await updateDoc(doc(db, 'events', editingEventId), eventData);
       } else {
-        await addDoc(collection(db, 'events'), { ...eventData, status: 'draft', createdAt: new Date().toISOString() });
+        await addDoc(collection(db, 'events'), { ...eventData, status: 'published', createdAt: new Date().toISOString() });
       }
       
       closeModal();
@@ -140,12 +144,15 @@ export const EventManager = () => {
   };
 
 
-  const handleToggleStatus = async (event: any) => {
-    const newStatus = event.status === 'published' ? 'draft' : 'published';
+
+
+  const handleConfirmEvent = async (event: any) => {
+    if (!window.confirm(`¿Estás seguro de confirmar a ${event.musicianName} para este evento? Se publicará oficialmente.`)) return;
     try {
-      await updateDoc(doc(db, 'events', event.id), { status: newStatus });
+      await updateDoc(doc(db, 'events', event.id), { status: 'confirmed' });
     } catch (e) {
       console.error(e);
+      alert('Error confirmando evento.');
     }
   };
 
@@ -155,6 +162,8 @@ export const EventManager = () => {
       title: event.title || '',
       date: dateStr || '',
       time: event.time || timeStr?.substring(0, 5) || '',
+      musicianName: event.musicianName || '',
+      musicianId: event.musicianId || '',
       ticketType: event.ticketType || 'Entrada Libre',
       imageUrl: event.imageUrl || '',
       vibes: event.vibes || [],
@@ -166,7 +175,7 @@ export const EventManager = () => {
   };
 
   const openCreateModal = () => {
-    setNewEvent({ title: '', date: '', time: '', ticketType: 'Entrada Libre', imageUrl: '', vibes: [], acceptsReservations: false, reservationContact: '' });
+    setNewEvent({ title: '', date: '', time: '', musicianName: '', musicianId: '', ticketType: 'Entrada Libre', imageUrl: '', vibes: [], acceptsReservations: false, reservationContact: '' });
     setEditingEventId(null);
     setImageFile(null);
     setIsModalOpen(true);
@@ -238,20 +247,39 @@ export const EventManager = () => {
                   <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover grayscale opacity-80" />
                 </div>
                 
-                <div className="flex flex-col gap-1 overflow-hidden min-w-0">
+                  <div className="flex flex-col gap-1 overflow-hidden min-w-0">
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg md:text-xl font-serif text-white group-hover:text-gold transition-colors truncate">{event.title}</h3>
                     {!isPast && (
-                      <span className={`hidden sm:flex px-2 py-0.5 text-[8px] uppercase tracking-widest items-center gap-1 shrink-0 cursor-pointer border transition-colors ${event.status === 'published' ? 'bg-green-900/30 text-green-500 border-green-900 hover:bg-green-900/50' : 'bg-orange-900/30 text-orange-500 border-orange-900 hover:bg-orange-900/50'}`} onClick={() => handleToggleStatus(event)} title="Haz clic para cambiar estado">
-                        <FiCheckCircle /> {event.status === 'published' ? 'Publicado' : 'Pendiente'}
+                      <span className={`hidden sm:flex px-2 py-0.5 text-[8px] uppercase tracking-widest items-center gap-1 shrink-0 transition-colors ${
+                        event.status === 'published' ? 'bg-green-900/30 text-green-500 border border-green-900' : 
+                        event.status === 'rejected' ? 'bg-red-900/30 text-red-500 border border-red-900' :
+                        event.status === 'pending_musician' ? 'bg-yellow-900/30 text-yellow-500 border border-yellow-900' :
+                        event.status === 'musician_accepted' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' :
+                        'bg-green-900 text-white font-bold'
+                      }`}>
+                        <FiCheckCircle /> {
+                          event.status === 'published' ? 'Buscando Grupo' : 
+                          event.status === 'rejected' ? 'Rechazado' :
+                          event.status === 'pending_musician' ? '⏳ Esperando Respuesta' :
+                          event.status === 'musician_accepted' ? '🎉 Músico Interesado' :
+                          'Confirmado'
+                        }
                       </span>
                     )}
                   </div>
+                  <p className="text-gold text-xs font-bold mb-1 truncate">{event.musicianName || 'Músico Desconocido'}</p>
                   
                   <div className="flex flex-wrap items-center gap-2 md:gap-4 text-white/50 text-[10px] uppercase tracking-widest truncate">
                     <span className="flex items-center gap-1 shrink-0"><FiClock className="text-gold w-3 h-3" /> {format(eventDate, "HH:mm")}h</span>
                     <span className="hidden sm:flex items-center gap-1 shrink-0"><FiMapPin className="text-gold w-3 h-3" /> {event.venueName}</span>
-                    <span className={`flex sm:hidden items-center gap-1 shrink-0 ${event.status === 'published' ? 'text-green-500' : 'text-orange-500'}`} onClick={() => handleToggleStatus(event)}><FiCheckCircle className="w-3 h-3" /> {event.status === 'published' ? 'PUB' : 'PEN'}</span>
+                    <span className={`flex sm:hidden items-center gap-1 shrink-0 ${
+                        event.status === 'published' ? 'text-green-500' : 
+                        event.status === 'rejected' ? 'text-red-500' :
+                        event.status === 'pending_musician' ? 'text-yellow-500' :
+                        event.status === 'musician_accepted' ? 'text-blue-400' :
+                        'text-white'
+                      }`}><FiCheckCircle className="w-3 h-3" /> {event.status}</span>
                   </div>
                 </div>
               </div>
@@ -269,9 +297,16 @@ export const EventManager = () => {
                    </button>
                  ) : (
                    <>
-                     <button onClick={() => openEditModal(event)} className="flex-1 md:flex-none border border-white/20 text-white hover:text-gold hover:border-gold px-4 py-3 md:py-2 text-[10px] uppercase tracking-widest font-bold transition-colors">
-                       Editar
-                     </button>
+                     {event.status === 'musician_accepted' && (
+                       <button onClick={() => handleConfirmEvent(event)} className="flex-1 md:flex-none bg-blue-600 text-white hover:bg-blue-500 px-4 py-3 md:py-2 text-[10px] uppercase tracking-widest font-bold transition-colors">
+                         Confirmar Oficialmente
+                       </button>
+                     )}
+                     {event.status !== 'musician_accepted' && (
+                       <button onClick={() => openEditModal(event)} className="flex-1 md:flex-none border border-white/20 text-white hover:text-gold hover:border-gold px-4 py-3 md:py-2 text-[10px] uppercase tracking-widest font-bold transition-colors">
+                         Editar
+                       </button>
+                     )}
                      <button onClick={() => setEventToDelete(event.id)} className="flex-1 md:flex-none border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 px-4 py-3 md:py-2 text-[10px] uppercase tracking-widest font-bold transition-colors">
                        Cancelar
                      </button>
@@ -299,6 +334,17 @@ export const EventManager = () => {
                 <div className="flex flex-col gap-2">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Título del Evento</label>
                   <input type="text" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="Ej: Noche de Jazz Acústico" className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Nombre del Artista / Grupo</label>
+                    <input type="text" value={newEvent.musicianName} onChange={e => setNewEvent({...newEvent, musicianName: e.target.value})} placeholder="Ej: Marlena" className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">ID del Artista (Si está registrado)</label>
+                    <input type="text" value={newEvent.musicianId} onChange={e => setNewEvent({...newEvent, musicianId: e.target.value})} placeholder="Opcional. Ej: musician-123" className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

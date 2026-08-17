@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FiSearch, FiMic, FiFilter, FiMapPin, FiStar, FiPlayCircle, FiMessageSquare, FiCheckCircle, FiX } from 'react-icons/fi';
 import { allMockMusicians } from '../../data/mockMusicianData';
 import { EPKModal } from '../../components/shared/EPKModal';
 import { db } from '../../firebase/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 
 
@@ -12,14 +12,47 @@ export const ArtistSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState<{sender: 'user' | 'ai', text: string}[]>([]);
-  const [isChatMode, setIsChatMode] = useState(true);
+  const [isChatMode, setIsChatMode] = useState(false);
   const [contacted, setContacted] = useState<string[]>([]);
   const { currentUser } = useAuth();
   const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [genreFilter, setGenreFilter] = useState('Todos');
 
-  const filteredResults = allMockMusicians.filter(artist => {
+  const [realMusicians, setRealMusicians] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRealMusicians = async () => {
+      try {
+        const q = query(collection(db, 'users'), where('role', '==', 'musician'));
+        const snapshot = await getDocs(q);
+        const musicians = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            ...data,
+            id: doc.id,
+            stageName: data.stageName || data.name || 'Músico Sin Nombre',
+            mainGenre: data.genre || 'Varios',
+            profileImageUrl: data.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400',
+            rating: data.rating || 5.0,
+            reviewsCount: data.reviewsCount || 1,
+            calendar: data.calendar || {},
+            contactWhatsapp: data.phone || '',
+            description: data.bio || 'Músico registrado en Sona Empordà.',
+            location: data.location || 'Empordà'
+          };
+        });
+        setRealMusicians(musicians);
+      } catch (e) {
+        console.error("Error fetching real musicians", e);
+      }
+    };
+    fetchRealMusicians();
+  }, []);
+
+  const combinedMusicians = [...realMusicians, ...allMockMusicians];
+
+  const filteredResults = combinedMusicians.filter(artist => {
     const matchesSearch = artist.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           artist.mainGenre.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGenre = genreFilter === 'Todos' || artist.mainGenre === genreFilter;
@@ -28,7 +61,7 @@ export const ArtistSearch = () => {
 
   const handleContact = async (artist: any) => {
     try {
-      await addDoc(collection(db, 'sos_alerts'), {
+      await addDoc(collection(db, 'booking_proposals'), {
         title: `Propuesta de Booking Directa`,
         venueName: currentUser?.email || 'Sala Soho',
         location: 'Ubicación local',
@@ -38,8 +71,9 @@ export const ArtistSearch = () => {
         description: `¡Hola ${artist.stageName}! Nos gustaría ofrecerte un bolo. Por favor, revisa esta propuesta y envíanos tu EPK.`,
         isUrgent: false,
         postedAt: new Date().toISOString(),
-        applications: [],
-        authorId: currentUser?.uid || 'venue-123'
+        status: 'pending',
+        venueId: currentUser?.uid || 'venue-123',
+        musicianId: artist.id
       });
       setContacted([...contacted, artist.id]);
       setSelectedArtist(null);

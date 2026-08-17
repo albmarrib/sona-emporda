@@ -23,9 +23,8 @@ export const VenueLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/venue', icon: <FiHome className="w-5 h-5" /> },
-    { name: 'Mis Eventos', path: '/venue/events', icon: <FiCalendar className="w-5 h-5" /> },
-    { name: 'Buscador IA', path: '/venue/search', icon: <FiSearch className="w-5 h-5" /> },
-    { name: 'Agenda & Booking', path: '/venue/calendar', icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Calendario', path: '/venue/calendar', icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Buscador', path: '/venue/search', icon: <FiSearch className="w-5 h-5" /> },
     { name: 'Urgencias SOS', path: '/venue/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
   ];
 

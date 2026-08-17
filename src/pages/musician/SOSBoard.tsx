@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { FiAlertTriangle, FiClock, FiMapPin, FiDollarSign, FiFilter, FiCheckCircle, FiPlus, FiX } from 'react-icons/fi';
+import { FiAlertTriangle, FiClock, FiMapPin, FiFilter, FiPlus, FiX } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
-import { collection, onSnapshot, query, addDoc, doc, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { useMusicianProfile } from '../../hooks/useMusicianProfile';
 
 export const SOSBoard = () => {
   const { currentUser } = useAuth();
+  const { profile } = useMusicianProfile();
   const [urgencies, setUrgencies] = useState<any[]>([]);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
   
   // Filtros
   const [filterMode, setFilterMode] = useState<'all' | 'mine' | 'urgent'>('all');
@@ -23,7 +24,8 @@ export const SOSBoard = () => {
     location: '',
     dateStr: '',
     price: '',
-    description: ''
+    description: '',
+    contactPhone: ''
   });
 
   useEffect(() => {
@@ -31,10 +33,12 @@ export const SOSBoard = () => {
     const q = query(collection(db, 'sos_alerts'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const sosList = snapshot.docs.map(doc => ({
+      let sosList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      // Filtrar propuestas directas para que no salgan en el tablón SOS
+      sosList = sosList.filter((sos: any) => sos.title !== 'Propuesta de Booking Directa');
       // Sort by postedAt descending
       sosList.sort((a: any, b: any) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
       setUrgencies(sosList);
@@ -43,18 +47,15 @@ export const SOSBoard = () => {
     return () => unsubscribe();
   }, []);
 
-  const handleApply = async (id: string) => {
-    setLoadingId(id);
-    try {
-      const sosRef = doc(db, 'sos_alerts', id);
-      await updateDoc(sosRef, {
-        applications: arrayUnion(currentUser?.uid || 'musician-test')
-      });
-    } catch (error) {
-      console.error("Error applying to SOS:", error);
-    } finally {
-      setLoadingId(null);
+  const openWhatsApp = (phone: string, title: string) => {
+    if (!phone) {
+      alert("Este anuncio no tiene un teléfono de contacto válido.");
+      return;
     }
+    const text = encodeURIComponent(`Hola, he visto tu alerta SOS "${title}" en Sona Empordà y puedo ayudar.`);
+    // Remove all non-numeric chars from phone except '+'
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
+    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   const handleCreateSos = async (e: React.FormEvent) => {
@@ -72,15 +73,16 @@ export const SOSBoard = () => {
         description: formData.description,
         isUrgent: true,
         postedAt: new Date().toISOString(),
-        applications: [],
-        authorId: currentUser?.uid || 'musician-test'
+        authorId: currentUser?.uid || 'musician-test',
+        authorType: 'musician',
+        authorPhone: formData.contactPhone || profile?.contactWhatsapp || ''
       };
       
       await addDoc(collection(db, 'sos_alerts'), newSos);
       
       setIsSubmitting(false);
       setIsModalOpen(false);
-      setFormData({ title: '', location: '', dateStr: '', price: '', description: '' });
+      setFormData({ title: '', location: '', dateStr: '', price: '', description: '', contactPhone: '' });
 
     } catch (error) {
       console.error("Error adding SOS:", error);
@@ -93,27 +95,106 @@ export const SOSBoard = () => {
     if (filterMode === 'urgent') return sos.isUrgent;
     return true;
   });
+  const myUrgencies = filteredUrgencies.filter(sos => sos.authorId === (currentUser?.uid || 'musician-test'));
+  const generalUrgencies = filteredUrgencies.filter(sos => sos.authorId !== (currentUser?.uid || 'musician-test'));
+
+  const renderSOSCard = (sos: any, isMine: boolean) => {
+    const authorLabel = sos.authorType === 'venue' ? '🏪 LOCAL' : '🎸 MÚSICO';
+    const authorColor = sos.authorType === 'venue' ? 'text-blue-400' : 'text-purple-400';
+
+    return (
+      <div 
+        key={sos.id} 
+        className={`bg-black border p-4 flex flex-col gap-4 transition-colors ${
+          sos.isUrgent ? 'border-red-900/50 hover:border-red-500' : 'border-white/10 hover:border-gold'
+        } ${isMine ? 'ring-1 ring-gold/30' : ''}`}
+      >
+        
+        <div className="flex justify-between items-start">
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex items-center justify-between w-full">
+              <h3 className="text-lg font-serif text-white">{sos.title}</h3>
+              {sos.isUrgent && (
+                <span className="text-red-500 text-[8px] uppercase tracking-widest font-bold animate-pulse">
+                  🚨 URGENCIA
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isMine && (
+                <span className="text-gold text-[8px] uppercase tracking-widest font-bold">
+                  Tu anuncio
+                </span>
+              )}
+              {!isMine && sos.authorType && (
+                <span className={`${authorColor} text-[8px] uppercase tracking-widest font-bold`}>
+                  {authorLabel}
+                </span>
+              )}
+              <span className="text-white/40 text-[10px]">&bull; {sos.authorType === 'venue' ? sos.venueName : 'Banda / Músico'}</span>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-xs text-white/70 leading-relaxed line-clamp-3">
+          {sos.description}
+        </p>
+
+        <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3 mt-auto">
+          <div className="flex items-center gap-1.5 text-white/60">
+            <FiClock className="text-gold w-3 h-3" />
+            <span className="text-[10px] truncate">{sos.dateStr}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-white/60">
+            <FiMapPin className="text-gold w-3 h-3" />
+            <span className="text-[10px] truncate">{sos.location}</span>
+          </div>
+        </div>
+
+        {!isMine && (
+          <button 
+            onClick={() => openWhatsApp(sos.authorPhone, sos.title)}
+            className="w-full py-2.5 text-[9px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white mt-1"
+          >
+            Hablar por WhatsApp
+          </button>
+        )}
+
+        {isMine && (
+          <button 
+            onClick={async () => {
+              if(window.confirm('¿Estás seguro de que quieres cancelar y borrar esta alerta SOS?')) {
+                try {
+                  await deleteDoc(doc(db, 'sos_alerts', sos.id));
+                } catch(e) {
+                  console.error(e);
+                }
+              }
+            }} 
+            className="w-full py-2.5 bg-red-900/20 border border-red-900 text-red-500 hover:bg-red-900 hover:text-white transition-colors text-[9px] uppercase tracking-widest font-bold flex justify-center items-center mt-1"
+          >
+            Cancelar Alerta
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl relative">
-      
-      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="flex flex-col gap-8 max-w-5xl h-[calc(100vh-8rem)]">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4">
         <div>
           <h1 className="text-3xl font-serif text-white mb-2 flex items-center gap-3">
-            <FiAlertTriangle className="text-red-500" />
+            <FiAlertTriangle className="text-red-500 animate-pulse" /> 
             Tablón SOS
           </h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">
-            Urgencias y sustituciones de última hora en locales o grupos de tu zona.
-          </p>
+          <p className="text-white/50 text-xs uppercase tracking-widest">Avisos urgentes de locales y bandas</p>
         </div>
         
         <div className="flex gap-4 relative">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center gap-2 border transition-colors px-4 py-2 text-[10px] uppercase tracking-widest font-bold ${
-              filterMode !== 'all' ? 'border-gold text-gold' : 'border-white/20 text-white hover:border-gold'
-            }`}
+            className="flex items-center gap-2 border border-white/10 hover:border-gold transition-colors px-4 py-2 text-[10px] uppercase tracking-widest text-white/70 hover:text-white"
           >
             <FiFilter /> Filtrar
           </button>
@@ -132,12 +213,6 @@ export const SOSBoard = () => {
               >
                 Solo Urgencias
               </button>
-              <button 
-                onClick={() => { setFilterMode('mine'); setIsFilterOpen(false); }}
-                className={`w-full text-left px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-white/5 transition-colors border-t border-white/10 ${filterMode === 'mine' ? 'text-gold font-bold' : 'text-white'}`}
-              >
-                Mis Anuncios
-              </button>
             </div>
           )}
 
@@ -150,116 +225,27 @@ export const SOSBoard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {filteredUrgencies.length === 0 && (
-          <p className="text-white/40 italic col-span-2">No hay anuncios que coincidan con este filtro.</p>
-        )}
-        {filteredUrgencies.map(sos => {
-          const isApplied = sos.applications?.includes(currentUser?.uid || 'musician-test');
-          const isLoading = loadingId === sos.id;
-          const isMine = sos.authorId === (currentUser?.uid || 'musician-test') || sos.venueName === 'Mi Banda / Propio';
 
-          return (
-            <div 
-              key={sos.id} 
-              className={`bg-black border p-6 flex flex-col gap-6 transition-colors ${
-                sos.isUrgent ? 'border-red-900/50 hover:border-red-500' : 'border-white/10 hover:border-gold'
-              } ${isMine ? 'ring-1 ring-gold/30' : ''}`}
-            >
-              
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-1">
-                  {sos.isUrgent && (
-                    <span className="text-red-500 text-[9px] uppercase tracking-widest font-bold animate-pulse mb-1">
-                      🚨 URGENCIA ALTA
-                    </span>
-                  )}
-                  {isMine && (
-                    <span className="text-gold text-[9px] uppercase tracking-widest font-bold mb-1">
-                      Tu anuncio
-                    </span>
-                  )}
-                  <h3 className="text-xl font-serif text-white">{sos.title}</h3>
-                  <p className="text-white/40 text-xs">{sos.venueName}</p>
-                </div>
-              </div>
 
-              <div className="flex flex-wrap gap-2">
-                {sos.requiredVibes?.map((vibe: string, idx: number) => (
-                  <span key={idx} className="bg-white/5 border border-white/10 px-2 py-1 text-[10px] uppercase tracking-widest text-gold">
-                    {vibe}
-                  </span>
-                ))}
-              </div>
-
-              <p className="text-sm text-white/70 leading-relaxed">
-                {sos.description}
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 mt-auto">
-                <div className="flex items-center gap-2 text-white/60">
-                  <FiClock className="text-gold" />
-                  <span className="text-xs">{sos.dateStr}</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/60">
-                  <FiMapPin className="text-gold" />
-                  <span className="text-xs">{sos.location}</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/60 col-span-2">
-                  <FiDollarSign className="text-gold" />
-                  <span className="text-xs font-bold text-white">{sos.price} <span className="text-white/40 font-normal">honorarios estimados</span></span>
-                </div>
-              </div>
-
-              {!isMine && (
-                <button 
-                  onClick={() => !isApplied && handleApply(sos.id)}
-                  disabled={isApplied || isLoading}
-                  className={`w-full py-4 text-[10px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 ${
-                    isApplied 
-                      ? 'bg-green-900/30 text-green-500 border border-green-900 cursor-default' 
-                      : isLoading
-                        ? 'bg-white/10 text-white cursor-wait'
-                        : 'bg-gold text-black hover:bg-white'
-                  }`}
-                >
-                  {isApplied ? (
-                    <>
-                      <FiCheckCircle className="w-4 h-4" /> EPK Enviado
-                    </>
-                  ) : isLoading ? (
-                    'Enviando...'
-                  ) : (
-                    'Enviar mi EPK'
-                  )}
-                </button>
-              )}
-
-              {isMine && (
-                <div className="flex flex-col gap-2 w-full mt-2">
-                  <div className="bg-white/5 border border-white/10 p-2 text-center text-xs text-white">
-                    <span className="font-bold text-gold">{sos.applications?.length || 0}</span> Candidatos Aplicados
-                  </div>
-                  <button 
-                    onClick={async () => {
-                      if(window.confirm('¿Estás seguro de que quieres cancelar y borrar esta alerta SOS?')) {
-                        try {
-                          await deleteDoc(doc(db, 'sos_alerts', sos.id));
-                        } catch(e) {
-                          console.error(e);
-                        }
-                      }
-                    }} 
-                    className="w-full py-3 bg-red-900/20 border border-red-900 text-red-500 hover:bg-red-900 hover:text-white transition-colors text-[9px] uppercase tracking-widest font-bold flex justify-center items-center"
-                  >
-                    Cancelar Alerta
-                  </button>
-                </div>
-              )}
-
+      <div className="flex flex-col gap-12">
+        {myUrgencies.length > 0 && (
+          <div>
+            <h2 className="text-xl font-serif text-white mb-6 border-b border-white/10 pb-2">Tus Alertas SOS Activas</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {myUrgencies.map(sos => renderSOSCard(sos, true))}
             </div>
-          );
-        })}
+          </div>
+        )}
+
+        <div>
+          <h2 className="text-xl font-serif text-white mb-6 border-b border-white/10 pb-2">Tablón General</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {generalUrgencies.length === 0 && (
+              <p className="text-white/40 italic col-span-2">No hay anuncios que coincidan con este filtro.</p>
+            )}
+            {generalUrgencies.map(sos => renderSOSCard(sos, false))}
+          </div>
+        </div>
       </div>
 
       {/* Modal Crear SOS */}
@@ -298,6 +284,12 @@ export const SOSBoard = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Detalles (Qué necesitas exactamente)</label>
                 <textarea required rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none resize-none"></textarea>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Teléfono de Contacto Urgente</label>
+                <input type="text" placeholder="Ej: +34 600 000 000" value={formData.contactPhone} onChange={e => setFormData({...formData, contactPhone: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                <p className="text-[9px] text-white/30 uppercase tracking-widest mt-1">Opcional. Si lo dejas en blanco, se usará el WhatsApp de tu perfil.</p>
               </div>
 
               <button 

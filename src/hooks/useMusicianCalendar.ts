@@ -20,9 +20,12 @@ export const useMusicianCalendar = (musicianId?: string) => {
         
         // Inyectamos dinámicamente todos sus eventos confirmados como 'booked'
         const myMusicianId = musicianId || "musician-123";
-        const myEvents = events.filter(e => e.musicianId === myMusicianId);
+        const myConfirmedEvents = events.filter(e => 
+          e.musicianId === myMusicianId && 
+          (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId)
+        );
         
-        myEvents.forEach(event => {
+        myConfirmedEvents.forEach(event => {
           // Extraemos YYYY-MM-DD de la fecha ISO
           const dateKey = event.date.split('T')[0];
           baseCalendar[dateKey] = 'booked';

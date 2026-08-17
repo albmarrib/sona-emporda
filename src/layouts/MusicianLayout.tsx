@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut } from 'react-icons/fi';
+import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiMessageSquare } from 'react-icons/fi';
 
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 
@@ -19,9 +19,11 @@ export const MusicianLayout = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/musician', icon: <FiHome className="w-5 h-5" /> },
-    { name: 'Mi EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
     { name: 'Calendario', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Invitaciones', path: '/musician/offers', icon: <FiMessageSquare className="w-5 h-5" /> },
+    { name: 'Oportunidades', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
     { name: 'Tablón SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
+    { name: 'Mi EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
   ];
 
   return (

@@ -3,12 +3,16 @@ import { Header } from "../../components/public/Header";
 import { useEvents } from "../../hooks/useEvents";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { FiArrowLeft, FiMapPin, FiCalendar, FiClock } from "react-icons/fi";
+import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic } from "react-icons/fi";
+import { useMusicianProfile } from "../../hooks/useMusicianProfile";
 
 export const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { events, loading, error } = useEvents();
+  
+  const event = events.find(e => e.id === id);
+  const { profile: musicianProfile } = useMusicianProfile(event?.musicianId);
 
   if (loading) {
     return (
@@ -20,7 +24,7 @@ export const EventDetail = () => {
     );
   }
 
-  const event = events.find(e => e.id === id);
+
 
   if (!event || error) {
     return (
@@ -86,9 +90,18 @@ export const EventDetail = () => {
               ))}
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-8">
+            <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-4">
               {event.title}
             </h1>
+            
+            {(event.musicianName || musicianProfile?.stageName) && (
+              <div className="flex items-center gap-3 mb-8">
+                <FiMusic className="text-gold w-6 h-6" />
+                <h2 className="text-2xl font-serif text-white/90">
+                  {event.musicianName || musicianProfile?.stageName}
+                </h2>
+              </div>
+            )}
 
             <div className="w-16 h-px bg-gold mb-8" />
 
@@ -103,6 +116,67 @@ export const EventDetail = () => {
                 Asegura tu asistencia cuanto antes.
               </p>
             </div>
+
+            {/* Artist Section (if musician is registered) */}
+            {event.musicianId && musicianProfile && (
+              <div className="mt-16 pt-12 border-t border-white/10">
+                <h3 className="text-2xl font-serif text-white mb-8 border-l-4 border-gold pl-4">Conoce al Artista</h3>
+                
+                <div className="flex flex-col md:flex-row gap-8">
+                  <div className="w-full md:w-1/3 shrink-0">
+                    <img 
+                      src={musicianProfile.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=600'} 
+                      alt={musicianProfile.stageName} 
+                      className="w-full h-auto object-cover grayscale opacity-90 border border-white/10"
+                    />
+                    <div className="mt-4 flex gap-2">
+                        <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
+                          {musicianProfile.mainGenre}
+                        </span>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex flex-col gap-6">
+                    <div>
+                      <h4 className="text-xl font-serif text-white mb-2">{musicianProfile.stageName}</h4>
+                      <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">
+                        {musicianProfile.shortBio || "No hay biografía disponible."}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 border border-white/10">
+                      <div>
+                        <h4 className="text-[10px] uppercase tracking-widest text-white/50">Formación</h4>
+                        <p className="text-lg text-white font-serif capitalize">
+                          {musicianProfile.formationType || "Solista"} {musicianProfile.membersCount ? `(${musicianProfile.membersCount} pax)` : ''}
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] uppercase tracking-widest text-white/50">Miembros</h4>
+                        <p className="text-sm text-white/80 mt-1 capitalize leading-relaxed">
+                          {musicianProfile.membersNames || 'No especificados'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(musicianProfile.youtubeUrl || musicianProfile.spotifyUrl) && (
+                      <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                        {musicianProfile.youtubeUrl && (
+                          <a href={musicianProfile.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex-1 border border-red-600/50 text-red-500 hover:bg-red-600 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
+                            Ver Video
+                          </a>
+                        )}
+                        {musicianProfile.spotifyUrl && (
+                          <a href={musicianProfile.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 border border-green-500/50 text-green-500 hover:bg-green-500 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
+                            Escuchar
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar / CTA */}

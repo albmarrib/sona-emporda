@@ -1,28 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiClock, FiCheckCircle, FiMapPin, FiEye, FiEyeOff } from "react-icons/fi";
 import { useEvents } from "../../hooks/useEvents";
+import { db } from '../../firebase/firebase';
+import { collection, onSnapshot, query } from 'firebase/firestore';
 import { format, parseISO } from "date-fns";
+import { useAuth } from "../../contexts/AuthContext";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
 export const DashboardHome = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { events } = useEvents(true);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [eventToEvaluate, setEventToEvaluate] = useState<any>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
 
-  // Simulamos que el músico logueado es "musician-123" (Acústico Sunset)
-  const myEvents = events.filter(event => event.musicianId === "musician-123");
+  // Solo mostramos en el Dashboard los bolos realmente CONFIRMADOS o los de relleno (mock)
+  const myEvents = events.filter(event => 
+    (event.musicianId === currentUser?.uid || (event.musicianId && event.musicianId.startsWith('musician-'))) &&
+    (event.status === 'confirmed' || (event.status === 'published' && event.musicianId) || !event.venueId)
+  );
   
   // Filtrar según el toggle
-  const visibleEvents = myEvents.filter(event => {
+  const visibleEvents = myEvents.filter((event: any) => {
     if (showPastEvents) return true;
     return parseISO(event.date) >= new Date();
   });
-  
+
   // Bolos confirmados (contamos solo los futuros o todos?)
-  const confirmedGigsCount = myEvents.filter(e => parseISO(e.date) >= new Date()).length;
+  const confirmedGigsCount = myEvents.filter((e: any) => parseISO(e.date) >= new Date()).length;
+
+  const [latestSos, setLatestSos] = useState<any | null>(null);
+
+  useEffect(() => {
+    // Escuchar la última urgencia SOS
+    const q = query(
+      collection(db, 'sos_alerts'),
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const sosList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Filtrar propuestas de booking y los propios del usuario
+      const urgencies = sosList.filter((s: any) => 
+        s.title !== 'Propuesta de Booking Directa' && 
+        s.authorId !== currentUser?.uid
+      );
+      urgencies.sort((a: any, b: any) => new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime());
+      
+      if (urgencies.length > 0) {
+        setLatestSos(urgencies[0]);
+      } else {
+        setLatestSos(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="flex flex-col gap-12">
@@ -47,26 +84,33 @@ export const DashboardHome = () => {
       </div>
 
       {/* Prominent SOS Urgent Banner */}
-      <div 
-        onClick={() => navigate('/musician/sos')}
-        className="relative overflow-hidden border border-red-900/50 bg-gradient-to-r from-red-950/40 to-black p-6 md:p-8 cursor-pointer group rounded-xl shadow-2xl"
-      >
-        <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/20 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-red-900/30 transition-colors"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="bg-red-600 text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold animate-pulse rounded-sm">
-                🚨 URGENCIA ALTA: HOY 22:00h
-              </span>
+      {latestSos && (
+        <div 
+          onClick={() => navigate('/musician/sos')}
+          className="relative overflow-hidden border border-red-900/50 bg-gradient-to-r from-red-950/40 to-black p-6 md:p-8 cursor-pointer group rounded-xl shadow-2xl mt-8"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/20 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-red-900/30 transition-colors"></div>
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="bg-red-600 text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold animate-pulse rounded-sm">
+                  🚨 URGENCIA ALTA: {latestSos.dateStr}
+                </span>
+                {latestSos.authorType === 'venue' ? (
+                  <span className="text-blue-400 text-[9px] uppercase tracking-widest font-bold">🏪 LOCAL</span>
+                ) : (
+                  <span className="text-purple-400 text-[9px] uppercase tracking-widest font-bold">🎸 MÚSICO</span>
+                )}
+              </div>
+              <h2 className="text-2xl font-serif text-white">{latestSos.title}</h2>
+              <p className="text-white/60 text-sm truncate max-w-xl">{latestSos.description}</p>
             </div>
-            <h2 className="text-2xl font-serif text-white">Sustituto de última hora requerido</h2>
-            <p className="text-white/60 text-sm">Se busca DJ para sesión de tardeo electrónico en Sala Soho (Palamós). ¡Postúlate rápido!</p>
+            <button className="whitespace-nowrap bg-red-900 hover:bg-red-800 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all hover:scale-105 rounded-sm">
+              Ver Tablón SOS
+            </button>
           </div>
-          <button className="whitespace-nowrap bg-red-900 hover:bg-red-800 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all hover:scale-105 rounded-sm">
-            Ver Tablón SOS
-          </button>
         </div>
-      </div>
+      )}
 
       <div className="flex flex-col gap-8">
         {/* Next Gigs List (Prominent) */}
@@ -86,7 +130,7 @@ export const DashboardHome = () => {
               <p className="text-white/40 text-sm italic">No hay eventos para mostrar.</p>
             )}
             
-            {visibleEvents.map((event) => {
+            {visibleEvents.map((event: any) => {
               const eventDate = parseISO(event.date);
               const isPast = eventDate < new Date();
               

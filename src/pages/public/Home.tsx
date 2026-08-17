@@ -26,8 +26,15 @@ export const Home = () => {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
 
+  // Solo mostramos eventos CONFIRMADOS en la web pública (incluyendo mock data que no tiene venueId)
+  const confirmedEvents = events.filter(e => 
+    e.status === 'confirmed' || 
+    (e.status === 'published' && e.musicianId) || 
+    !e.venueId
+  );
+  
   // El carrusel rotará por todos los eventos disponibles
-  const heroEvents = events;
+  const heroEvents = confirmedEvents;
 
   useEffect(() => {
     if (heroEvents.length <= 1) return;
@@ -54,7 +61,7 @@ export const Home = () => {
   const currentHeroEvent = heroEvents[carouselIndex];
   
   // Filtrar el resto de eventos para la lista
-  const filteredEvents = events
+  const filteredEvents = confirmedEvents
     .filter(e => e.id !== currentHeroEvent?.id)
     .filter(e => {
       if (selectedVibes.length === 0) return true;
@@ -231,7 +238,7 @@ export const Home = () => {
             )}
 
             {activeView === "CALENDARIO" && (
-              <EventCalendar events={events} selectedVibes={selectedVibes} />
+              <EventCalendar events={confirmedEvents} selectedVibes={selectedVibes} />
             )}
 
             {activeView === "LUGARES" && (

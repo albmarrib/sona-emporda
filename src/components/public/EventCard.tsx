@@ -51,9 +51,19 @@ export const EventCard = ({ event }: EventCardProps) => {
             ))}
           </div>
           
-          <h3 className="text-2xl md:text-3xl font-serif text-white mb-3 group-hover:text-gold transition-colors duration-300">
-            {event.title}
-          </h3>
+          <p className="text-gold text-xs font-bold uppercase tracking-widest mb-1 truncate">
+            CONCIERTO
+          </p>
+          {event.title && (
+            <h3 className="text-2xl md:text-3xl font-serif text-white mb-3 group-hover:text-gold transition-colors duration-300">
+              {event.title}
+            </h3>
+          )}
+          {event.musicianName && (
+            <p className="text-white/80 text-sm font-bold mb-3 truncate">
+              Artista / Grupo: <span className="text-gold font-normal">{event.musicianName}</span>
+            </p>
+          )}
           
           <p className="text-white/60 text-[10px] uppercase tracking-widest flex items-center gap-2">
             <span>{format(dateObj, "HH:mm")}h</span>

@@ -11,6 +11,8 @@ import { DashboardHome } from './pages/musician/DashboardHome';
 import { EPKManager } from './pages/musician/EPKManager';
 import { AvailabilityCalendar } from './pages/musician/AvailabilityCalendar';
 import { SOSBoard } from './pages/musician/SOSBoard';
+import { MusicianOpportunities } from './pages/musician/MusicianOpportunities';
+import { DirectOffers } from './pages/musician/DirectOffers';
 import { VenueLayout } from './layouts/VenueLayout';
 import { VenueDashboardHome } from './pages/venue/VenueDashboardHome';
 import { ArtistSearch } from './pages/venue/ArtistSearch';
@@ -45,6 +47,8 @@ function App() {
             </ProtectedRoute>
           }>
             <Route index element={<DashboardHome />} />
+            <Route path="opportunities" element={<MusicianOpportunities />} />
+            <Route path="offers" element={<DirectOffers />} />
             <Route path="epk" element={<EPKManager />} />
             <Route path="calendar" element={<AvailabilityCalendar />} />
             <Route path="sos" element={<SOSBoard />} />

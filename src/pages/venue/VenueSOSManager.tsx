@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiAlertTriangle, FiPlus, FiX, FiCheckCircle } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
 import { collection, query, where, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const VenueSOSManager = () => {
   const [urgencies, setUrgencies] = useState<any[]>([]);
@@ -12,16 +13,17 @@ export const VenueSOSManager = () => {
     title: '',
     dateStr: '',
     price: '',
-    description: ''
+    description: '',
+    contactPhone: ''
   });
+
+  const { currentUser, userData } = useAuth();
 
   useEffect(() => {
     // Listen to real-time SOS alerts created by this venue
     const q = query(
       collection(db, 'sos_alerts'), 
-      where('venueName', '==', 'Sala Soho'),
-      // Note: If orderBy is used with where, it requires a composite index in Firestore.
-      // To avoid index errors during prototyping, we won't use orderBy here and just sort in JS.
+      where('authorId', '==', currentUser?.uid || 'venue-test')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -44,22 +46,24 @@ export const VenueSOSManager = () => {
     try {
       const newSos = {
         title: formData.title,
-        venueName: 'Sala Soho',
-        location: 'Palamós', // Hardcoded for demo
+        venueName: userData?.name || 'Local Sin Nombre',
+        location: userData?.address || 'Dirección no definida',
         dateStr: formData.dateStr,
         price: formData.price || 'A convenir',
         requiredVibes: ['🎸 Urgente'],
         description: formData.description,
         isUrgent: true,
         postedAt: new Date().toISOString(),
-        applications: [] // Array of musician IDs who applied
+        authorId: currentUser?.uid || 'venue-test',
+        authorType: 'venue',
+        authorPhone: formData.contactPhone || userData?.contactPhone || ''
       };
       
       await addDoc(collection(db, 'sos_alerts'), newSos);
       
       setIsSubmitting(false);
       setIsModalOpen(false);
-      setFormData({ title: '', dateStr: '', price: '', description: '' });
+      setFormData({ title: '', dateStr: '', price: '', description: '', contactPhone: '' });
 
       // Trigger local alarm visual (Optional, as the listener on the other side will handle it)
       const alertEvent = new CustomEvent('sos-alert', {
@@ -130,16 +134,12 @@ export const VenueSOSManager = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 w-full md:w-64 shrink-0 relative z-10">
-                <div className="bg-white/5 border border-white/10 p-4 text-center">
-                  <p className="text-3xl font-serif text-gold">{sos.applications?.length || 0}</p>
-                  <p className="text-[9px] uppercase tracking-widest text-white/40">Candidatos Aplicados</p>
-                </div>
+              <div className="flex flex-col gap-2 w-full md:w-64 shrink-0 relative z-10 justify-center">
                 <button 
                   onClick={() => handleCancelSos(sos.id)}
-                  className="w-full border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 py-3 text-[10px] uppercase tracking-widest font-bold transition-colors"
+                  className="w-full bg-red-900/20 border border-red-500/30 text-red-400 hover:text-white hover:bg-red-500 hover:border-red-500 py-4 text-[10px] uppercase tracking-widest font-bold transition-colors"
                 >
-                  Cancelar Alerta
+                  Cancelar Alerta SOS
                 </button>
               </div>
 
@@ -182,6 +182,12 @@ export const VenueSOSManager = () => {
               <div className="flex flex-col gap-2">
                 <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Detalles (Qué buscas)</label>
                 <textarea required rows={3} placeholder="Explica brevemente qué perfil musical necesitas para cubrir el hueco..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none resize-none"></textarea>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Teléfono de Contacto Urgente</label>
+                <input type="text" placeholder="Ej: +34 600 000 000" value={formData.contactPhone} onChange={e => setFormData({...formData, contactPhone: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                <p className="text-[9px] text-white/30 uppercase tracking-widest">Opcional. Si lo dejas en blanco, los músicos usarán el WhatsApp de tu perfil.</p>
               </div>
 
               <button 
