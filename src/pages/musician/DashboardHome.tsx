@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FiClock, FiCheckCircle, FiMapPin, FiEye, FiEyeOff } from "react-icons/fi";
 import { useEvents } from "../../hooks/useEvents";
 import { db } from '../../firebase/firebase';
+import { PushNotificationBanner } from '../../components/chat/PushNotificationBanner';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { format, parseISO } from "date-fns";
 import { useAuth } from "../../contexts/AuthContext";
@@ -63,50 +64,44 @@ export const DashboardHome = () => {
 
   return (
     <div className="flex flex-col gap-12">
+      <PushNotificationBanner />
       
-      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2">Bienvenido de nuevo</h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">Resumen de tu actividad en Sona Empordà</p>
-        </div>
-        
-        {/* Ultra-Compact Stats Header */}
-        <div className="flex items-center gap-4 mt-2 md:mt-0">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-white/50 uppercase tracking-widest">Próximos confirmados:</span>
-            <span className="text-sm font-bold text-white">{confirmedGigsCount}</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-            <div className="w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(197,160,89,0.8)]"></div>
-            <span className="text-[9px] text-gold uppercase tracking-widest font-bold">EPK 75%</span>
+      <div className="border-b border-white/10 pb-6">
+          {/* Ultra-Compact Stats Header */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white/50 uppercase tracking-widest">Próximos confirmados:</span>
+              <span className="text-sm font-bold text-white">{confirmedGigsCount}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+              <div className="w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(197,160,89,0.8)]"></div>
+              <span className="text-[9px] text-gold uppercase tracking-widest font-bold">EPK 75%</span>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Prominent SOS Urgent Banner */}
       {latestSos && (
         <div 
           onClick={() => navigate('/musician/sos')}
-          className="relative overflow-hidden border border-red-900/50 bg-gradient-to-r from-red-950/40 to-black p-6 md:p-8 cursor-pointer group rounded-xl shadow-2xl mt-8"
+          className="relative overflow-hidden border border-red-900/50 bg-gradient-to-r from-red-950/40 to-black p-4 cursor-pointer group rounded-lg shadow-lg mt-6"
         >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-red-900/20 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-red-900/30 transition-colors"></div>
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="bg-red-600 text-white px-2 py-1 text-[9px] uppercase tracking-widest font-bold animate-pulse rounded-sm">
-                  🚨 URGENCIA ALTA: {latestSos.dateStr}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-900/20 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-red-900/30 transition-colors"></div>
+          <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex flex-col gap-1 w-full min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="bg-red-600 text-white px-1.5 py-0.5 text-[8px] uppercase tracking-widest font-bold animate-pulse rounded-sm shrink-0">
+                  🚨 URGENCIA: {latestSos.dateStr}
                 </span>
                 {latestSos.authorType === 'venue' ? (
-                  <span className="text-blue-400 text-[9px] uppercase tracking-widest font-bold">🏪 LOCAL</span>
+                  <span className="text-blue-400 text-[8px] uppercase tracking-widest font-bold shrink-0">🏪 LOCAL</span>
                 ) : (
-                  <span className="text-purple-400 text-[9px] uppercase tracking-widest font-bold">🎸 MÚSICO</span>
+                  <span className="text-purple-400 text-[8px] uppercase tracking-widest font-bold shrink-0">🎸 MÚSICO</span>
                 )}
               </div>
-              <h2 className="text-2xl font-serif text-white">{latestSos.title}</h2>
-              <p className="text-white/60 text-sm truncate max-w-xl">{latestSos.description}</p>
+              <h2 className="text-base sm:text-lg font-serif text-white truncate w-full">{latestSos.title}</h2>
+              <p className="text-white/60 text-xs truncate w-full">{latestSos.description}</p>
             </div>
-            <button className="whitespace-nowrap bg-red-900 hover:bg-red-800 text-white px-6 py-3 text-[10px] uppercase tracking-widest font-bold transition-all hover:scale-105 rounded-sm">
-              Ver Tablón SOS
+            <button className="whitespace-nowrap bg-red-900 hover:bg-red-800 text-white px-3 py-1.5 text-[9px] uppercase tracking-widest font-bold transition-all hover:scale-105 rounded-sm shrink-0 sm:mt-0 mt-2">
+              Ver
             </button>
           </div>
         </div>
@@ -137,38 +132,42 @@ export const DashboardHome = () => {
               return (
                 <div 
                   key={event.id} 
-                  className={`bg-black border border-white/10 p-5 md:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 hover:border-gold/50 transition-colors group rounded-lg ${isPast ? 'opacity-70' : ''}`}
+                  className={`py-3 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:bg-white/5 transition-colors group px-2 -mx-2 rounded-lg cursor-pointer ${isPast ? 'opacity-70' : ''}`}
+                  onClick={() => navigate(`/event/${event.id}`)}
                 >
-                  <div className="flex items-center gap-4 md:gap-5 cursor-pointer w-full sm:w-auto" onClick={() => navigate(`/event/${event.id}`)}>
-                    <div className="flex flex-col items-center justify-center w-14 h-14 bg-white/5 border border-white/10 rounded-sm group-hover:bg-gold group-hover:border-gold transition-all shrink-0 shadow-lg">
-                      <span className="text-[9px] uppercase tracking-widest text-gold group-hover:text-black font-bold -mb-1">{format(eventDate, "MMM", { locale: es })}</span>
-                      <span className="text-xl font-serif text-white group-hover:text-black leading-none mt-1">{format(eventDate, "dd")}</span>
+                  <div className="flex items-center gap-3 w-full sm:w-auto min-w-0">
+                    <div className="flex flex-col items-center justify-center w-12 h-12 bg-white/5 border border-white/10 rounded-sm group-hover:bg-gold group-hover:border-gold transition-all shrink-0">
+                      <span className="text-[8px] uppercase tracking-widest text-gold group-hover:text-black font-bold mb-0.5">{format(eventDate, "MMM", { locale: es })}</span>
+                      <span className="text-lg font-serif text-white group-hover:text-black leading-none">{format(eventDate, "dd")}</span>
                     </div>
-                    <div className="flex flex-col gap-1 overflow-hidden min-w-0 w-full">
-                      <p className="text-white text-base md:text-lg font-bold tracking-wide group-hover:text-gold transition-colors truncate">{event.title}</p>
-                      <p className="text-white/50 text-[10px] uppercase tracking-widest flex items-center gap-2 truncate">
-                        <FiClock className="w-3 h-3 text-gold shrink-0" /> {format(eventDate, "HH:mm")}h 
-                        <span className="text-white/20">|</span> 
-                        <FiMapPin className="w-3 h-3 text-gold shrink-0" /> <span className="truncate">{event.venueName}, {event.venueLocation}</span>
-                      </p>
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1 overflow-hidden">
+                      <p className="text-white text-sm sm:text-base font-bold group-hover:text-gold transition-colors truncate">{event.title}</p>
+                      <div className="flex items-center gap-1.5 text-white/50 text-[9px] uppercase tracking-widest mt-0.5 overflow-hidden w-full">
+                        <span className="flex items-center gap-1 shrink-0"><FiClock className="w-2.5 h-2.5 text-gold" /> {format(eventDate, "HH:mm")}</span>
+                        <span className="text-white/20 shrink-0">|</span> 
+                        <span className="flex items-center gap-1 truncate min-w-0"><FiMapPin className="w-2.5 h-2.5 text-gold shrink-0" /><span className="truncate">{event.venueName}, {event.venueLocation}</span></span>
+                      </div>
                     </div>
                   </div>
                   
-                  {isPast ? (
-                    <button 
-                      onClick={() => {
-                        setEventToEvaluate(event);
-                        setIsRatingModalOpen(true);
-                      }}
-                      className="w-full sm:w-auto bg-gold text-black hover:bg-white px-5 py-3 text-[10px] uppercase tracking-widest font-bold transition-colors text-center rounded-sm"
-                    >
-                      Evaluar Local
-                    </button>
-                  ) : (
-                    <span className="w-full sm:w-auto bg-green-900/30 text-green-500 border border-green-900 px-5 py-2 text-[10px] uppercase tracking-widest font-bold text-center rounded-sm flex items-center justify-center gap-2">
-                      <FiCheckCircle className="w-4 h-4" /> Confirmado
-                    </span>
-                  )}
+                  <div className="w-full sm:w-auto flex justify-end shrink-0 mt-1 sm:mt-0">
+                    {isPast ? (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEventToEvaluate(event);
+                          setIsRatingModalOpen(true);
+                        }}
+                        className="w-full sm:w-auto bg-gold text-black hover:bg-white px-3 py-1.5 text-[9px] uppercase tracking-widest font-bold transition-colors text-center rounded-sm shrink-0"
+                      >
+                        Evaluar Local
+                      </button>
+                    ) : (
+                      <span className="w-full sm:w-auto bg-green-900/30 text-green-500 border border-green-900 px-3 py-1.5 text-[9px] uppercase tracking-widest font-bold text-center rounded-sm flex items-center justify-center gap-1.5 shrink-0">
+                        <FiCheckCircle className="w-3 h-3" /> Confirmado
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}

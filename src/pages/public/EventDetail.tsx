@@ -5,6 +5,9 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic } from "react-icons/fi";
 import { useMusicianProfile } from "../../hooks/useMusicianProfile";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 
 export const EventDetail = () => {
   const { id } = useParams();
@@ -13,6 +16,17 @@ export const EventDetail = () => {
   
   const event = events.find(e => e.id === id);
   const { profile: musicianProfile } = useMusicianProfile(event?.musicianId);
+  const [venueProfile, setVenueProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (event?.venueId) {
+      getDoc(doc(db, 'users', event.venueId)).then(docSnap => {
+        if (docSnap.exists()) {
+          setVenueProfile(docSnap.data());
+        }
+      });
+    }
+  }, [event?.venueId]);
 
   if (loading) {
     return (
@@ -209,6 +223,39 @@ export const EventDetail = () => {
                   </div>
                 </div>
               </div>
+
+              {(venueProfile?.contactPhone || venueProfile?.contactWhatsapp || venueProfile?.email || venueProfile?.websiteUrl || venueProfile?.instagramUrl) && (
+                <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
+                  <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Contacto con el Local</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {venueProfile.contactWhatsapp && (
+                      <a href={`https://wa.me/${venueProfile.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                        WhatsApp
+                      </a>
+                    )}
+                    {venueProfile.contactPhone && (
+                      <a href={`tel:${venueProfile.contactPhone.replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                        Llamar
+                      </a>
+                    )}
+                    {venueProfile.email && (
+                      <a href={`mailto:${venueProfile.email}`} className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                        Email
+                      </a>
+                    )}
+                    {venueProfile.websiteUrl && (
+                      <a href={venueProfile.websiteUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                        Web
+                      </a>
+                    )}
+                    {venueProfile.instagramUrl && (
+                      <a href={venueProfile.instagramUrl} target="_blank" rel="noopener noreferrer" className="bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                        Instagram
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
                 <div className="text-center">

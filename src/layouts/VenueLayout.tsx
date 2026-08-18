@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
 import { Info } from 'lucide-react';
+import { FloatingChatButton } from '../components/chat/FloatingChatButton';
+import { InviteColleagues } from '../components/shared/InviteColleagues';
 
 export const VenueLayout = () => {
   const { pathname } = useLocation();
@@ -60,7 +62,7 @@ export const VenueLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest transition-colors ${
+                className={`relative flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest transition-colors ${
                   isActive ? 'bg-white/10 text-gold border-r-2 border-gold' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -82,13 +84,18 @@ export const VenueLayout = () => {
             </Link>
           </div>
           
-          <button 
-            onClick={() => setShowTutorial(true)}
-            className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors mb-2"
-          >
-            <Info className="w-5 h-5" />
-            Ver Tutorial
-          </button>
+          <div className="flex gap-2 w-full mb-2">
+            <div className="flex-shrink-0 flex items-center justify-center">
+              <InviteColleagues userType="venue" />
+            </div>
+            <button 
+              onClick={() => setShowTutorial(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <Info className="w-5 h-5" />
+              Tutorial
+            </button>
+          </div>
 
           <button 
             onClick={handleLogout}
@@ -115,6 +122,7 @@ export const VenueLayout = () => {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <InviteColleagues userType="venue" />
             <button 
               onClick={() => setShowTutorial(true)} 
               className="text-white/60 hover:text-white active:scale-95 transition-transform"
@@ -154,16 +162,17 @@ export const VenueLayout = () => {
                 {isSOS && (
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-red-900/20 rounded-full blur-md"></div>
                 )}
-                <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''}`}>
+                <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''} relative`}>
                   {item.icon}
                 </div>
-                <span className="text-[9px] uppercase tracking-wider">{item.name.replace(' & Booking', '').replace('Urgencias ', '').replace('Buscador ', '')}</span>
+                <span className="text-[9px] uppercase tracking-wider">{item.name.replace(' & Booking', '').replace('Urgencias ', '').replace('Buscador ', '').replace('Calendario', 'Agenda')}</span>
               </Link>
             );
           })}
         </div>
       </nav>
 
+      <FloatingChatButton />
     </div>
   );
 };

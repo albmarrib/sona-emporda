@@ -15,13 +15,13 @@ import { SOSBoard } from './pages/musician/SOSBoard';
 import { MusicianOpportunities } from './pages/musician/MusicianOpportunities';
 import { DirectOffers } from './pages/musician/DirectOffers';
 import { VenueLayout } from './layouts/VenueLayout';
-import { VenueDashboardHome } from './pages/venue/VenueDashboardHome';
 import { ArtistSearch } from './pages/venue/ArtistSearch';
 import { EventManager } from './pages/venue/EventManager';
 import { VenueProfile } from './pages/venue/VenueProfile';
 import { VenueSOSManager } from './pages/venue/VenueSOSManager';
 import { VenueCalendar } from './pages/venue/VenueCalendar';
 import { SeedDatabase } from './pages/SeedDatabase';
+import { Messages } from './pages/shared/Messages';
 
 function App() {
   const { loading } = useAuth();
@@ -54,6 +54,7 @@ function App() {
             <Route path="epk" element={<EPKManager />} />
             <Route path="calendar" element={<AvailabilityCalendar />} />
             <Route path="sos" element={<SOSBoard />} />
+            <Route path="messages" element={<Messages />} />
           </Route>
           
           {/* Área de Locales */}
@@ -62,12 +63,13 @@ function App() {
               <VenueLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<VenueDashboardHome />} />
+            <Route index element={<EventManager />} />
             <Route path="search" element={<ArtistSearch />} />
             <Route path="events" element={<EventManager />} />
             <Route path="calendar" element={<VenueCalendar />} />
             <Route path="sos" element={<VenueSOSManager />} />
             <Route path="profile" element={<VenueProfile />} />
+            <Route path="messages" element={<Messages />} />
           </Route>
         </Routes>
       </div>

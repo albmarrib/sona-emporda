@@ -1,13 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, db } from '../firebase/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db, messaging } from '../firebase/firebase';
+import { doc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getToken } from 'firebase/messaging';
 
 interface AuthContextType {
   currentUser: User | null;
   userRole: string | null;
   userData: any | null;
   loading: boolean;
+  requestPushPermission: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -15,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
   userRole: null,
   userData: null,
   loading: true,
+  requestPushPermission: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -71,11 +74,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const requestPushPermission = async () => {
+    if (!currentUser || !messaging) return;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const currentToken = await getToken(messaging, { vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY });
+        if (currentToken) {
+          await updateDoc(doc(db, 'users', currentUser.uid), {
+            fcmTokens: arrayUnion(currentToken)
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error requesting push permission:", e);
+    }
+  };
+
   const value = {
     currentUser,
     userRole,
     userData,
     loading,
+    requestPushPermission
   };
 
   return (

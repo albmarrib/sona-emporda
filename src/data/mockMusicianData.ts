@@ -8,12 +8,16 @@ export interface MusicianProfile {
   shortBio: string;
   contactPhone: string;
   contactWhatsapp: string;
+  contactEmail?: string;
+  websiteUrl?: string;
+  instagramUrl?: string;
   spotifyUrl: string;
   youtubeUrl: string;
   technicalRider: string;
   rating: number;
   reviewsCount: number;
   profileImageUrl?: string;
+  customApplyMessage?: string;
 }
 
 export type DayStatus = 'available' | 'unavailable' | 'booked';
@@ -25,7 +29,7 @@ export interface MusicianCalendar {
 // Datos simulados para inyectar globalmente
 export const mockMusicianProfile: MusicianProfile = {
   id: 'musician-123',
-  stageName: 'Acústico Sunset',
+  stageName: 'Dúo Costa Brava',
   formationType: 'duo',
   membersCount: 2,
   membersNames: 'Carlos Ruiz (Guitarra), Ana Silva (Voz)',

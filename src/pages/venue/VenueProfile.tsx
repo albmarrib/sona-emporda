@@ -11,6 +11,10 @@ export const VenueProfile = () => {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [contactWhatsapp, setContactWhatsapp] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
+  const [customInviteMessage, setCustomInviteMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -19,6 +23,10 @@ export const VenueProfile = () => {
       setEmail(userData.email || currentUser?.email || '');
       setAddress(userData.address || '');
       setContactPhone(userData.contactPhone || '');
+      setContactWhatsapp(userData.contactWhatsapp || '');
+      setWebsiteUrl(userData.websiteUrl || '');
+      setInstagramUrl(userData.instagramUrl || '');
+      setCustomInviteMessage(userData.customInviteMessage || '');
     }
   }, [userData, currentUser]);
 
@@ -30,7 +38,11 @@ export const VenueProfile = () => {
         name,
         email,
         address,
-        contactPhone
+        contactPhone,
+        contactWhatsapp,
+        websiteUrl,
+        instagramUrl,
+        customInviteMessage
       });
       alert('Perfil actualizado con éxito. ¡Esta es la dirección que aparecerá en tus eventos y alertas SOS!');
     } catch (e) {
@@ -102,15 +114,68 @@ export const VenueProfile = () => {
 
         <div className="flex flex-col gap-2">
           <label className="text-[10px] uppercase tracking-widest text-white/50 flex items-center gap-2">
-            <FiPhone /> WhatsApp / Teléfono de Contacto
+            <FiPhone /> Teléfono Fijo o Contacto
           </label>
           <input 
             type="text" 
             value={contactPhone}
             onChange={(e) => setContactPhone(e.target.value)}
+            placeholder="Ej: +34 900 000 000"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50 flex items-center gap-2">
+            WhatsApp Business / Móvil (Opcional)
+          </label>
+          <input 
+            type="text" 
+            value={contactWhatsapp}
+            onChange={(e) => setContactWhatsapp(e.target.value)}
             placeholder="Ej: +34 600 000 000"
             className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
           />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50">
+            Página Web (Opcional)
+          </label>
+          <input 
+            type="url" 
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://tulocal.com"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50">
+            Instagram (Opcional)
+          </label>
+          <input 
+            type="url" 
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://instagram.com/tu_local"
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label className="text-[10px] uppercase tracking-widest text-white/50">
+            Plantilla de Invitación (Chat)
+          </label>
+          <textarea 
+            rows={3}
+            value={customInviteMessage}
+            onChange={(e) => setCustomInviteMessage(e.target.value)}
+            placeholder="Ej: Hola, nos gustaría que actuaras en nuestro local..."
+            className="bg-white/5 border border-white/10 p-3 text-white focus:outline-none focus:border-gold transition-colors resize-none"
+          />
+          <p className="text-[10px] text-white/30 italic">Este mensaje se usará como plantilla al invitar a un músico a un evento.</p>
         </div>
 
         <div className="pt-6 border-t border-white/10 flex justify-end">

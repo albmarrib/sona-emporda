@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Header } from "../../components/public/Header";
 import { EventCard } from "../../components/public/EventCard";
 import { EventCalendar } from "../../components/public/EventCalendar";
 import { VenueList } from "../../components/public/VenueList";
 import { LoadingScreen } from "../../components/shared/LoadingScreen";
 import { useEvents } from "../../hooks/useEvents";
+import { useAuth } from "../../contexts/AuthContext";
 import { InstallPWAModal } from "../../components/public/InstallPWAModal";
 import { Info } from "lucide-react";
 
@@ -18,9 +19,27 @@ export const Home = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  
+  const navigate = useNavigate();
+  const { currentUser, userData, loading: authLoading } = useAuth();
   
   const viewParam = searchParams.get("view") as ViewMode;
   const activeView: ViewMode = ["LISTA", "CALENDARIO", "LUGARES"].includes(viewParam) ? viewParam : "LISTA";
+
+  useEffect(() => {
+    // Auto-redirect authenticated users to their dashboard on load
+    if (!authLoading && currentUser && userData?.role) {
+      navigate(`/${userData.role}`);
+    }
+  }, [currentUser, userData, authLoading, navigate]);
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches 
+      || (window.navigator as any).standalone 
+      || document.referrer.includes('android-app://');
+    setIsStandalone(standalone);
+  }, []);
 
   const setActiveView = (view: ViewMode) => {
     setSearchParams({ view });
@@ -257,14 +276,16 @@ export const Home = () => {
         <p className="text-white/30 text-[10px] uppercase tracking-widest mb-6">
           © {new Date().getFullYear()} Todos los derechos reservados.
         </p>
-        <button 
-          onClick={() => window.dispatchEvent(new Event('open-pwa-modal'))}
-          className="inline-flex items-center gap-2 text-white/50 hover:text-gold transition-colors text-xs"
-          title="Instalar App"
-        >
-          <Info size={16} />
-          <span>Instalar App</span>
-        </button>
+        {!isStandalone && (
+          <button 
+            onClick={() => window.dispatchEvent(new Event('open-pwa-modal'))}
+            className="inline-flex items-center gap-2 text-white/50 hover:text-gold transition-colors text-xs"
+            title="Instalar App"
+          >
+            <Info size={16} />
+            <span>Instalar App</span>
+          </button>
+        )}
       </footer>
     </div>
   );

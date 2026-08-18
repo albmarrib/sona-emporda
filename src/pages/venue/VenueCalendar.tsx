@@ -13,7 +13,7 @@ import { EPKModal } from '../../components/shared/EPKModal';
 
 
 export const VenueCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1)); // August 2026 for mock data
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
   const [realMusicians, setRealMusicians] = useState<any[]>([]);
@@ -55,6 +55,13 @@ export const VenueCalendar = () => {
   
   const handleDayClick = (day: Date) => {
     if (selectedDate && isSameDay(day, selectedDate)) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (day < today) {
+        alert("No puedes programar eventos en fechas pasadas.");
+        return;
+      }
+      
       const dayKey = format(day, 'yyyy-MM-dd');
       const existingEvent = venueEvents.find(e => format(parseISO(e.date), 'yyyy-MM-dd') === dayKey);
       if (!existingEvent) {
@@ -63,6 +70,12 @@ export const VenueCalendar = () => {
       }
     }
     setSelectedDate(day);
+    // Auto-scroll on mobile
+    if (window.innerWidth < 1280) {
+      setTimeout(() => {
+        document.getElementById('calendar-details')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
   };
 
   const handleCreateDraftEvent = async () => {
@@ -193,12 +206,13 @@ export const VenueCalendar = () => {
             const isConfirmed = eventForDay?.status === 'confirmed' || (eventForDay?.status === 'published' && eventForDay?.musicianId);
             const isPublished = eventForDay?.status === 'published' && !eventForDay?.musicianId;
 
+            const isToday = isSameDay(day, new Date());
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isCurrentMonth = isSameMonth(day, currentDate);
             const hasApplicants = eventForDay?.applicants && eventForDay.applicants.length > 0;
             
             let cellBg = 'bg-black border border-white/5';
-            let dateTextColor = isSelected ? 'text-gold font-bold' : 'text-white/80';
+            let dateTextColor = isSelected ? 'text-gold font-bold' : (isToday ? 'text-blue-400 font-bold' : 'text-white/80');
             
             if (isRejected) cellBg = 'bg-red-900/40 border border-red-500/50';
             else if (isDraft) cellBg = 'bg-orange-900/40 border border-orange-500/30';
@@ -217,7 +231,7 @@ export const VenueCalendar = () => {
               <div 
                 key={dayKey}
                 onClick={() => handleDayClick(day)}
-                className={`${cellBg} aspect-square p-1 md:p-2 relative cursor-pointer hover:bg-white/5 transition-colors flex flex-col items-center justify-start gap-1 overflow-hidden ${!isCurrentMonth ? 'opacity-20' : ''} ${isSelected && !isPendingMusician && !isConfirmed ? 'ring-1 md:ring-2 ring-gold ring-inset z-10' : ''}`}
+                className={`${cellBg} aspect-square p-1 md:p-2 relative cursor-pointer hover:bg-white/5 transition-colors flex flex-col items-center justify-start gap-1 overflow-hidden ${!isCurrentMonth ? 'opacity-20' : ''} ${isToday ? 'ring-2 ring-blue-500/50 ring-inset' : ''} ${isSelected && !isPendingMusician && !isConfirmed ? 'ring-1 md:ring-2 ring-gold ring-inset z-10' : ''}`}
               >
                 {hasApplicants && (
                   <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-20"></div>
@@ -238,36 +252,18 @@ export const VenueCalendar = () => {
           })}
         </div>
         
-        <div className="mt-auto pt-4 flex flex-wrap gap-4 text-[9px] uppercase tracking-widest text-white/50 bg-white/5 p-4 border border-white/10 w-full">
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 bg-green-900/40 border border-green-500/30 rounded flex items-center justify-center shrink-0"></div>
-             Buscando Músicos
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 bg-yellow-500 border border-yellow-400 rounded flex items-center justify-center shrink-0"><FiMusic className="text-black w-2 h-2" /></div>
-             Esperando Músico
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 bg-blue-900/40 border border-blue-500/30 rounded flex items-center justify-center shrink-0"><FiMusic className="text-blue-500 w-2 h-2" /></div>
-             Músico Interesado
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 bg-green-500 border border-green-400 rounded flex items-center justify-center shrink-0"><FiMusic className="text-black w-2 h-2" /></div>
-             Cerrado (Público)
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 bg-red-900/40 border border-red-500/50 rounded flex items-center justify-center shrink-0"></div>
-             Rechazado
-           </div>
-           <div className="flex items-center gap-2">
-             <div className="w-3 h-3 border-2 border-gold rounded-full shrink-0"></div>
-             Seleccionado
-           </div>
+        <div className="mt-auto pt-4 flex flex-wrap gap-3 md:gap-4 text-[8px] md:text-[9px] uppercase tracking-widest text-white/50 bg-white/5 p-3 md:p-4 border border-white/10 w-full justify-center md:justify-start">
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-green-900/40 border border-green-500/30 rounded-sm"></div>Buscando</div>
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-yellow-500 border border-yellow-400 rounded-sm"></div>Esperando</div>
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-blue-900/40 border border-blue-500/30 rounded-sm"></div>Interesado</div>
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-green-500 border border-green-400 rounded-sm"></div>Cerrado</div>
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 bg-red-900/40 border border-red-500/50 rounded-sm"></div>Rechazado</div>
+           <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 border border-gold rounded-full"></div>Seleccionado</div>
         </div>
       </div>
 
       {/* Results Section */}
-      <div className="w-full xl:w-[400px] flex flex-col bg-black border border-white/10 shrink-0">
+      <div id="calendar-details" className="w-full xl:w-[400px] flex flex-col bg-black border border-white/10 shrink-0 scroll-mt-20">
         {!selectedDate ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-white/40 min-h-[300px]">
             <FiCalendar className="w-12 h-12 mb-4 opacity-20" />
@@ -284,18 +280,33 @@ export const VenueCalendar = () => {
               </p>
             </div>
 
-            {!selectedDayEvent && (
-              <div className="px-4 md:px-6 pt-6">
-                <button 
-                  onClick={() => {
-                    setNewEvent({ title: '', time: '21:00', musicianName: '', musicianId: '' });
-                    setIsNewEventModalOpen(true);
-                  }}
-                  className="w-full bg-gold text-black font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-white transition-colors"
-                >
-                  Programar Nuevo Evento
-                </button>
-              </div>
+            {!selectedDayEvent && selectedDate && (
+              (() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                if (selectedDate >= today) {
+                  return (
+                    <div className="px-4 md:px-6 pt-6">
+                      <button 
+                        onClick={() => {
+                          setNewEvent({ title: '', time: '21:00', musicianName: '', musicianId: '' });
+                          setIsNewEventModalOpen(true);
+                        }}
+                        className="w-full bg-gold text-black font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-white transition-colors"
+                      >
+                        Programar Nuevo Evento
+                      </button>
+                    </div>
+                  );
+                }
+                return (
+                   <div className="px-4 md:px-6 pt-6">
+                      <div className="p-4 border border-white/10 bg-white/5 text-center text-white/50 text-xs italic">
+                        No se pueden programar eventos en fechas pasadas.
+                      </div>
+                   </div>
+                );
+              })()
             )}
 
             {selectedDayEvent?.status === 'rejected' && (

@@ -1,12 +1,21 @@
-import { FiX, FiStar, FiMessageSquare, FiCalendar } from 'react-icons/fi';
+import { FiX, FiStar, FiCalendar } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import { db } from '../../firebase/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useEvents } from '../../hooks/useEvents';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useChat } from '../../hooks/useChat';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void }) => {
   const { events } = useEvents(true); // true to include drafts
   const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const navigate = useNavigate();
+  const { findOrCreateChat, sendMessage } = useChat();
+  const { userData } = useAuth();
 
   const venueOpenEvents = events.filter(e => 
     (e.venueId === currentUser?.uid || e.venueName === currentUser?.email) && 
@@ -96,12 +105,35 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
             </div>
           )}
           
-          {(artist.contactPhone || artist.contactWhatsapp) && (
-             <div>
-              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-2">CONTACTO PRIVADO</h3>
-              <div className="bg-white/5 border border-white/10 p-4 text-white/80 text-sm">
-                {artist.contactPhone && <p>Tel: {artist.contactPhone}</p>}
-                {artist.contactWhatsapp && <p>WhatsApp: {artist.contactWhatsapp}</p>}
+          {(artist.contactPhone || artist.contactWhatsapp || artist.contactEmail || artist.websiteUrl || artist.instagramUrl) && (
+            <div>
+              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-3">CONTACTO DIRECTO</h3>
+              <div className="flex flex-wrap gap-2">
+                {artist.contactWhatsapp && (
+                  <a href={`https://wa.me/${artist.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
+                    WhatsApp
+                  </a>
+                )}
+                {artist.contactPhone && (
+                  <a href={`tel:${artist.contactPhone.replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
+                    Llamar
+                  </a>
+                )}
+                {artist.contactEmail && (
+                  <a href={`mailto:${artist.contactEmail}`} className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
+                    Email
+                  </a>
+                )}
+                {artist.websiteUrl && (
+                  <a href={artist.websiteUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
+                    Web
+                  </a>
+                )}
+                {artist.instagramUrl && (
+                  <a href={artist.instagramUrl} target="_blank" rel="noopener noreferrer" className="bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
+                    Instagram
+                  </a>
+                )}
               </div>
             </div>
           )}
@@ -136,7 +168,15 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
                       if (!selectedEventId) return;
                       
                       const selectedEvt = venueOpenEvents.find(e => e.id === selectedEventId);
-                      const evtDate = selectedEvt?.date || 'próximamente';
+                      let evtDate = 'próximamente';
+                      if (selectedEvt?.date) {
+                        try {
+                          evtDate = format(parseISO(selectedEvt.date), "dd 'de' MMMM 'a las' HH:mm", { locale: es });
+                        } catch (e) {
+                          // fallback
+                          evtDate = selectedEvt.date;
+                        }
+                      }
 
                       const confirmMsg = `¿Estás seguro de invitar a ${artist.stageName} a tu evento "${selectedEvt?.title}"?`;
                       if (!window.confirm(confirmMsg)) return;
@@ -152,9 +192,20 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
                         onClose();
                         if (onContacted) onContacted();
 
-                        // Open WhatsApp
-                        const waText = encodeURIComponent(`¡Hola ${artist.stageName}! Te escribo desde Sona Empordà. Te he enviado una invitación oficial para tocar en nuestro evento "${selectedEvt?.title}" el ${evtDate}. Por favor, entra en la app y acéptala si te interesa.`);
-                        window.open(`https://wa.me/${artist.contactWhatsapp || '34600000000'}?text=${waText}`, '_blank');
+                        // Create chat and send auto message
+                        const venueName = userData?.name || currentUser?.email || 'un local';
+                        
+                        let template = userData?.customInviteMessage;
+                        if (template) {
+                          template = template.replace('[Músico]', artist.stageName).replace('[Local]', venueName).replace('[Evento]', selectedEvt?.title || '');
+                        } else {
+                          template = `Hola ${artist.stageName}, te escribo de ${venueName} porque quería ver si podrías actuar en el evento "${selectedEvt?.title}" el ${evtDate}. Te acabo de enviar la invitación por Sona-Empordà también por si quieres revisar los datos.`;
+                        }
+                        
+                        const chatId = await findOrCreateChat(artist.id, selectedEventId);
+                        await sendMessage(chatId, template);
+                        
+                        navigate('/venue/messages', { state: { chatId } });
 
                       } catch (e) {
                         console.error(e);
@@ -165,7 +216,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
                       selectedEventId ? 'bg-gold text-black hover:bg-white' : 'bg-white/10 text-white/30 cursor-not-allowed'
                     }`}
                   >
-                    <FiMessageSquare className="w-5 h-5" /> Invitar y Abrir WhatsApp
+                    <FaWhatsapp className="w-5 h-5" /> Invitar y Abrir Chat
                   </button>
                 </div>
               )}

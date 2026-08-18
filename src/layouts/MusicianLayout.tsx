@@ -2,7 +2,9 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiMessageSquare } from 'react-icons/fi';
+import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase } from 'react-icons/fi';
+import { FloatingChatButton } from '../components/chat/FloatingChatButton';
+import { InviteColleagues } from '../components/shared/InviteColleagues';
 
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
@@ -32,7 +34,7 @@ export const MusicianLayout = () => {
   const navItems = [
     { name: 'Dashboard', mobileName: 'Inicio', path: '/musician', icon: <FiHome className="w-5 h-5" /> },
     { name: 'Calendario', mobileName: 'Agenda', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
-    { name: 'Invitaciones', mobileName: 'Ofertas', path: '/musician/offers', icon: <FiMessageSquare className="w-5 h-5" /> },
+    { name: 'Invitaciones', mobileName: 'Ofertas', path: '/musician/offers', icon: <FiBriefcase className="w-5 h-5" /> },
     { name: 'Oportunidades', mobileName: 'Buscar', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
     { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
     { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
@@ -61,7 +63,7 @@ export const MusicianLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest transition-colors ${
+                className={`relative flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest transition-colors ${
                   isActive ? 'bg-white/10 text-gold border-r-2 border-gold' : 'text-white/60 hover:text-white hover:bg-white/5'
                 }`}
               >
@@ -78,13 +80,18 @@ export const MusicianLayout = () => {
             <p className="text-xs truncate font-bold text-gold">{profile?.stageName || currentUser?.email || 'Músico'}</p>
           </div>
           
-          <button 
-            onClick={() => setShowTutorial(true)}
-            className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors mb-2"
-          >
-            <Info className="w-5 h-5" />
-            Ver Tutorial
-          </button>
+          <div className="flex gap-2 w-full mb-2">
+            <div className="flex-shrink-0 flex items-center justify-center">
+              <InviteColleagues userType="musician" />
+            </div>
+            <button 
+              onClick={() => setShowTutorial(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-2 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <Info className="w-5 h-5" />
+              Tutorial
+            </button>
+          </div>
 
           <button 
             onClick={handleLogout}
@@ -110,6 +117,7 @@ export const MusicianLayout = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <InviteColleagues userType="musician" />
             <button 
               onClick={() => setShowTutorial(true)} 
               className="text-white/60 hover:text-white p-2 active:scale-95 transition-transform"
@@ -146,7 +154,7 @@ export const MusicianLayout = () => {
                 {isSOS && (
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-red-900/20 rounded-full blur-md"></div>
                 )}
-                <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''}`}>
+                <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''} relative`}>
                   {item.icon}
                 </div>
                 <span className="text-[9px] uppercase tracking-wider">{item.mobileName || item.name}</span>
@@ -156,6 +164,7 @@ export const MusicianLayout = () => {
         </div>
       </nav>
 
+      <FloatingChatButton />
     </div>
   );
 };

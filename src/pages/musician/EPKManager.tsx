@@ -156,6 +156,55 @@ export const EPKManager = () => {
               />
             </div>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Email de Contacto (Opcional)</label>
+              <input 
+                type="email" 
+                placeholder="tu@email.com"
+                value={formData.contactEmail || ''} 
+                onChange={(e) => handleChange('contactEmail', e.target.value)}
+                className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors" 
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Página Web (Opcional)</label>
+              <input 
+                type="url" 
+                placeholder="https://tuweb.com"
+                value={formData.websiteUrl || ''} 
+                onChange={(e) => handleChange('websiteUrl', e.target.value)}
+                className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors" 
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 mt-4">
+            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Instagram (Opcional)</label>
+            <input 
+              type="url" 
+              placeholder="https://instagram.com/tu_perfil"
+              value={formData.instagramUrl || ''} 
+              onChange={(e) => handleChange('instagramUrl', e.target.value)}
+              className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors" 
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 mt-4">
+            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Plantilla de Mensaje para Contacto (Chat)</label>
+            <textarea 
+              rows={3}
+              placeholder="Ej: Hola, me gustaría poder actuar en su local..."
+              value={formData.customApplyMessage || ''} 
+              onChange={(e) => handleChange('customApplyMessage', e.target.value)}
+              className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors resize-none" 
+            />
+            <p className="text-[9px] uppercase tracking-widest text-white/30">
+              Este mensaje es el que se enviará por defecto cuando te postules para tocar en un local.
+            </p>
+          </div>
         </section>
 
         {/* Media & Links */}

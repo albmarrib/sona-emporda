@@ -4,11 +4,16 @@ import { db } from '../../firebase/firebase';
 import { collection, onSnapshot, query, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useMusicianProfile } from '../../hooks/useMusicianProfile';
+import { useChat } from '../../hooks/useChat';
+import { useNavigate } from 'react-router-dom';
+import { FaWhatsapp } from 'react-icons/fa';
 
 export const SOSBoard = () => {
   const { currentUser } = useAuth();
   const { profile } = useMusicianProfile();
   const [urgencies, setUrgencies] = useState<any[]>([]);
+  const { findOrCreateChat, sendMessage } = useChat();
+  const navigate = useNavigate();
   
   // Filtros
   const [filterMode, setFilterMode] = useState<'all' | 'mine' | 'urgent'>('all');
@@ -47,15 +52,17 @@ export const SOSBoard = () => {
     return () => unsubscribe();
   }, []);
 
-  const openWhatsApp = (phone: string, title: string) => {
-    if (!phone) {
-      alert("Este anuncio no tiene un teléfono de contacto válido.");
-      return;
+  const openChat = async (sos: any) => {
+    if (!currentUser) return;
+    try {
+      const template = `Hola, he visto tu alerta SOS "${sos.title}" en Sona Empordà y puedo ayudar.`;
+      const chatId = await findOrCreateChat(sos.authorId);
+      await sendMessage(chatId, template);
+      navigate('/musician/messages', { state: { chatId } });
+    } catch (e) {
+      console.error(e);
+      alert('Error al abrir el chat.');
     }
-    const text = encodeURIComponent(`Hola, he visto tu alerta SOS "${title}" en Sona Empordà y puedo ayudar.`);
-    // Remove all non-numeric chars from phone except '+'
-    const cleanPhone = phone.replace(/[^\d+]/g, '');
-    window.open(`https://wa.me/${cleanPhone}?text=${text}`, '_blank');
   };
 
   const handleCreateSos = async (e: React.FormEvent) => {
@@ -153,10 +160,10 @@ export const SOSBoard = () => {
 
         {!isMine && (
           <button 
-            onClick={() => openWhatsApp(sos.authorPhone, sos.title)}
-            className="w-full py-2.5 text-[9px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 text-white mt-1"
+            onClick={() => openChat(sos)}
+            className="w-full py-2.5 text-[9px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 bg-green-900/30 border border-green-500/50 hover:bg-green-600 text-white mt-1"
           >
-            Hablar por WhatsApp
+            <FaWhatsapp className="w-4 h-4" /> Hablar por Chat
           </button>
         )}
 

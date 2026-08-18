@@ -92,9 +92,29 @@ export const VenueDashboardHome = () => {
                     </div>
                   </div>
                   
-                  <span className="w-full sm:w-auto bg-green-900/30 text-green-500 border border-green-900 px-5 py-2 text-[10px] uppercase tracking-widest font-bold text-center flex items-center justify-center gap-2 shrink-0">
-                     Confirmado
+                  <span className={`w-full sm:w-auto px-5 py-2 text-[10px] uppercase tracking-widest font-bold text-center flex items-center justify-center gap-2 shrink-0 ${
+                    event.status === 'published' ? 'bg-green-900/30 text-green-500 border border-green-900' :
+                    event.status === 'rejected' ? 'bg-red-900/30 text-red-500 border border-red-900' :
+                    event.status === 'pending_musician' ? 'bg-yellow-900/30 text-yellow-500 border border-yellow-900' :
+                    event.status === 'musician_accepted' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' :
+                    'bg-green-900 text-white border border-green-700'
+                  }`}>
+                    {
+                      event.status === 'published' ? 'Buscando Grupo' :
+                      event.status === 'rejected' ? 'Rechazado' :
+                      event.status === 'pending_musician' ? 'Esperando Respuesta' :
+                      event.status === 'musician_accepted' ? 'Músico Interesado' :
+                      'Confirmado'
+                    }
                   </span>
+                  <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); navigate('/venue/events'); }}
+                      className="w-full sm:w-auto px-4 py-2 border border-white/20 text-white/50 hover:border-gold hover:text-gold transition-colors text-[10px] uppercase tracking-widest font-bold"
+                    >
+                      Editar/Borrar
+                    </button>
+                  </div>
                 </div>
               );
             })}

@@ -1,48 +1,63 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiMapPin, FiCalendar, FiCheck, FiMessageCircle, FiBriefcase } from 'react-icons/fi';
+import { FiMapPin, FiCalendar, FiCheck, FiBriefcase } from 'react-icons/fi';
+import { FaWhatsapp } from 'react-icons/fa';
 import { useEvents } from '../../hooks/useEvents';
 import { useMusicianProfile } from '../../hooks/useMusicianProfile';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
+import { useChat } from '../../hooks/useChat';
+import { useNavigate } from 'react-router-dom';
 
 export const MusicianOpportunities = () => {
   const { events, loading } = useEvents(true);
   const { profile } = useMusicianProfile();
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
+  const { findOrCreateChat, sendMessage } = useChat();
+  const navigate = useNavigate();
 
   if (loading) return <LoadingScreen />;
 
   // Filter for events that are NOT confirmed and have NOT been declined by the musician
   const opportunities = events
-    .filter(e => e.status !== 'confirmed' && e.status !== 'draft' && !e.declinedBy?.includes(profile?.id))
+    .filter(e => {
+       if (e.status === 'confirmed' || e.status === 'draft' || e.declinedBy?.includes(profile?.id)) return false;
+       const eventDate = parseISO(e.date);
+       const today = new Date();
+       today.setHours(0, 0, 0, 0);
+       return eventDate >= today;
+    })
     .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
 
-  const handleApply = async (eventId: string) => {
+  const handleApply = async (event: any) => {
     if (!profile?.id) return;
-    setApplyingTo(eventId);
+    setApplyingTo(event.id);
     try {
-      const eventRef = doc(db, 'events', eventId);
+      const eventRef = doc(db, 'events', event.id);
       await updateDoc(eventRef, {
         applicants: arrayUnion(profile.id)
       });
-      alert('¡Te has postulado con éxito!');
+      
+      const formattedDate = format(parseISO(event.date), "d 'de' MMMM", { locale: es });
+      let template = profile.customApplyMessage;
+      if (template) {
+        template = template.replace('[Músico]', profile.stageName).replace('[Local]', event.venueName).replace('[Evento]', event.title);
+      } else {
+        template = `Hola ${event.venueName}, somos ${profile.stageName}. Hemos visto que buscáis músicos para el evento "${event.title}" del ${formattedDate}. Nos gustaría postularnos para tocar allí.`;
+      }
+      
+      const chatId = await findOrCreateChat(event.venueId || 'venue', event.id);
+      await sendMessage(chatId, template);
+      
+      navigate('/musician/messages', { state: { chatId } });
     } catch (error) {
       console.error(error);
       alert('Hubo un error al postularte.');
     } finally {
       setApplyingTo(null);
     }
-  };
-
-  const openWhatsApp = (venueName: string, eventTitle: string, date: string) => {
-    const formattedDate = format(parseISO(date), "d 'de' MMMM", { locale: es });
-    const text = encodeURIComponent(`Hola ${venueName}, somos ${profile?.stageName || 'un grupo'}. Hemos visto que buscáis músicos para el evento "${eventTitle}" del ${formattedDate}. Nos gustaría postularnos.`);
-    // Since we don't have a phone number in the mock event, we'll use a dummy one
-    const dummyPhone = "34600000000";
-    window.open(`https://wa.me/${dummyPhone}?text=${text}`, '_blank');
   };
 
   return (
@@ -99,22 +114,15 @@ export const MusicianOpportunities = () => {
 
                 <div className="mt-auto flex gap-2">
                   <button 
-                    onClick={() => handleApply(event.id)}
+                    onClick={() => handleApply(event)}
                     disabled={hasApplied || applyingTo === event.id}
-                    className={`flex-1 flex items-center justify-center gap-1 py-2 text-[9px] uppercase tracking-widest font-bold transition-colors ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${
                       hasApplied 
                         ? 'bg-green-900/30 text-green-500 border border-green-500/50 cursor-not-allowed' 
                         : 'bg-gold text-black hover:bg-white'
                     }`}
                   >
-                    {applyingTo === event.id ? '...' : hasApplied ? <><FiCheck className="w-3 h-3" /> Listo</> : 'Postularme'}
-                  </button>
-                  <button 
-                    onClick={() => openWhatsApp(event.venueName, event.title, event.date)}
-                    className="flex-1 flex items-center justify-center gap-1 py-2 border border-white/20 text-white hover:bg-white/10 transition-colors text-[9px] uppercase tracking-widest"
-                  >
-                    <FiMessageCircle className="w-3 h-3" />
-                    WhatsApp
+                    {applyingTo === event.id ? '...' : hasApplied ? <><FiCheck className="w-3 h-3" /> Postulado</> : <><FaWhatsapp className="w-4 h-4" /> Postularme y Abrir Chat</>}
                   </button>
                 </div>
               </div>

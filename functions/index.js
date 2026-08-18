@@ -39,15 +39,50 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/messages/{messa
     return;
   }
 
-  // Construct message
+  // Calculate total unread messages for the recipient
+  let unreadCount = 0;
+  try {
+    const chatsSnapshot = await admin.firestore().collection("chats").where("participants", "array-contains", recipientId).get();
+    for (const chat of chatsSnapshot.docs) {
+      const messagesSnapshot = await admin.firestore().collection(`chats/${chat.id}/messages`).where("read", "==", false).get();
+      messagesSnapshot.forEach(msg => {
+        if (msg.data().senderId !== recipientId) {
+          unreadCount++;
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Error calculating unread count:", err);
+    unreadCount = 1; // Fallback
+  }
+
+  // Construct message with APNs payload for iOS Badging
   const payload = {
     notification: {
       title: `Nuevo mensaje de ${senderName}`,
       body: text.length > 50 ? text.substring(0, 50) + "..." : text,
     },
+    apns: {
+      payload: {
+        aps: {
+          badge: unreadCount,
+          sound: "default"
+        }
+      }
+    },
+    webpush: {
+      headers: {
+        Urgency: "high"
+      },
+      notification: {
+        badge: "https://sona-emporda.web.app/pwa-icon.png",
+        icon: "https://sona-emporda.web.app/pwa-icon.png",
+      }
+    },
     data: {
       url: `${baseUrl}?chatId=${chatId}`,
       chatId: chatId,
+      unreadCount: unreadCount.toString(),
     },
     tokens: fcmTokens
   };
