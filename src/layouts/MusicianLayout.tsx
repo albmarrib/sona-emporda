@@ -30,12 +30,12 @@ export const MusicianLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/musician', icon: <FiHome className="w-5 h-5" /> },
-    { name: 'Calendario', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
-    { name: 'Invitaciones', path: '/musician/offers', icon: <FiMessageSquare className="w-5 h-5" /> },
-    { name: 'Oportunidades', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Tablón SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
-    { name: 'Mi EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
+    { name: 'Dashboard', mobileName: 'Inicio', path: '/musician', icon: <FiHome className="w-5 h-5" /> },
+    { name: 'Calendario', mobileName: 'Agenda', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Invitaciones', mobileName: 'Ofertas', path: '/musician/offers', icon: <FiMessageSquare className="w-5 h-5" /> },
+    { name: 'Oportunidades', mobileName: 'Buscar', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
+    { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
+    { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
   ];
 
   return (
@@ -105,7 +105,7 @@ export const MusicianLayout = () => {
             <Link to="/" className="text-lg tracking-widest uppercase">
               SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
             </Link>
-            <span className="text-[10px] text-gold font-bold truncate max-w-[150px]">
+            <span className="text-xs text-gold font-bold truncate max-w-[200px] mt-0.5">
               {profile?.stageName || currentUser?.email || 'Músico'}
             </span>
           </div>
@@ -149,7 +149,7 @@ export const MusicianLayout = () => {
                 <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''}`}>
                   {item.icon}
                 </div>
-                <span className="text-[9px] uppercase tracking-wider">{item.name.replace('Mi ', '').replace('Tablón ', '')}</span>
+                <span className="text-[9px] uppercase tracking-wider">{item.mobileName || item.name}</span>
               </Link>
             );
           })}

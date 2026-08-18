@@ -6,6 +6,7 @@ import { Login } from './pages/auth/Login';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { SosAlarm } from './components/shared/SosAlarm';
 import { LoadingScreen } from './components/shared/LoadingScreen';
+import { ScrollToTop } from './components/shared/ScrollToTop';
 import { MusicianLayout } from './layouts/MusicianLayout';
 import { DashboardHome } from './pages/musician/DashboardHome';
 import { EPKManager } from './pages/musician/EPKManager';
@@ -31,6 +32,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen bg-black font-sans text-white">
         <SosAlarm />
         <Routes>

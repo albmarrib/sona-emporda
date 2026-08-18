@@ -109,9 +109,8 @@ export const VenueLayout = () => {
             <Link to="/" className="text-lg tracking-widest uppercase flex items-center gap-2">
               <span>SONA</span>
               <span className="text-gold font-serif lowercase">Empordà</span>
-              <span className="text-[8px] border border-gold text-gold px-1 ml-2">LOCAL</span>
             </Link>
-            <span className="text-[10px] text-white/60 font-bold truncate max-w-[150px] mt-1">
+            <span className="text-xs text-white/80 font-bold truncate max-w-[200px] mt-0.5">
               {userData?.name || currentUser?.email || 'Mi Local'}
             </span>
           </div>
