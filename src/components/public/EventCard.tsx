@@ -1,6 +1,7 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
+import { FiAward } from "react-icons/fi";
 import type { SonaEvent } from "../../data/mockEvents";
 
 interface EventCardProps {
@@ -38,6 +39,11 @@ export const EventCard = ({ event }: EventCardProps) => {
         <div className="absolute top-4 left-4 bg-black/80 backdrop-blur-md px-3 py-2 md:hidden border border-white/10">
           <div className="text-white text-lg font-serif">{format(dateObj, "dd MMM", { locale: es })}</div>
         </div>
+        {(event as any).sponsorTier && (event as any).sponsorTier > 0 && (
+          <div className="absolute bottom-4 left-4 bg-gold/90 text-black text-[9px] uppercase tracking-widest px-2 py-1 font-bold rounded-sm shadow-lg flex items-center gap-1 backdrop-blur-sm">
+            <FiAward className="w-3 h-3" /> Patrocinado
+          </div>
+        )}
       </div>
 
       {/* Content */}

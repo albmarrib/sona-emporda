@@ -9,6 +9,7 @@ import { useEvents } from "../../hooks/useEvents";
 import { useAuth } from "../../contexts/AuthContext";
 import { InstallPWAModal } from "../../components/public/InstallPWAModal";
 import { Info } from "lucide-react";
+import { FiAward } from "react-icons/fi";
 
 // VIBES purificados sin emojis para estilo premium
 const VIBES = ["BAILAR", "TARDEO", "ACÚSTICO", "ELECTRÓNICA", "CENA"];
@@ -110,11 +111,47 @@ export const Home = () => {
                     className={`w-full h-full object-cover opacity-60 grayscale transition-transform duration-[6000ms] ${index === carouselIndex ? 'scale-105' : 'scale-100'}`}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                  
+                  {/* Sponsor Tier 3 Overlay on Carousel */}
+                  {event.sponsorTier === 3 && (
+                    <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/90 via-black/50 to-transparent pt-8 pb-16 flex flex-col items-center gap-4 z-20">
+                      <div className="flex items-center gap-3">
+                        <FiAward className="w-8 h-8 text-gold animate-pulse" />
+                        <span className="text-gold text-sm md:text-lg uppercase tracking-[0.5em] font-bold">Patrocinador Principal</span>
+                        <FiAward className="w-8 h-8 text-gold animate-pulse" />
+                      </div>
+                      {event.sponsorImageUrl ? (
+                        <img src={event.sponsorImageUrl} alt={event.sponsorName || 'Sponsor'} className="h-24 md:h-32 lg:h-40 object-contain drop-shadow-[0_0_30px_rgba(255,215,0,0.3)] brightness-200" />
+                      ) : (
+                        <span className="text-4xl md:text-6xl lg:text-7xl font-serif text-gold drop-shadow-[0_0_20px_rgba(255,215,0,0.5)] uppercase">{event.sponsorName}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sponsor Tier 2 Overlay on Carousel */}
+                  {event.sponsorTier === 2 && (
+                    <div className="absolute top-6 right-6 md:top-10 md:right-10 bg-black/60 backdrop-blur-md border-2 border-gold/50 p-6 shadow-2xl z-20 flex flex-col items-end gap-3 rounded-lg">
+                      <span className="text-gold text-xs uppercase tracking-[0.4em] font-bold">Patrocinador Oficial</span>
+                      {event.sponsorImageUrl ? (
+                        <img src={event.sponsorImageUrl} alt={event.sponsorName || 'Sponsor'} className="h-16 md:h-20 object-contain brightness-200" />
+                      ) : (
+                        <span className="text-2xl md:text-3xl font-serif text-white">{event.sponsorName}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Sponsor Tier 1 Overlay on Carousel */}
+                  {event.sponsorTier === 1 && (
+                    <div className="absolute top-6 right-6 md:top-10 md:right-10 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs md:text-sm uppercase tracking-widest px-6 py-3 shadow-2xl z-20">
+                      Presentado por <span className="font-bold text-gold ml-2 text-base md:text-lg">{event.sponsorName}</span>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="absolute inset-0 flex flex-col justify-center items-center text-center p-6 mt-16">
-                  <span className="text-gold text-xs uppercase tracking-[0.3em] mb-4 border border-gold/50 px-4 py-2">
-                    Destacado
+                  <span className="text-gold text-xs uppercase tracking-[0.3em] mb-4 border border-gold/50 px-4 py-2 flex items-center gap-2">
+                    {event.sponsorTier && event.sponsorTier > 0 && <FiAward className="w-4 h-4" />}
+                    {(event.sponsorTier && event.sponsorTier > 0) ? 'Patrocinado' : 'Destacado'}
                   </span>
                   <h2 className="text-4xl md:text-6xl font-serif text-white mb-4 max-w-4xl leading-tight drop-shadow-xl">
                     {event.title}

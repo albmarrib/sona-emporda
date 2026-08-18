@@ -3,6 +3,36 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
+exports.migrateAdmin = require("firebase-functions/v2/https").onRequest(async (req, res) => {
+  try {
+    const adminEmail = "axonai.ia@gmail.com";
+    
+    // Check if user already exists
+    let newUser;
+    try {
+      newUser = await admin.auth().getUserByEmail(adminEmail);
+      await admin.auth().updateUser(newUser.uid, { password: "232323" });
+    } catch (e) {
+      // 3. Create new user with old email and role admin
+      newUser = await admin.auth().createUser({
+        email: adminEmail,
+        password: "232323", // Firebase Auth requires at least 6 characters
+      });
+    }
+    
+    // 4. Create Firestore doc for new user
+    await admin.firestore().collection("users").doc(newUser.uid).set({
+      email: adminEmail,
+      role: "admin",
+      createdAt: new Date().toISOString()
+    }, { merge: true });
+    
+    res.send(`Admin created successfully. New Admin UID: ${newUser.uid}`);
+  } catch (err) {
+    res.status(500).send("Error: " + err.message);
+  }
+});
+
 exports.sendChatNotification = onDocumentCreated("chats/{chatId}/messages/{messageId}", async (event) => {
   const messageData = event.data.data();
   if (!messageData) return;

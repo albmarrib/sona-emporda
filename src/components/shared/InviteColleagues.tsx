@@ -25,10 +25,10 @@ export const InviteColleagues: React.FC<InviteColleaguesProps> = ({ userType }) 
   return (
     <button
       onClick={handleInvite}
-      className="flex items-center justify-center bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/30 transition-all w-10 h-10 md:w-11 md:h-11 rounded-full group shadow-lg shadow-[#25D366]/5 flex-shrink-0"
+      className="flex items-center justify-center bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white border border-[#25D366]/30 transition-all w-8 h-8 md:w-9 md:h-9 rounded-full group shadow-md shadow-[#25D366]/5 flex-shrink-0"
       title="Invitar a colegas por WhatsApp"
     >
-      <Share2 className="w-4 h-4 md:w-5 md:h-5 group-hover:scale-110 transition-transform" />
+      <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:scale-110 transition-transform" />
     </button>
   );
 };

@@ -3,7 +3,7 @@ import { Header } from "../../components/public/Header";
 import { useEvents } from "../../hooks/useEvents";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic } from "react-icons/fi";
+import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic, FiAward } from "react-icons/fi";
 import { useMusicianProfile } from "../../hooks/useMusicianProfile";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
@@ -83,14 +83,64 @@ export const EventDetail = () => {
               className="w-full h-full object-cover grayscale opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+            {/* Massive Tier 3 Overlay */}
+            {event.sponsorTier === 3 && (
+              <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/90 via-black/50 to-transparent pt-8 pb-16 flex flex-col items-center gap-4 z-20">
+                <div className="flex items-center gap-3">
+                  <FiAward className="w-8 h-8 text-gold animate-pulse" />
+                  <span className="text-gold text-sm md:text-lg uppercase tracking-[0.5em] font-bold">Patrocinador Principal</span>
+                  <FiAward className="w-8 h-8 text-gold animate-pulse" />
+                </div>
+                {event.sponsorImageUrl ? (
+                  <img src={event.sponsorImageUrl} alt={event.sponsorName || 'Sponsor'} className="h-24 md:h-32 lg:h-40 object-contain drop-shadow-[0_0_30px_rgba(255,215,0,0.3)] brightness-200" />
+                ) : (
+                  <span className="text-4xl md:text-6xl lg:text-7xl font-serif text-gold drop-shadow-[0_0_20px_rgba(255,215,0,0.5)] uppercase">{event.sponsorName}</span>
+                )}
+              </div>
+            )}
             
-            {event.isSponsored && (
-              <div className="absolute top-6 right-6 bg-gold text-black text-[10px] uppercase tracking-widest px-4 py-2 font-bold shadow-2xl">
-                Presentado por {event.sponsorName}
+            {/* Prominent Tier 2 Overlay */}
+            {event.sponsorTier === 2 && (
+              <div className="absolute top-6 right-6 md:top-10 md:right-10 bg-black/60 backdrop-blur-md border-2 border-gold/50 p-6 shadow-2xl z-20 flex flex-col items-end gap-3 rounded-lg">
+                <span className="text-gold text-xs uppercase tracking-[0.4em] font-bold">Patrocinador Oficial</span>
+                {event.sponsorImageUrl ? (
+                  <img src={event.sponsorImageUrl} alt={event.sponsorName || 'Sponsor'} className="h-16 md:h-20 object-contain brightness-200" />
+                ) : (
+                  <span className="text-2xl md:text-3xl font-serif text-white">{event.sponsorName}</span>
+                )}
+              </div>
+            )}
+
+            {/* Clear Tier 1 Overlay */}
+            {event.sponsorTier === 1 && (
+              <div className="absolute top-6 right-6 md:top-10 md:right-10 bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs md:text-sm uppercase tracking-widest px-6 py-3 shadow-2xl z-20">
+                Presentado por <span className="font-bold text-gold ml-2 text-base md:text-lg">{event.sponsorName}</span>
               </div>
             )}
           </div>
         </div>
+
+        {/* Level 3 Sponsor Huge Banner Bottom */}
+        {event.sponsorTier === 3 && (
+          <div className="px-6 mb-12">
+            <a 
+              href={event.sponsorLink || '#'} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block w-full border-2 border-gold/50 bg-gradient-to-r from-gold/10 via-gold/20 to-black p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 hover:bg-gold/20 transition-all duration-500 group cursor-pointer shadow-[0_0_30px_rgba(255,215,0,0.1)] rounded-xl"
+            >
+              <div className="flex-1">
+                <p className="text-xs md:text-sm text-gold uppercase tracking-[0.4em] mb-3 font-bold flex items-center gap-3">
+                  <FiAward className="w-5 h-5 animate-pulse" /> Patrocinador Oficial
+                </p>
+                <h3 className="text-2xl md:text-4xl font-serif text-white group-hover:text-gold transition-colors leading-tight">{event.sponsorMessage || `Este gran evento es posible gracias a ${event.sponsorName}`}</h3>
+              </div>
+              <div className="flex-shrink-0">
+                 <span className="text-sm md:text-base uppercase tracking-widest border-2 border-gold text-gold px-8 py-4 font-bold group-hover:bg-gold group-hover:text-black transition-colors rounded-lg shadow-lg">Descubrir Marca</span>
+              </div>
+            </a>
+          </div>
+        )}
 
         {/* Content */}
         <div className="px-6 grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">

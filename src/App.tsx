@@ -21,6 +21,8 @@ import { VenueProfile } from './pages/venue/VenueProfile';
 import { VenueSOSManager } from './pages/venue/VenueSOSManager';
 import { VenueCalendar } from './pages/venue/VenueCalendar';
 import { SeedDatabase } from './pages/SeedDatabase';
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { Messages } from './pages/shared/Messages';
 
 function App() {
@@ -70,6 +72,15 @@ function App() {
             <Route path="sos" element={<VenueSOSManager />} />
             <Route path="profile" element={<VenueProfile />} />
             <Route path="messages" element={<Messages />} />
+          </Route>
+
+          {/* Área de Administración */}
+          <Route path="/admin" element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<AdminDashboard />} />
           </Route>
         </Routes>
       </div>
