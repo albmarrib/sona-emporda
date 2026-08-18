@@ -3,12 +3,21 @@ import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
 import { FiHome, FiSearch, FiCalendar, FiLifeBuoy, FiLogOut, FiSettings } from 'react-icons/fi';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { OnboardingWizard } from '../components/shared/OnboardingWizard';
+import { TutorialSlides } from '../components/shared/TutorialSlides';
+import { Info } from 'lucide-react';
 
 export const VenueLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { currentUser, userData, loading } = useAuth();
+  const [showWizard, setShowWizard] = useState(
+    userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted
+  );
+  const [showTutorial, setShowTutorial] = useState(
+    userData && userData.tutorialSeen === undefined ? true : !userData?.tutorialSeen
+  );
 
   useEffect(() => {
     if (!loading && userData && !userData.address && pathname !== '/venue/profile') {
@@ -30,6 +39,8 @@ export const VenueLayout = () => {
 
   return (
     <div className="flex h-[100dvh] w-full bg-black text-white font-sans overflow-hidden">
+      {showWizard && <OnboardingWizard onComplete={() => setShowWizard(false)} />}
+      {!showWizard && showTutorial && <TutorialSlides onClose={() => setShowTutorial(false)} />}
       
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full bg-zinc-950">
@@ -70,6 +81,15 @@ export const VenueLayout = () => {
               <FiSettings className="w-4 h-4" />
             </Link>
           </div>
+          
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors mb-2"
+          >
+            <Info className="w-5 h-5" />
+            Ver Tutorial
+          </button>
+
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-red-400 hover:bg-red-900/20 transition-colors"
@@ -95,7 +115,14 @@ export const VenueLayout = () => {
               {userData?.name || currentUser?.email || 'Mi Local'}
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowTutorial(true)} 
+              className="text-white/60 hover:text-white active:scale-95 transition-transform"
+              title="Ver Tutorial"
+            >
+              <Info className="w-5 h-5" />
+            </button>
             <Link to="/venue/profile" className="text-white/60 hover:text-white transition-colors active:scale-95">
               <FiSettings className="w-5 h-5" />
             </Link>

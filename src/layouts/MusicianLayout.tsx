@@ -5,12 +5,24 @@ import { signOut } from 'firebase/auth';
 import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiMessageSquare } from 'react-icons/fi';
 
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
+import { OnboardingWizard } from '../components/shared/OnboardingWizard';
+import { TutorialSlides } from '../components/shared/TutorialSlides';
+import { useState } from 'react';
+import { Info } from 'lucide-react';
 
 export const MusicianLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userData } = useAuth();
   const { profile } = useMusicianProfile();
+  
+  const [showWizard, setShowWizard] = useState(
+    userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted
+  );
+  
+  const [showTutorial, setShowTutorial] = useState(
+    userData && userData.tutorialSeen === undefined ? true : !userData?.tutorialSeen
+  );
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -28,6 +40,8 @@ export const MusicianLayout = () => {
 
   return (
     <div className="flex h-[100dvh] w-full bg-black text-white font-sans overflow-hidden">
+      {showWizard && <OnboardingWizard onComplete={() => setShowWizard(false)} />}
+      {!showWizard && showTutorial && <TutorialSlides onClose={() => setShowTutorial(false)} />}
       
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full">
@@ -63,6 +77,15 @@ export const MusicianLayout = () => {
             <p className="text-[9px] uppercase tracking-widest text-white/40 mb-1">Sesión iniciada como</p>
             <p className="text-xs truncate font-bold text-gold">{profile?.stageName || currentUser?.email || 'Músico'}</p>
           </div>
+          
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors mb-2"
+          >
+            <Info className="w-5 h-5" />
+            Ver Tutorial
+          </button>
+
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-red-400 hover:bg-red-900/20 transition-colors"
@@ -86,9 +109,18 @@ export const MusicianLayout = () => {
               {profile?.stageName || currentUser?.email || 'Músico'}
             </span>
           </div>
-          <button onClick={handleLogout} className="text-white/60 hover:text-red-400 p-2 active:scale-95 transition-transform">
-            <FiLogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowTutorial(true)} 
+              className="text-white/60 hover:text-white p-2 active:scale-95 transition-transform"
+              title="Ver Tutorial"
+            >
+              <Info className="w-5 h-5" />
+            </button>
+            <button onClick={handleLogout} className="text-white/60 hover:text-red-400 p-2 active:scale-95 transition-transform">
+              <FiLogOut className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto">

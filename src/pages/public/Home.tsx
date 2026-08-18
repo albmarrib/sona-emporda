@@ -6,6 +6,8 @@ import { EventCalendar } from "../../components/public/EventCalendar";
 import { VenueList } from "../../components/public/VenueList";
 import { LoadingScreen } from "../../components/shared/LoadingScreen";
 import { useEvents } from "../../hooks/useEvents";
+import { InstallPWAModal } from "../../components/public/InstallPWAModal";
+import { Info } from "lucide-react";
 
 // VIBES purificados sin emojis para estilo premium
 const VIBES = ["BAILAR", "TARDEO", "ACÚSTICO", "ELECTRÓNICA", "CENA"];
@@ -70,6 +72,7 @@ export const Home = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
+      <InstallPWAModal />
       <Header />
 
       <main>
@@ -249,11 +252,19 @@ export const Home = () => {
       </main>
       
       {/* Footer Minimalista */}
-      <footer className="border-t border-white/10 py-12 text-center mt-20">
+      <footer className="border-t border-white/10 py-12 text-center mt-20 relative">
         <div className="text-gold font-serif text-2xl mb-4">Sona Empordà</div>
-        <p className="text-white/30 text-[10px] uppercase tracking-widest">
+        <p className="text-white/30 text-[10px] uppercase tracking-widest mb-6">
           © {new Date().getFullYear()} Todos los derechos reservados.
         </p>
+        <button 
+          onClick={() => window.dispatchEvent(new Event('open-pwa-modal'))}
+          className="inline-flex items-center gap-2 text-white/50 hover:text-gold transition-colors text-xs"
+          title="Instalar App"
+        >
+          <Info size={16} />
+          <span>Instalar App</span>
+        </button>
       </footer>
     </div>
   );
