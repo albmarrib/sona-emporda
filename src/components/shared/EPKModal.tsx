@@ -1,4 +1,4 @@
-import { FiX, FiStar, FiCalendar } from 'react-icons/fi';
+import { FiX, FiStar, FiCalendar, FiCheckCircle } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { db } from '../../firebase/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -10,7 +10,7 @@ import { es } from 'date-fns/locale';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../contexts/AuthContext';
 
-export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void }) => {
+export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, isApplicantForEventId }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void, isApplicantForEventId?: string }) => {
   const { events } = useEvents(true); // true to include drafts
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const navigate = useNavigate();
@@ -139,11 +139,57 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
           )}
 
             <div className="mt-4 border-t border-white/10 pt-6">
-              <h3 className="text-[10px] uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
-                <FiCalendar /> Invitar a un Evento
-              </h3>
-              
-              {venueOpenEvents.length === 0 ? (
+              {isApplicantForEventId ? (
+                <>
+                  <h3 className="text-[10px] uppercase tracking-widest text-green-400 mb-3 flex items-center gap-2">
+                    <FiStar /> Ha postulado para este bolo
+                  </h3>
+                  <div className="flex flex-col gap-4 bg-green-900/10 border border-green-500/20 p-4">
+                    <p className="text-white/70 text-sm">El músico ya ha enviado un mensaje para actuar en este evento.</p>
+                    <button 
+                      onClick={async () => {
+                        try {
+                          const chatId = await findOrCreateChat(artist.id, isApplicantForEventId);
+                          onClose();
+                          navigate('/venue/messages', { state: { chatId } });
+                        } catch (e) {
+                          console.error(e);
+                          alert('Error al abrir el chat.');
+                        }
+                      }}
+                      className="w-full bg-green-900 hover:bg-green-800 text-white font-bold uppercase tracking-widest text-[12px] py-4 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <FaWhatsapp className="w-5 h-5" /> Abrir Chat para Responder
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if (!window.confirm(`¿Quieres aceptar a ${artist.stageName} para este bolo de forma definitiva?`)) return;
+                        try {
+                          await updateDoc(doc(db, 'events', isApplicantForEventId), {
+                            status: 'confirmed',
+                            musicianId: artist.id,
+                            musicianName: artist.stageName
+                          });
+                          onClose();
+                          if (onContacted) onContacted();
+                        } catch (e) {
+                          console.error(e);
+                          alert('Error al aceptar la postulación.');
+                        }
+                      }}
+                      className="w-full bg-green-500 hover:bg-green-400 text-black font-extrabold uppercase tracking-widest text-[14px] py-5 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] flex items-center justify-center gap-3"
+                    >
+                      <FiCheckCircle className="w-6 h-6" /> ¡CONFIRMAR BANDA PARA ESTE EVENTO!
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-[10px] uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
+                    <FiCalendar /> Invitar a un Evento
+                  </h3>
+                  
+                  {venueOpenEvents.length === 0 ? (
                 <div className="bg-white/5 border border-white/10 p-4 text-sm text-white/50 text-center">
                   No tienes eventos publicados o en borrador buscando músicos. Crea uno en tu calendario primero.
                 </div>
@@ -219,6 +265,8 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted }:
                     <FaWhatsapp className="w-5 h-5" /> Invitar y Abrir Chat
                   </button>
                 </div>
+              )}
+                </>
               )}
             </div>
         </div>

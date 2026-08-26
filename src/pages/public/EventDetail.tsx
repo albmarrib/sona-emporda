@@ -158,11 +158,18 @@ export const EventDetail = () => {
               {event.title}
             </h1>
             
-            {(event.musicianName || musicianProfile?.stageName) && (
+            {event.musicianName || musicianProfile?.stageName ? (
               <div className="flex items-center gap-3 mb-8">
                 <FiMusic className="text-gold w-6 h-6" />
                 <h2 className="text-2xl font-serif text-white/90">
                   {event.musicianName || musicianProfile?.stageName}
+                </h2>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 mb-8">
+                <FiMusic className="text-white/30 w-6 h-6" />
+                <h2 className="text-2xl font-serif text-white/50 italic">
+                  Banda por confirmar
                 </h2>
               </div>
             )}
@@ -182,21 +189,19 @@ export const EventDetail = () => {
             </div>
 
             {/* Artist Section (if musician is registered) */}
-            {event.musicianId && musicianProfile && (
-              <div className="mt-16 pt-12 border-t border-white/10">
-                <h3 className="text-2xl font-serif text-white mb-8 border-l-4 border-gold pl-4">Conoce al Artista</h3>
+            {(musicianProfile && (event.musicianName || musicianProfile?.stageName)) && (
+              <div className="mt-12">
+                <h3 className="text-xl font-serif text-white mb-6 border-b border-white/10 pb-4">Conoce al Artista</h3>
                 
                 <div className="flex flex-col md:flex-row gap-8">
                   <div className="w-full md:w-1/3 shrink-0">
-                    <img 
-                      src={musicianProfile.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=600'} 
-                      alt={musicianProfile.stageName} 
-                      className="w-full h-auto object-cover grayscale opacity-90 border border-white/10"
-                    />
-                    <div className="mt-4 flex gap-2">
-                        <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
-                          {musicianProfile.mainGenre}
-                        </span>
+                    <div className="aspect-square w-full relative">
+                      <img 
+                        src={musicianProfile.profileImageUrl} 
+                        alt={musicianProfile.stageName}
+                        className="w-full h-full object-cover grayscale opacity-80"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
                     </div>
                   </div>
 

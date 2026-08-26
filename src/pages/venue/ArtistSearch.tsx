@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { FiSearch, FiMic, FiFilter, FiMapPin, FiStar, FiPlayCircle, FiMessageSquare, FiCheckCircle, FiX } from 'react-icons/fi';
-import { allMockMusicians } from '../../data/mockMusicianData';
+// mock data removed
 import { EPKModal } from '../../components/shared/EPKModal';
 import { db } from '../../firebase/firebase';
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../hooks/useSettings';
 
 
 
@@ -19,38 +20,38 @@ export const ArtistSearch = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [genreFilter, setGenreFilter] = useState('Todos');
 
+  const { settings } = useSettings();
+
   const [realMusicians, setRealMusicians] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchRealMusicians = async () => {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'musician'));
-        const snapshot = await getDocs(q);
-        const musicians = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            ...data,
-            id: doc.id,
-            stageName: data.stageName || data.name || 'Músico Sin Nombre',
-            mainGenre: data.genre || 'Varios',
-            profileImageUrl: data.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400',
-            rating: data.rating || 5.0,
-            reviewsCount: data.reviewsCount || 1,
-            calendar: data.calendar || {},
-            contactWhatsapp: data.phone || '',
-            description: data.bio || 'Músico registrado en Sona Empordà.',
-            location: data.location || 'Empordà'
-          };
-        });
-        setRealMusicians(musicians);
-      } catch (e) {
-        console.error("Error fetching real musicians", e);
-      }
-    };
-    fetchRealMusicians();
+    const q = query(collection(db, 'users'), where('role', '==', 'musician'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const musicians = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          stageName: data.stageName || data.name || 'Músico Sin Nombre',
+          mainGenre: data.mainGenre || data.genre || 'Varios',
+          profileImageUrl: data.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400',
+          rating: data.rating || 5.0,
+          reviewsCount: data.reviewsCount || 1,
+          calendar: data.calendar || {},
+          contactWhatsapp: data.phone || data.contactWhatsapp || '',
+          description: data.bio || data.shortBio || 'Músico registrado en Sona Empordà.',
+          location: data.location || 'Empordà'
+        };
+      });
+      setRealMusicians(musicians);
+    }, (error) => {
+      console.error("Error fetching real musicians", error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const combinedMusicians = [...realMusicians, ...allMockMusicians];
+  const combinedMusicians = [...realMusicians];
 
   const filteredResults = combinedMusicians.filter(artist => {
     const matchesSearch = artist.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -264,12 +265,9 @@ export const ArtistSearch = () => {
               <label className="text-[10px] uppercase tracking-widest text-white/50">Género</label>
               <select value={genreFilter} onChange={e => setGenreFilter(e.target.value)} className="bg-white/5 border border-white/10 p-3 text-sm text-white focus:outline-none focus:border-gold">
                 <option value="Todos" className="bg-zinc-950 text-white">Todos</option>
-                <option value="Indie" className="bg-zinc-950 text-white">Indie / Alternativo</option>
-                <option value="Rock" className="bg-zinc-950 text-white">Rock</option>
-                <option value="Pop" className="bg-zinc-950 text-white">Pop</option>
-                <option value="Electrónica" className="bg-zinc-950 text-white">Electrónica / DJ</option>
-                <option value="Acústico" className="bg-zinc-950 text-white">Acústico / Cantautor</option>
-                <option value="Jazz" className="bg-zinc-950 text-white">Jazz / Soul</option>
+                {settings.genres.map(genre => (
+                  <option key={genre} value={genre} className="bg-zinc-950 text-white">{genre}</option>
+                ))}
               </select>
 
               <label className="text-[10px] uppercase tracking-widest text-white/50 mt-4">Caché Máximo</label>

@@ -1,17 +1,29 @@
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiChevronLeft, FiChevronRight, FiInfo } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiInfo, FiX, FiMessageSquare, FiCheckCircle } from 'react-icons/fi';
 import { useMusicianCalendar } from '../../hooks/useMusicianCalendar';
-import type { DayStatus } from '../../data/mockMusicianData';
+import type { DayStatus } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { useEvents } from '../../hooks/useEvents';
+import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../../hooks/useChat';
+import { doc, updateDoc, arrayRemove } from 'firebase/firestore';
+import { db } from '../../firebase/firebase';
+import { EventViewModal } from '../../components/shared/EventViewModal';
+
+import { useSosAlerts } from '../../hooks/useSosAlerts';
 
 export const AvailabilityCalendar = () => {
+  const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
   const { events } = useEvents();
-  const { calendar, loading, updateDayStatus, markAllAvailable } = useMusicianCalendar();
+  const { calendar, loading, updateDayStatus } = useMusicianCalendar();
+  const { activeSosCount } = useSosAlerts();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedManageDate, setSelectedManageDate] = useState<string | null>(null);
+  const [eventToView, setEventToView] = useState<any | null>(null);
+  const { findOrCreateChat, sendMessage } = useChat();
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(monthStart);
@@ -28,14 +40,18 @@ export const AvailabilityCalendar = () => {
     const dateKey = format(date, dateFormat);
     const currentStatus = calendar[dateKey];
     
-    // Si ya hay un bolo ('booked'), no dejamos cambiarlo desde aquí
-    if (currentStatus === 'booked') return;
+    // Si ya hay un bolo confirmado ('booked_full' o 'booked_partial')
+    if (currentStatus === 'booked_full' || currentStatus === 'booked_partial') {
+      setSelectedManageDate(dateKey);
+      return;
+    }
 
-    let newStatus: DayStatus | null = 'available';
-    if (!currentStatus) newStatus = 'available';
-    else if (currentStatus === 'available') newStatus = 'unavailable';
-    else if (currentStatus === 'unavailable') {
+    // Toggle normal: Libre (null) <-> No Disponible (unavailable)
+    let newStatus: DayStatus | null = 'unavailable';
+    if (currentStatus === 'unavailable') {
       newStatus = null;
+    } else {
+      if (!window.confirm(`¿Estás seguro de que quieres marcar el día ${format(date, 'd', { locale: es })} de ${format(date, 'MMMM', { locale: es })} como No Disponible?`)) return;
     }
 
     await updateDayStatus(dateKey, newStatus);
@@ -43,10 +59,10 @@ export const AvailabilityCalendar = () => {
 
   const getStatusColor = (status?: DayStatus) => {
     switch (status) {
-      case 'available': return 'bg-green-800/60 text-green-300 border-green-400 shadow-[inset_0_0_10px_rgba(74,222,128,0.2)]';
       case 'unavailable': return 'bg-red-800/60 text-red-300 border-red-400 shadow-[inset_0_0_10px_rgba(248,113,113,0.2)]';
-      case 'booked': return 'bg-gold/20 text-gold border-gold font-bold shadow-[inset_0_0_15px_rgba(197,160,89,0.3)]';
-      default: return 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10 hover:border-white/40';
+      case 'booked_full': return 'bg-red-800/80 text-white border-red-500 shadow-[inset_0_0_15px_rgba(248,113,113,0.4)]';
+      case 'booked_partial': return 'bg-[linear-gradient(135deg,rgba(153,27,27,0.8)_50%,rgba(255,255,255,0.05)_50%)] text-white border-white/40';
+      default: return 'bg-white/5 text-white/70 border-white/20 hover:bg-white/10 hover:border-white/40'; // Default is available
     }
   };
 
@@ -57,11 +73,21 @@ export const AvailabilityCalendar = () => {
   return (
     <div className="flex flex-col gap-6 max-w-5xl overflow-hidden w-full">
       
-      <div className="border-b border-white/10 pb-4">
-        <h1 className="text-3xl font-serif text-white mb-2">Mi Disponibilidad</h1>
-        <p className="text-white/50 text-xs uppercase tracking-widest">
-          Asegura tus fechas para recibir propuestas.
-        </p>
+      <div className="border-b border-white/10 pb-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-serif text-white mb-2">Mi Disponibilidad</h1>
+          <p className="text-white/50 text-xs uppercase tracking-widest">
+            Asegura tus fechas para recibir propuestas.
+          </p>
+        </div>
+        {activeSosCount > 0 && (
+          <button 
+            onClick={() => navigate('/musician/sos')}
+            className="flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500 hover:bg-red-600 hover:text-white transition-colors px-4 py-2 rounded-lg animate-pulse"
+          >
+            <span className="font-bold uppercase tracking-widest text-xs">¡{activeSosCount} SOS Activos!</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-black border border-white/10 p-4 md:p-10 shadow-2xl w-full overflow-hidden">
@@ -101,8 +127,10 @@ export const AvailabilityCalendar = () => {
             const status = calendar[dateKey];
             const isToday = isSameDay(day, new Date());
 
-            // Check if there is an event on this date
-            const myEvents = events.filter(e => e.musicianId === "musician-123");
+            // Find confirmed events to display count
+            const myEvents = events.filter(e => e.musicianId === (currentUser?.uid || ""));
+            const confirmedEventsToday = myEvents.filter(e => e.date.split('T')[0] === dateKey && (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId));
+            
             const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === dateKey);
             const isConfirmedEvent = eventOnThisDay && (eventOnThisDay.status === 'confirmed' || (eventOnThisDay.status === 'published' && eventOnThisDay.musicianId) || !eventOnThisDay.venueId);
             const isPendingNegotiation = eventOnThisDay && !isConfirmedEvent && (eventOnThisDay.status === 'pending_musician' || eventOnThisDay.status === 'musician_accepted');
@@ -111,9 +139,7 @@ export const AvailabilityCalendar = () => {
               <div 
                 key={dateKey}
                 onClick={() => {
-                  if (status === 'booked' && eventOnThisDay) {
-                    navigate(`/event/${eventOnThisDay.id}`);
-                  } else if (isPendingNegotiation && eventOnThisDay) {
+                  if (isPendingNegotiation && eventOnThisDay) {
                     navigate(`/musician/offers`);
                   } else {
                     toggleDayStatus(day);
@@ -122,29 +148,35 @@ export const AvailabilityCalendar = () => {
                 className={`aspect-square p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden relative
                   ${getStatusColor(status)}
                   ${isToday ? 'ring-1 md:ring-2 ring-white ring-inset' : ''}
-                  ${status === 'booked' || isPendingNegotiation ? 'hover:bg-gold/40 hover:text-white hover:border-white transition-all group' : ''}
+                  ${(status === 'booked_full' || status === 'booked_partial') || isPendingNegotiation ? 'hover:border-gold hover:text-gold transition-all group' : ''}
                 `}
               >
                 {isPendingNegotiation && (
-                  <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-20"></div>
+                  <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-gold rounded-full animate-pulse shadow-[0_0_8px_rgba(197,160,89,0.8)] z-20"></div>
                 )}
                 
                 <span className="text-xs md:text-lg font-serif z-10 relative">{format(day, 'd')}</span>
                 
-                {status === 'booked' && (
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest font-bold mt-auto hidden sm:block group-hover:text-black transition-colors truncate z-10 relative">
-                    Evento
-                  </span>
+                {(status === 'booked_full' || status === 'booked_partial' || status === 'unavailable') && (
+                  <div className="mt-auto z-10 relative flex flex-col">
+                     {confirmedEventsToday.length > 1 && (
+                        <span className="text-[10px] font-bold text-white bg-black/50 px-1 rounded-sm w-max mb-0.5">{confirmedEventsToday.length} Bolos</span>
+                     )}
+                     <span className="text-[7px] md:text-[9px] uppercase tracking-widest font-bold hidden sm:block truncate">
+                       {status === 'booked_full' && confirmedEventsToday.length > 0 ? 'Evento' : 
+                        status === 'unavailable' || status === 'booked_full' ? 'No Disponible' : 'Admite más'}
+                     </span>
+                  </div>
                 )}
                 
                 {isPendingNegotiation && (
-                  <span className="text-[7px] md:text-[9px] text-red-300 uppercase tracking-widest font-bold mt-auto hidden sm:block transition-colors truncate z-10 relative">
+                  <span className="text-[7px] md:text-[9px] text-gold uppercase tracking-widest font-bold mt-auto hidden sm:block transition-colors truncate z-10 relative">
                     Invitación
                   </span>
                 )}
                 
-                {status === 'available' && !isPendingNegotiation && (
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest mt-auto hidden sm:block opacity-70 truncate z-10 relative">
+                {(!status || status === 'available') && !isPendingNegotiation && (
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest mt-auto hidden sm:block opacity-50 truncate z-10 relative">
                     Libre
                   </span>
                 )}
@@ -156,32 +188,19 @@ export const AvailabilityCalendar = () => {
       </div>
       
       <div className="flex flex-col gap-4">
-        <button 
-          onClick={async () => {
-            const datesIso = days.map(day => format(day, dateFormat));
-            await markAllAvailable(datesIso);
-          }}
-          className="bg-green-800/60 hover:bg-green-700/80 text-green-300 hover:text-white border border-green-400 transition-colors px-4 py-4 md:py-3 text-[10px] md:text-xs uppercase tracking-widest font-bold w-full md:w-auto self-start flex justify-center items-center shadow-lg"
-        >
-          + Marcar todo el mes disponible
-        </button>
-
         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-[9px] uppercase tracking-widest font-bold bg-white/5 p-4 border border-white/10 w-full">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-white/5 border border-white/20 shrink-0"></div> No definido
+            <div className="w-3 h-3 bg-white/5 border border-white/20 shrink-0"></div> Libre por defecto
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-800/60 border border-green-400 shrink-0 shadow-[inset_0_0_5px_rgba(74,222,128,0.3)]"></div> Disponible
+            <div className="w-3 h-3 bg-red-800/60 border border-red-400 shrink-0"></div> No Disponible
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-800/60 border border-red-400 shrink-0 shadow-[inset_0_0_5px_rgba(248,113,113,0.3)]"></div> No Disponible
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gold/20 border border-gold shrink-0 shadow-[inset_0_0_5px_rgba(197,160,89,0.4)]"></div> Confirmado
+            <div className="w-3 h-3 bg-[linear-gradient(135deg,rgba(153,27,27,0.8)_50%,rgba(255,255,255,0.05)_50%)] border border-white/40 shrink-0"></div> Bolo (Admite más)
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-white/5 border border-white/20 shrink-0 flex items-center justify-center relative">
-               <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(239,68,68,0.8)]"></div>
+               <div className="absolute w-1.5 h-1.5 bg-gold rounded-full animate-pulse shadow-[0_0_4px_rgba(197,160,89,0.8)]"></div>
             </div> 
             Pendiente Local
           </div>
@@ -190,10 +209,143 @@ export const AvailabilityCalendar = () => {
         <div className="bg-white/5 border border-white/10 p-4 flex gap-4 items-start">
           <FiInfo className="text-gold w-5 h-5 shrink-0 mt-0.5" />
           <p className="text-xs text-white/60 leading-relaxed">
-            Haz clic en cualquier día para alternar entre <strong className="text-green-400">Disponible</strong> (verde) y <strong className="text-red-400">No Disponible</strong> (rojo). Si dejas el día <strong className="text-white">No Definido</strong>, los locales no sabrán tu estado y dudarán en contactarte. Los días dorados son conciertos ya confirmados.
+            Por defecto, todos los días constan como <strong className="text-white">Libres</strong>. Haz clic en cualquier día libre para bloquearlo como <strong className="text-red-400">No Disponible</strong> (rojo). Si un local te confirma un bolo, el día pasará a ser rojo automáticamente. Si quieres hacer "doblete" y buscar un segundo concierto ese mismo día, haz clic en el bolo confirmado para volver a abrir la fecha.
           </p>
         </div>
       </div>
+
+      {/* Modal de Gestión de Evento Confirmado */}
+      {selectedManageDate && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#111] border border-white/10 max-w-sm w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-serif text-white flex items-center gap-2">
+                <FiCheckCircle className="text-green-500" />
+                Gestión del Día
+              </h3>
+              <button 
+                onClick={() => setSelectedManageDate(null)}
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {(() => {
+              const myEvents = events.filter(e => e.musicianId === currentUser?.uid);
+              const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === selectedManageDate);
+              const currentStatus = calendar[selectedManageDate];
+              
+              if (!eventOnThisDay) {
+                return (
+                  <div className="text-center pb-4">
+                    <p className="text-white/60 text-sm mb-4">Día marcado como No Disponible (sin evento asociado).</p>
+                    <button 
+                      onClick={async () => {
+                        await updateDayStatus(selectedManageDate, null);
+                        setSelectedManageDate(null);
+                      }}
+                      className="w-full bg-white text-black font-bold uppercase tracking-widest text-[10px] py-3 transition-colors hover:bg-white/90"
+                    >
+                      Liberar Día
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex flex-col gap-4">
+                  <div 
+                    onClick={() => {
+                      if (eventOnThisDay) {
+                        setEventToView(eventOnThisDay);
+                      }
+                    }}
+                    className="bg-white/5 border border-white/10 p-4 mb-2 cursor-pointer hover:bg-white/10 hover:border-gold transition-all group"
+                  >
+                    <p className="text-white/60 text-xs uppercase tracking-widest mb-1 flex justify-between items-center">
+                      Evento Confirmado
+                      <span className="text-[9px] text-gold opacity-0 group-hover:opacity-100 transition-opacity">Ver Detalles →</span>
+                    </p>
+                    <p className="text-white font-bold text-lg group-hover:text-gold transition-colors">{eventOnThisDay.title}</p>
+                    <p className="text-white/40 text-sm">{eventOnThisDay.venueName}</p>
+                  </div>
+
+                  <button 
+                    onClick={async () => {
+                      if (!eventOnThisDay.venueId) {
+                        navigate('/musician/messages');
+                        return;
+                      }
+                      const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
+                      navigate('/musician/messages', { state: { chatId } });
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-white/20 transition-colors"
+                  >
+                    <FiMessageSquare className="w-4 h-4" /> Abrir Chat con el Local
+                  </button>
+
+                  <button 
+                    onClick={async () => {
+                      if (currentStatus === 'booked_full') {
+                        await updateDayStatus(selectedManageDate, 'booked_partial');
+                      } else {
+                        await updateDayStatus(selectedManageDate, 'booked_full');
+                      }
+                      setSelectedManageDate(null);
+                    }}
+                    className="w-full bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-white/20 transition-colors"
+                  >
+                    {currentStatus === 'booked_full' ? 'Permitir Doblete (Admitir Más)' : 'Cerrar Fecha (No Admitir Más)'}
+                  </button>
+
+                  <div className="h-px bg-white/10 my-2"></div>
+
+                  <button 
+                    onClick={async () => {
+                      if (!window.confirm('¿Estás seguro de cancelar tu actuación? Se avisará automáticamente al local.')) return;
+                      try {
+                        await updateDoc(doc(db, 'events', eventOnThisDay.id), {
+                          status: 'musician_cancelled',
+                          musicianId: null,
+                          musicianName: null,
+                          applicants: arrayRemove(currentUser!.uid),
+                          cancelledByMusicianId: currentUser!.uid,
+                          cancelledByMusicianName: userData?.stageName || 'Un músico'
+                        });
+
+                        if (eventOnThisDay.venueId) {
+                          const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
+                          const formattedDate = format(new Date(eventOnThisDay.date), "d 'de' MMMM", { locale: es });
+                          const cancelMsg = `Hola, lamentablemente no podré actuar en el evento "${eventOnThisDay.title}" del ${formattedDate}. Mi actuación queda anulada.`;
+                          await sendMessage(chatId, cancelMsg);
+                        }
+                        
+                        await updateDayStatus(selectedManageDate, null);
+                        setSelectedManageDate(null);
+                      } catch (err) {
+                        console.error(err);
+                        alert("Error al cancelar la actuación.");
+                      }
+                    }}
+                    className="w-full bg-red-900/30 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white font-bold uppercase tracking-widest text-[10px] py-3 transition-colors"
+                  >
+                    Cancelar mi Actuación
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Visor de Detalles del Evento */}
+      {eventToView && (
+        <EventViewModal 
+          event={eventToView} 
+          onClose={() => setEventToView(null)} 
+        />
+      )}
 
     </div>
   );

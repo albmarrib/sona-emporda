@@ -12,82 +12,47 @@ interface Slide {
 
 const musicianSlides: Slide[] = [
   {
-    title: 'Bienvenido a Sona Empordà',
-    content: 'En tu Dashboard verás todos tus eventos programados y también aparecerá siempre la última solicitud urgente de ayuda (SOS) de locales u otros músicos.',
-    icon: <User className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'Tu Calendario (Disponibilidad)',
-    content: 'Controla tu agenda fácilmente marcando los días que estás libre. Si no lo rellenas, aparecerás como "posible disponible". Si lo pones verde, ¡apareces como buscando bolo activamente!',
+    title: 'El Calendario es el Rey',
+    content: 'Tu pantalla principal ahora es el Calendario. Mantenlo actualizado marcando los días que no estés disponible. ¡Los locales se fijan en tu disponibilidad real!',
     icon: <Calendar className="w-16 h-16 text-gold" />
   },
   {
-    title: 'Tu Calendario (Eventos)',
-    content: 'Aquí verás los días con evento (que aparecerán automáticamente como NO disponibles). También puedes hacer clic en cualquier día para bloquearlo manualmente (rojo) cuando no puedas tocar.',
-    icon: <Calendar className="w-16 h-16 text-gold" />
+    title: 'Navegación Fluida',
+    content: 'Desliza tu dedo hacia la izquierda o derecha por la pantalla para moverte rápidamente entre el Calendario, tus Oportunidades, y el Tablón de Urgencias SOS.',
+    icon: <Search className="w-16 h-16 text-gold" />
   },
   {
-    title: 'Invitaciones Directas',
-    content: 'Aquí recibirás en detalle cualquier invitación directa de un local. Podrás contactar con ellos y, si se confirma un bolo, aparecerá automáticamente en tu calendario.',
-    icon: <MessageSquare className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'Oportunidades',
-    content: 'Descubre toda la oferta de conciertos de locales que aún no tienen músico. Postúlate para que les llegue un aviso directo y empecéis a negociar el evento.',
-    icon: <Briefcase className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'Tablón S.O.S',
-    content: 'Lanza un SOS a otros músicos si te falla alguien a última hora (el batería, guitarra...), o revisa el tablón para ayudar a otros músicos y locales en apuros.',
+    title: 'Urgencias SOS',
+    content: 'Presta atención a las alertas rojas en la pantalla. Si un local tiene una cancelación de última hora, ¡es tu oportunidad para salvar la noche!',
     icon: <LifeBuoy className="w-16 h-16 text-gold" />
   },
   {
     title: 'Tu EPK Público',
-    content: 'Actualiza tus vídeos, Spotify y fotos cuando quieras, ¡es lo que verán locales y público! Por cierto, siempre que lo necesites, puedes volver a ver este tutorial desde el menú.',
-    icon: <FileText className="w-16 h-16 text-gold" />
+    content: 'Actualiza tus vídeos, Spotify y fotos desde tu Perfil. Siempre que lo necesites, puedes volver a ver este tutorial desde el icono de información en el menú.',
+    icon: <User className="w-16 h-16 text-gold" />
   }
 ];
 
 const venueSlides: Slide[] = [
   {
-    title: 'Bienvenido a Sona Empordà',
-    content: 'Tu centro de mando. Aquí podrás gestionar tu calendario, organizar conciertos, buscar y negociar con músicos, o solicitar ayuda rápida en caso de cancelaciones de última hora.',
+    title: 'Tu Programación',
+    content: 'Entras directamente al Calendario de la sala. Desde aquí puedes ver de un vistazo qué días tienes cubiertos y cuáles están buscando banda.',
+    icon: <Calendar className="w-16 h-16 text-gold" />
+  },
+  {
+    title: 'Movilidad Rápida',
+    content: 'Desliza lateralmente la pantalla para navegar hacia tu Dashboard (para confirmar artistas), el Buscador de bandas, o lanzar una alerta SOS.',
     icon: <Search className="w-16 h-16 text-gold" />
   },
   {
-    title: 'Tu Dashboard',
-    content: 'Es la pantalla principal. Verás tus próximos eventos programados de un vistazo, y tendrás acceso directo para programar nuevos eventos o buscar músicos.',
-    icon: <Briefcase className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'El Calendario (Organización)',
-    content: 'Tu herramienta más potente. Haz clic en un día para programar. Al hacerlo, verás primero a los músicos que buscan bolo activamente ese día, y luego al resto de músicos disponibles.',
-    icon: <Calendar className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'El Calendario (Negociación)',
-    content: 'Contacta a un músico; el evento quedará en amarillo esperando su respuesta. Si creas un evento abierto, los músicos podrán postularse (lo verás con un punto rojo parpadeante).',
-    icon: <MessageSquare className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'El Calendario (Publicación)',
-    content: 'Cuando confirmes oficialmente el evento con el músico en tu panel, ¡se publicará automáticamente en la web para todo el público! También puedes buscar músicos por nombre directamente aquí.',
-    icon: <Calendar className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'Buscador de Artistas',
-    content: 'Explora toda nuestra base de datos. Revisa sus vídeos, necesidades técnicas (Rider) y fotos. Filtra por estilo musical o búscalos por nombre para contactarles directamente.',
-    icon: <User className="w-16 h-16 text-gold" />
-  },
-  {
-    title: 'Urgencias S.O.S',
-    content: '¿Cancelación a última hora? Lanza un aviso S.O.S que llegará a todos los músicos registrados para que alguien te cubra. IMPORTANTE: ¡Recuerda desactivarlo cuando lo soluciones!',
+    title: 'Alertas SOS',
+    content: 'Si te falla una banda a última hora, la sección SOS envía una notificación instantánea (Push/WhatsApp) a todos los músicos disponibles de tu zona.',
     icon: <LifeBuoy className="w-16 h-16 text-gold" />
   },
   {
-    title: 'Configuración y Ayuda',
-    content: 'Puedes modificar los datos públicos de tu local pulsando el icono de la rueda dentada. Y si alguna vez necesitas repasar esto, ¡puedes volver a ver este tutorial desde el menú!',
-    icon: <FileText className="w-16 h-16 text-gold" />
+    title: 'Buscador y Configuración',
+    content: 'Encuentra a la banda ideal en el Buscador y mantén los datos de tu local actualizados en Perfil. Puedes volver a ver este tutorial desde el menú cuando quieras.',
+    icon: <Briefcase className="w-16 h-16 text-gold" />
   }
 ];
 

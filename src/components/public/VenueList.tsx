@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { addDays, isWithinInterval, parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
-import type { SonaEvent } from "../../data/mockEvents";
+import type { SonaEvent } from "../../types";
 
 // Fix Leaflet default icon issues in React
 delete (L.Icon.Default.prototype as any)._getIconUrl;

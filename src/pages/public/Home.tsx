@@ -10,17 +10,19 @@ import { useAuth } from "../../contexts/AuthContext";
 import { InstallPWAModal } from "../../components/public/InstallPWAModal";
 import { Info } from "lucide-react";
 import { FiAward } from "react-icons/fi";
+import { useSettings } from "../../hooks/useSettings";
 
-// VIBES purificados sin emojis para estilo premium
-const VIBES = ["BAILAR", "TARDEO", "ACÚSTICO", "ELECTRÓNICA", "CENA"];
 type ViewMode = "LISTA" | "CALENDARIO" | "LUGARES";
 
 export const Home = () => {
-  const { events, loading, error } = useEvents();
+  const { events, loading: eventsLoading, error } = useEvents();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  
+  const { settings, loading: settingsLoading } = useSettings();
+  const VIBES = settings.vibes;
   
   const navigate = useNavigate();
   const { currentUser, userData, loading: authLoading } = useAuth();
@@ -48,15 +50,11 @@ export const Home = () => {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // Solo mostramos eventos CONFIRMADOS en la web pública (incluyendo mock data que no tiene venueId)
-  const confirmedEvents = events.filter(e => 
-    e.status === 'confirmed' || 
-    (e.status === 'published' && e.musicianId) || 
-    !e.venueId
-  );
+  // Mostramos eventos confirmados Y publicados (buscando grupo) Y cancelados
+  const confirmedEvents = events.filter(e => e.status !== 'draft');
   
-  // El carrusel rotará por todos los eventos disponibles
-  const heroEvents = confirmedEvents;
+  // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
+  const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');
 
   useEffect(() => {
     if (heroEvents.length <= 1) return;
@@ -66,7 +64,7 @@ export const Home = () => {
     return () => clearInterval(interval);
   }, [heroEvents.length]);
 
-  if (loading) {
+  if (eventsLoading || settingsLoading) {
     return <LoadingScreen />;
   }
 
@@ -83,8 +81,8 @@ export const Home = () => {
   const currentHeroEvent = heroEvents[carouselIndex];
   
   // Filtrar el resto de eventos para la lista
+  // Mostrar todos en la lista siempre para evitar confusiones de que "desaparecen"
   const filteredEvents = confirmedEvents
-    .filter(e => e.id !== currentHeroEvent?.id)
     .filter(e => {
       if (selectedVibes.length === 0) return true;
       return (e.vibes || []).some((v: any) => selectedVibes.some(selected => v.toUpperCase().includes(selected)));

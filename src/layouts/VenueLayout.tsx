@@ -33,11 +33,45 @@ export const VenueLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/venue', icon: <FiHome className="w-5 h-5" /> },
     { name: 'Calendario', path: '/venue/calendar', icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Dashboard', path: '/venue/dashboard', icon: <FiHome className="w-5 h-5" /> },
     { name: 'Buscador', path: '/venue/search', icon: <FiSearch className="w-5 h-5" /> },
     { name: 'Urgencias SOS', path: '/venue/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
+    { name: 'Perfil', path: '/venue/profile', icon: <FiSettings className="w-5 h-5" /> },
   ];
+
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = navItems.findIndex(item => pathname === item.path || (item.path !== '/venue' && pathname.startsWith(item.path)));
+      if (currentIndex === -1) return;
+
+      if (isLeftSwipe && currentIndex < navItems.length - 1) {
+        navigate(navItems[currentIndex + 1].path);
+      }
+      if (isRightSwipe && currentIndex > 0) {
+        navigate(navItems[currentIndex - 1].path);
+      }
+    }
+  };
 
   return (
     <div className="flex h-[100dvh] w-full bg-black text-white font-sans overflow-hidden">
@@ -108,7 +142,12 @@ export const VenueLayout = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 h-full overflow-y-auto overflow-x-hidden min-w-0 bg-black pb-20 md:pb-0">
+      <main 
+        className="flex-1 h-full overflow-y-auto overflow-x-hidden min-w-0 bg-zinc-950 pb-20 md:pb-0"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-white/10 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">

@@ -53,10 +53,10 @@ export const VenueSOSManager = () => {
         requiredVibes: ['🎸 Urgente'],
         description: formData.description,
         isUrgent: true,
+        status: 'active',
         postedAt: new Date().toISOString(),
         authorId: currentUser?.uid || 'venue-test',
-        authorType: 'venue',
-        authorPhone: formData.contactPhone || userData?.contactPhone || ''
+        authorType: 'venue'
       };
       
       await addDoc(collection(db, 'sos_alerts'), newSos);
@@ -181,13 +181,8 @@ export const VenueSOSManager = () => {
 
               <div className="flex flex-col gap-2">
                 <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Detalles (Qué buscas)</label>
-                <textarea required rows={3} placeholder="Explica brevemente qué perfil musical necesitas para cubrir el hueco..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none resize-none"></textarea>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Teléfono de Contacto Urgente</label>
-                <input type="text" placeholder="Ej: +34 600 000 000" value={formData.contactPhone} onChange={e => setFormData({...formData, contactPhone: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
-                <p className="text-[9px] text-white/30 uppercase tracking-widest">Opcional. Si lo dejas en blanco, los músicos usarán el WhatsApp de tu perfil.</p>
+                <textarea required rows={4} placeholder="Explica brevemente qué perfil musical necesitas para cubrir el hueco..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none resize-none"></textarea>
+                <p className="text-[9px] text-white/30 uppercase tracking-widest mt-1">Los músicos interesados te contactarán directamente por el Chat interno.</p>
               </div>
 
               <button 

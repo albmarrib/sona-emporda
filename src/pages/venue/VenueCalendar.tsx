@@ -1,33 +1,38 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameMonth, isSameDay, parseISO, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiChevronLeft, FiChevronRight, FiCalendar, FiMusic, FiStar, FiMessageSquare, FiSearch, FiX, FiXCircle } from 'react-icons/fi';
-import { addDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { FiChevronLeft, FiChevronRight, FiCalendar, FiMusic, FiStar, FiMessageSquare, FiSearch, FiX, FiXCircle, FiCheckCircle } from 'react-icons/fi';
+import { addDoc, collection, onSnapshot, query, where, arrayRemove } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import { useEvents } from '../../hooks/useEvents';
-import { allMockMusicians } from '../../data/mockMusicianData';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../../hooks/useChat';
 import { EPKModal } from '../../components/shared/EPKModal';
+import { EventFormModal } from '../../components/shared/EventFormModal';
+import { useSosAlerts } from '../../hooks/useSosAlerts';
+import { useNavigate } from 'react-router-dom';
 
 // Mocked musicians to simulate explicit and implicit availability
 
 
 export const VenueCalendar = () => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
   const [realMusicians, setRealMusicians] = useState<any[]>([]);
+  const { findOrCreateChat, sendMessage } = useChat();
+  const { activeSosCount } = useSosAlerts();
   
   useEffect(() => {
-    const fetchRealMusicians = async () => {
-      try {
-        const q = query(collection(db, 'users'), where('role', '==', 'musician'));
-        const snapshot = await getDocs(q);
+    const fetchRealMusicians = () => {
+      const q = query(collection(db, 'users'), where('role', '==', 'musician'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
         const musicians = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
             ...data,
-            id: doc.id, // Real UID!
+            id: doc.id,
             stageName: data.stageName || data.name || 'Músico Sin Nombre',
             mainGenre: data.genre || 'Varios',
             profileImageUrl: data.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400',
@@ -38,20 +43,22 @@ export const VenueCalendar = () => {
           };
         });
         setRealMusicians(musicians);
-      } catch (e) {
+      }, (e) => {
         console.error("Error fetching real musicians", e);
-      }
+      });
+      
+      return unsubscribe;
     };
-    fetchRealMusicians();
+    
+    const unsubscribe = fetchRealMusicians();
+    return () => unsubscribe();
   }, []);
 
-  const combinedMusicians = [...realMusicians, ...allMockMusicians];
+  const combinedMusicians = [...realMusicians];
   
   const [isNewEventModalOpen, setIsNewEventModalOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', time: '21:00', musicianName: '', musicianId: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
   
   const handleDayClick = (day: Date) => {
     if (selectedDate && isSameDay(day, selectedDate)) {
@@ -65,7 +72,6 @@ export const VenueCalendar = () => {
       const dayKey = format(day, 'yyyy-MM-dd');
       const existingEvent = venueEvents.find(e => format(parseISO(e.date), 'yyyy-MM-dd') === dayKey);
       if (!existingEvent) {
-         setNewEvent({ title: '', time: '21:00', musicianName: '', musicianId: '' });
          setIsNewEventModalOpen(true);
       }
     }
@@ -78,36 +84,7 @@ export const VenueCalendar = () => {
     }
   };
 
-  const handleCreateDraftEvent = async () => {
-    if (!newEvent.title || !newEvent.time) {
-      alert("Introduce al menos un título y hora.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const dateStr = format(selectedDate as Date, 'yyyy-MM-dd');
-      await addDoc(collection(db, 'events'), {
-        title: newEvent.title,
-        date: `${dateStr}T${newEvent.time}:00Z`,
-        time: newEvent.time,
-        musicianName: newEvent.musicianName,
-        musicianId: newEvent.musicianId || null,
-        status: 'published',
-        venueName: venueName,
-        venueId: venueId,
-        imageUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000',
-        ticketType: 'Entrada Libre',
-        vibes: [],
-        createdAt: new Date().toISOString()
-      });
-      setIsNewEventModalOpen(false);
-    } catch (e) {
-      console.error(e);
-      alert("Error al crear el evento pendiente");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const { events } = useEvents(true);
   const { userData, currentUser } = useAuth();
@@ -140,17 +117,13 @@ export const VenueCalendar = () => {
       format(parseISO(e.date), 'yyyy-MM-dd') === dateStr
     );
   };
-
-  const explicitlyAvailable = dateKey ? combinedMusicians.filter(m => m.calendar[dateKey] === 'available' && !isMusicianBooked(m.id, dateKey)) : [];
-  const implicitlyAvailableStrict = dateKey ? combinedMusicians.filter(m => (m.calendar[dateKey] === undefined || m.calendar[dateKey] === 'free') && !isMusicianBooked(m.id, dateKey)) : [];
+  const implicitlyAvailableStrict = dateKey ? combinedMusicians.filter(m => (m.calendar[dateKey] === undefined || m.calendar[dateKey] === 'free' || m.calendar[dateKey] === 'booked_partial') && !isMusicianBooked(m.id, dateKey) && !selectedDayEvent?.applicants?.includes(m.id)) : [];
   
   const applicantsList = selectedDayEvent?.applicants 
     ? combinedMusicians.filter(m => selectedDayEvent.applicants?.includes(m.id))
     : [];
   
-  const searchResults = searchQuery ? combinedMusicians.filter(a => a.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || a.mainGenre.toLowerCase().includes(searchQuery.toLowerCase())) : [];
-  
-  const dropdownResults = (newEvent.musicianName && showDropdown) ? combinedMusicians.filter(a => a.stageName.toLowerCase().includes(newEvent.musicianName.toLowerCase())) : [];
+  const searchResults = searchQuery ? implicitlyAvailableStrict.filter(a => a.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || a.mainGenre.toLowerCase().includes(searchQuery.toLowerCase())) : [];
 
 
   return (
@@ -160,11 +133,21 @@ export const VenueCalendar = () => {
       <div className="flex-1 flex flex-col bg-black border border-white/10 p-4 md:p-6 shadow-2xl overflow-hidden w-full">
         
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 border-b border-white/10 pb-4 gap-4">
-          <div>
-            <h1 className="text-2xl font-serif text-white">Calendario</h1>
-            <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">
-              Cruza tus fechas con la disponibilidad de los artistas
-            </p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-serif text-white">Calendario</h1>
+              <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">
+                Cruza tus fechas con la disponibilidad de los artistas
+              </p>
+            </div>
+            {activeSosCount > 0 && (
+              <button 
+                onClick={() => navigate('/venue/sos')}
+                className="flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500 hover:bg-red-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg animate-pulse h-fit"
+              >
+                <span className="font-bold uppercase tracking-widest text-[10px]">¡{activeSosCount} SOS!</span>
+              </button>
+            )}
           </div>
           <div className="flex gap-2 md:gap-4 items-center w-full md:w-auto justify-between md:justify-end">
             <button onClick={prevMonth} className="p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors">
@@ -205,11 +188,13 @@ export const VenueCalendar = () => {
             // Retro-compatibility: if it's 'published' but has a musicianId, treat it as 'confirmed'
             const isConfirmed = eventForDay?.status === 'confirmed' || (eventForDay?.status === 'published' && eventForDay?.musicianId);
             const isPublished = eventForDay?.status === 'published' && !eventForDay?.musicianId;
+            const isMusicianCancelled = eventForDay?.status === 'musician_cancelled';
 
             const isToday = isSameDay(day, new Date());
             const isSelected = selectedDate && isSameDay(day, selectedDate);
             const isCurrentMonth = isSameMonth(day, currentDate);
-            const hasApplicants = eventForDay?.applicants && eventForDay.applicants.length > 0;
+            const hasApplicants = eventForDay?.applicants && eventForDay.applicants.length > 0 && !isConfirmed;
+            const hasAlert = isMusicianCancelled || hasApplicants;
             
             let cellBg = 'bg-black border border-white/5';
             let dateTextColor = isSelected ? 'text-gold font-bold' : (isToday ? 'text-blue-400 font-bold' : 'text-white/80');
@@ -226,6 +211,10 @@ export const VenueCalendar = () => {
               dateTextColor = 'text-black font-bold';
             }
             else if (isPublished) cellBg = 'bg-green-900/40 border border-green-500/30';
+            else if (isMusicianCancelled) {
+              cellBg = 'bg-red-600 animate-pulse border border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.6)]';
+              dateTextColor = 'text-white font-bold';
+            }
             
             return (
               <div 
@@ -233,7 +222,7 @@ export const VenueCalendar = () => {
                 onClick={() => handleDayClick(day)}
                 className={`${cellBg} aspect-square p-1 md:p-2 relative cursor-pointer hover:bg-white/5 transition-colors flex flex-col items-center justify-start gap-1 overflow-hidden ${!isCurrentMonth ? 'opacity-20' : ''} ${isToday ? 'ring-2 ring-blue-500/50 ring-inset' : ''} ${isSelected && !isPendingMusician && !isConfirmed ? 'ring-1 md:ring-2 ring-gold ring-inset z-10' : ''}`}
               >
-                {hasApplicants && (
+                {hasAlert && (
                   <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-20"></div>
                 )}
                 <span className={`text-xs md:text-sm font-serif ${dateTextColor}`}>
@@ -289,7 +278,6 @@ export const VenueCalendar = () => {
                     <div className="px-4 md:px-6 pt-6">
                       <button 
                         onClick={() => {
-                          setNewEvent({ title: '', time: '21:00', musicianName: '', musicianId: '' });
                           setIsNewEventModalOpen(true);
                         }}
                         className="w-full bg-gold text-black font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-white transition-colors"
@@ -307,6 +295,46 @@ export const VenueCalendar = () => {
                    </div>
                 );
               })()
+            )}
+
+            {selectedDayEvent?.status === 'musician_cancelled' && (
+              <div className="px-4 md:px-6 pt-6">
+                <div className="bg-red-900/30 border border-red-500/50 p-4 mb-4">
+                  <h3 className="text-red-400 font-bold text-sm mb-1 flex items-center gap-2"><FiXCircle /> ¡Cancelación de última hora!</h3>
+                  <p className="text-white/60 text-xs leading-relaxed mb-4">
+                    El grupo <strong className="text-white">{selectedDayEvent.cancelledByMusicianName || 'seleccionado'}</strong> ha cancelado su actuación a última hora.
+                  </p>
+                  
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={async () => {
+                        import('firebase/firestore').then(({ doc, updateDoc }) => {
+                          updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                            status: 'published'
+                          });
+                        });
+                      }}
+                      className="w-full bg-green-600/20 text-green-400 border border-green-500/30 hover:bg-green-600 hover:text-white font-bold uppercase tracking-widest text-[10px] py-3 transition-colors"
+                    >
+                      Mantener evento y buscar otra banda
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if(window.confirm('¿Estás seguro de que quieres anular el evento? Aparecerá como CANCELADO en la web pública.')) {
+                          import('firebase/firestore').then(({ doc, updateDoc }) => {
+                            updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                              status: 'cancelled'
+                            });
+                          });
+                        }
+                      }}
+                      className="w-full bg-red-600 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-red-500 transition-colors"
+                    >
+                      Anular el evento por completo
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {selectedDayEvent?.status === 'rejected' && (
@@ -356,17 +384,66 @@ export const VenueCalendar = () => {
                 </div>
               </div>
             )}
+            {(selectedDayEvent?.status === 'confirmed' || (selectedDayEvent?.status === 'published' && selectedDayEvent?.musicianId)) && selectedDayEvent && (
+              <div className="px-4 md:px-6 pt-6">
+                <div className="bg-green-900/30 border border-green-500/50 p-4 mb-4">
+                  <h3 className="text-green-400 font-bold text-sm mb-1 flex items-center gap-2"><FiCheckCircle /> Banda Confirmada</h3>
+                  <p className="text-white/80 font-bold text-base mb-1">{selectedDayEvent.title}</p>
+                  <p className="text-white/60 text-xs leading-relaxed mb-4">Músico confirmado: <strong className="text-white">{selectedDayEvent.musicianName}</strong></p>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => {
+                        setEditingEventId(selectedDayEvent.id);
+                        setIsNewEventModalOpen(true);
+                      }}
+                      className="w-full bg-gold hover:bg-white text-black font-bold uppercase tracking-widest text-[10px] py-3 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <FiStar className="w-4 h-4" /> Ver / Editar Detalles
+                    </button>
+                    <button 
+                      onClick={async () => {
+                        if(window.confirm('¿Quieres cancelar este bolo? El músico recibirá un aviso automático y el evento volverá a buscar artistas.')) {
+                          try {
+                            const musicianIdToNotify = selectedDayEvent.musicianId;
+                            import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+                              await updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                                status: 'published',
+                                musicianId: null,
+                                musicianName: null,
+                                applicants: arrayRemove(musicianIdToNotify)
+                              });
+                              
+                              if (musicianIdToNotify) {
+                                const chatId = await findOrCreateChat(musicianIdToNotify, selectedDayEvent.id);
+                                const eventDateStr = selectedDayEvent.date ? format(parseISO(selectedDayEvent.date), "d 'de' MMMM", { locale: es }) : 'próximamente';
+                                const cancelMsg = `Hola, lamentamos informarte que hemos tenido que cancelar tu actuación para el evento "${selectedDayEvent.title}" del ${eventDateStr}.`;
+                                await sendMessage(chatId, cancelMsg);
+                              }
+                            });
+                          } catch(e) {
+                            console.error(e);
+                          }
+                        }
+                      }}
+                      className="w-full bg-red-600/20 text-red-400 border border-red-500/30 font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-red-600 hover:text-white transition-colors"
+                    >
+                      Cancelar Bolo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-8">
               
               
-            {isSelectedDayPending && (
+            {selectedDate && !(selectedDayEvent?.status === 'confirmed' || (selectedDayEvent?.status === 'published' && selectedDayEvent?.musicianId)) && (
               <div className="px-4 md:px-6 pt-4">
                 <div className="relative">
                   <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                   <input 
                     type="text" 
-                    placeholder="Buscar cualquier músico..."
+                    placeholder="Filtrar músicos por nombre o género..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 py-3 pl-10 pr-4 text-sm text-white focus:border-gold focus:outline-none"
@@ -375,7 +452,7 @@ export const VenueCalendar = () => {
               </div>
             )}
 
-              {searchQuery ? (
+              {searchQuery && !(selectedDayEvent?.status === 'confirmed' || (selectedDayEvent?.status === 'published' && selectedDayEvent?.musicianId)) ? (
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-2 text-white/50 text-[10px] uppercase tracking-widest font-bold">
                     Resultados de la búsqueda ({searchResults.length})
@@ -383,7 +460,9 @@ export const VenueCalendar = () => {
                   {searchResults.length === 0 ? (
                     <p className="text-white/30 text-xs italic">No hay coincidencias.</p>
                   ) : (
-                    searchResults.map(artist => {
+                    searchResults
+                      .filter(artist => artist.id !== selectedDayEvent?.cancelledByMusicianId)
+                      .map(artist => {
                       const status = artist.calendar[dateKey || ''] || 'free';
                       const isBooked = dateKey ? isMusicianBooked(artist.id, dateKey) : false;
                       let badge = 'Agenda Libre';
@@ -400,7 +479,7 @@ export const VenueCalendar = () => {
                     })
                   )}
                 </div>
-              ) : (
+              ) : !(selectedDayEvent?.status === 'confirmed' || (selectedDayEvent?.status === 'published' && selectedDayEvent?.musicianId)) ? (
                 <>
                   {/* Applicants List */}
                   {applicantsList.length > 0 && (
@@ -413,34 +492,13 @@ export const VenueCalendar = () => {
                         {applicantsList.map(artist => {
                           const isDeclined = selectedDayEvent?.declinedBy?.includes(artist.id) || false;
                           return (
-                            <ArtistCard key={`app-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : "¡Quiere este bolo!"} isWarning={true} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
+                          <ArtistCard key={`app-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : "¡Quiere este bolo!"} isWarning={true} isDeclined={isDeclined} onSelect={() => setSelectedArtist({...artist, isApplicantForEventId: selectedDayEvent?.id})} />
                           );
                         })}
                       </div>
                       <div className="h-px bg-white/10 w-full my-1"></div>
                     </>
                   )}
-
-                  {/* Explicitly Available */}
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-2 text-green-500 text-[10px] uppercase tracking-widest font-bold">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0"></div>
-                      Quieren Bolo Hoy ({explicitlyAvailable.length})
-                    </div>
-                    
-                    {explicitlyAvailable.length === 0 ? (
-                      <p className="text-white/30 text-xs italic">Nadie lo ha marcado explícitamente.</p>
-                    ) : (
-                      explicitlyAvailable.map(artist => {
-                        const isDeclined = selectedDayEvent?.declinedBy?.includes(artist.id) || false;
-                        return (
-                          <ArtistCard key={`exp-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : "¡Ganas de tocar!"} isWarning={isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
-                        );
-                      })
-                    )}
-                  </div>
-
-                  <div className="h-px bg-white/10 w-full my-1"></div>
 
                   {/* Implicitly Available */}
                   <div className="flex flex-col gap-4">
@@ -452,7 +510,9 @@ export const VenueCalendar = () => {
                     {implicitlyAvailableStrict.length === 0 ? (
                       <p className="text-white/30 text-xs italic">No hay más artistas libres.</p>
                     ) : (
-                      implicitlyAvailableStrict.map(artist => {
+                      implicitlyAvailableStrict
+                        .filter(artist => artist.id !== selectedDayEvent?.cancelledByMusicianId)
+                        .map(artist => {
                         const isDeclined = selectedDayEvent?.declinedBy?.includes(artist.id) || false;
                         return (
                           <ArtistCard key={`imp-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : "Agenda Libre"} isWarning={isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
@@ -461,7 +521,7 @@ export const VenueCalendar = () => {
                     )}
                   </div>
                 </>
-              )}
+              ) : null}
 
             </div>
           </div>
@@ -478,73 +538,20 @@ export const VenueCalendar = () => {
           dateKey={dateKey || ''} 
           currentUser={currentUser} 
           onClose={() => setSelectedArtist(null)} 
+          isApplicantForEventId={selectedArtist.isApplicantForEventId}
         />
       )}
 
       {/* New Event Modal */}
-      {isNewEventModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/10 p-6 md:p-8 max-w-md w-full shadow-2xl relative">
-            <button onClick={() => setIsNewEventModalOpen(false)} className="absolute top-4 right-4 text-white/50 hover:text-white">
-              <FiX className="w-6 h-6" />
-            </button>
-            <h2 className="text-2xl font-serif text-white mb-2">Nuevo Evento</h2>
-            <p className="text-white/50 text-[10px] uppercase tracking-widest mb-6">
-              {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM yyyy", { locale: es })}
-            </p>
-            
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Título del Evento</label>
-                <input type="text" value={newEvent.title} onChange={e => setNewEvent({...newEvent, title: e.target.value})} placeholder="Ej: Noche Acústica" className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Hora</label>
-                <input type="time" value={newEvent.time} onChange={e => setNewEvent({...newEvent, time: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark]" />
-              </div>
-              
-              <div className="flex flex-col gap-2 mt-2 pt-4 border-t border-white/10 relative">
-                <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Asignar Músico (Opcional por ahora)</label>
-                <input 
-                  type="text" 
-                  value={newEvent.musicianName} 
-                  onChange={e => {
-                    setNewEvent({...newEvent, musicianName: e.target.value, musicianId: ''});
-                    setShowDropdown(true);
-                  }} 
-                  onFocus={() => setShowDropdown(true)}
-                  placeholder="Nombre (Búsqueda o Libre)" 
-                  className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none mb-2" 
-                />
-                
-                {showDropdown && dropdownResults.length > 0 && (
-                  <div className="absolute top-full left-0 w-full bg-zinc-900 border border-white/10 max-h-48 overflow-y-auto z-50 shadow-xl">
-                    {dropdownResults.map(artist => (
-                      <div 
-                        key={artist.id} 
-                        className="p-3 hover:bg-white/10 cursor-pointer flex justify-between items-center"
-                        onClick={() => {
-                          setNewEvent({...newEvent, musicianName: artist.stageName, musicianId: artist.id});
-                          setShowDropdown(false);
-                        }}
-                      >
-                        <span className="text-sm font-serif text-white">{artist.stageName}</span>
-                        <span className="text-[9px] text-white/50 uppercase">{artist.mainGenre}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                <p className="text-[9px] text-white/40 uppercase tracking-widest">Si no asignas un grupo ahora, el evento se guardará como PENDIENTE (Amarillo) y podrás asignar uno luego.</p>
-              </div>
-            </div>
-
-            <button onClick={handleCreateDraftEvent} disabled={isSubmitting} className="w-full mt-6 bg-gold text-black font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-white transition-colors">
-              {isSubmitting ? 'Guardando...' : 'Crear Evento Pendiente'}
-            </button>
-          </div>
-        </div>
-      )}
+      <EventFormModal 
+        isOpen={isNewEventModalOpen}
+        onClose={() => {
+          setIsNewEventModalOpen(false);
+          setEditingEventId(null);
+        }}
+        editingEventId={editingEventId}
+        initialEventData={editingEventId ? events.find(e => e.id === editingEventId) : (selectedDate ? { date: format(selectedDate, 'yyyy-MM-dd') } : null)}
+      />
 
     </div>
   );

@@ -3,13 +3,18 @@ import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase
 import { db } from '../../firebase/firebase';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiAward, FiEdit2, FiX, FiCheck } from 'react-icons/fi';
-import type { Event } from '../../types/event';
+import { FiAward, FiEdit2, FiX, FiCheck, FiPlus, FiTrash2 } from 'react-icons/fi';
+import type { SonaEvent } from '../../types';
+import { useSettings } from '../../hooks/useSettings';
 
 export const AdminDashboard = () => {
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<SonaEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<SonaEvent | null>(null);
+  
+  const { settings, updateVibes, updateGenres } = useSettings();
+  const [newVibe, setNewVibe] = useState('');
+  const [newGenre, setNewGenre] = useState('');
 
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
@@ -17,7 +22,7 @@ export const AdminDashboard = () => {
       const eventsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      })) as Event[];
+      })) as SonaEvent[];
       setEvents(eventsData);
       setLoading(false);
     });
@@ -66,6 +71,36 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleAddVibe = async () => {
+    if (!newVibe.trim()) return;
+    const uppercaseVibe = newVibe.trim().toUpperCase();
+    if (!settings.vibes.includes(uppercaseVibe)) {
+      await updateVibes([...settings.vibes, uppercaseVibe]);
+      setNewVibe('');
+    }
+  };
+
+  const handleRemoveVibe = async (vibeToRemove: string) => {
+    if (confirm(`¿Eliminar el género "${vibeToRemove}"?`)) {
+      await updateVibes(settings.vibes.filter(v => v !== vibeToRemove));
+    }
+  };
+
+  const handleAddGenre = async () => {
+    if (!newGenre.trim()) return;
+    const uppercaseGenre = newGenre.trim().toUpperCase();
+    if (!settings.genres.includes(uppercaseGenre)) {
+      await updateGenres([...settings.genres, uppercaseGenre]);
+      setNewGenre('');
+    }
+  };
+
+  const handleRemoveGenre = async (genreToRemove: string) => {
+    if (confirm(`¿Eliminar el género "${genreToRemove}"?`)) {
+      await updateGenres(settings.genres.filter(g => g !== genreToRemove));
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -75,6 +110,79 @@ export const AdminDashboard = () => {
         <p className="text-white/60">
           Inyecta publicidad en los eventos creados por los locales. Los niveles 1, 2 y 3 determinan el impacto visual.
         </p>
+      </div>
+
+      {/* Genres and Vibes Config */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* Vibes Config */}
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden p-6">
+          <h2 className="text-xl font-bold text-white mb-2">Ambientes de Evento (Vibes)</h2>
+          <p className="text-white/50 text-xs mb-4">Opciones que los locales pueden asignar a sus eventos (ej: CENA, TARDEO).</p>
+        <div className="flex gap-4 mb-6">
+          <input 
+            type="text" 
+            value={newVibe}
+            onChange={(e) => setNewVibe(e.target.value)}
+            placeholder="Ej: ROCK, TECHNO..."
+            className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-400 uppercase"
+            onKeyDown={(e) => e.key === 'Enter' && handleAddVibe()}
+          />
+          <button 
+            onClick={handleAddVibe}
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl transition-colors font-bold flex items-center gap-2"
+          >
+            <FiPlus /> Añadir
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {settings.vibes.map((vibe) => (
+            <div key={vibe} className="flex items-center gap-2 bg-black border border-white/20 px-3 py-1.5 rounded-lg text-sm text-white/80">
+              {vibe}
+              <button 
+                onClick={() => handleRemoveVibe(vibe)}
+                className="text-red-400 hover:text-red-300 ml-1"
+              >
+                <FiTrash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          </div>
+        </div>
+
+        {/* Genres Config */}
+        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden p-6">
+          <h2 className="text-xl font-bold text-white mb-2">Géneros Musicales (Genres)</h2>
+          <p className="text-white/50 text-xs mb-4">Estilos musicales que los músicos eligen en su EPK (ej: ROCK, INDIE).</p>
+          <div className="flex gap-4 mb-6">
+            <input 
+              type="text" 
+              value={newGenre}
+              onChange={(e) => setNewGenre(e.target.value)}
+              placeholder="Ej: JAZZ, METAL..."
+              className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-400 uppercase"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddGenre()}
+            />
+            <button 
+              onClick={handleAddGenre}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl transition-colors font-bold flex items-center gap-2"
+            >
+              <FiPlus /> Añadir
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {settings.genres.map((genre) => (
+              <div key={genre} className="flex items-center gap-2 bg-black border border-white/20 px-3 py-1.5 rounded-lg text-sm text-white/80">
+                {genre}
+                <button 
+                  onClick={() => handleRemoveGenre(genre)}
+                  className="text-red-400 hover:text-red-300 ml-1"
+                >
+                  <FiTrash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {loading ? (

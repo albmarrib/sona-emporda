@@ -4,6 +4,9 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useChat } from "../../hooks/useChat";
+import { doc, updateDoc, arrayRemove } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 
 export const VenueDashboardHome = () => {
   const navigate = useNavigate();
@@ -11,9 +14,11 @@ export const VenueDashboardHome = () => {
   const { userData, currentUser } = useAuth();
   const venueName = userData?.name || 'Sala Soho';
   const venueId = currentUser?.uid;
+  const { findOrCreateChat, sendMessage } = useChat();
   
   const upcomingEvents = events
     .filter(e => (e.venueId && e.venueId === venueId) || (e.venueName && e.venueName === venueName))
+    .filter(e => e.status !== 'cancelled')
     .filter(e => parseISO(e.date) >= new Date())
     .slice(0, 3);
   
@@ -97,6 +102,8 @@ export const VenueDashboardHome = () => {
                     event.status === 'rejected' ? 'bg-red-900/30 text-red-500 border border-red-900' :
                     event.status === 'pending_musician' ? 'bg-yellow-900/30 text-yellow-500 border border-yellow-900' :
                     event.status === 'musician_accepted' ? 'bg-blue-900/30 text-blue-400 border border-blue-900' :
+                    event.status === 'musician_cancelled' ? 'bg-red-900 text-white border border-red-500 animate-pulse' :
+                    event.status === 'cancelled' ? 'bg-red-900/50 text-white/50 border border-red-900' :
                     'bg-green-900 text-white border border-green-700'
                   }`}>
                     {
@@ -104,10 +111,43 @@ export const VenueDashboardHome = () => {
                       event.status === 'rejected' ? 'Rechazado' :
                       event.status === 'pending_musician' ? 'Esperando Respuesta' :
                       event.status === 'musician_accepted' ? 'Músico Interesado' :
+                      event.status === 'musician_cancelled' ? '¡MÚSICO CANCELÓ!' :
+                      event.status === 'cancelled' ? 'Cancelado' :
                       'Confirmado'
                     }
                   </span>
                   <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                    {(event.status === 'confirmed' || (event.status === 'published' && event.musicianId)) && (
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!window.confirm('¿Quieres cancelar este bolo? El músico recibirá un aviso automático y el evento volverá a buscar artistas.')) return;
+                          
+                          try {
+                            const musicianIdToNotify = event.musicianId;
+                            
+                            await updateDoc(doc(db, 'events', event.id), {
+                              status: 'published',
+                              musicianId: null,
+                              musicianName: null,
+                              applicants: arrayRemove(musicianIdToNotify)
+                            });
+
+                            if (musicianIdToNotify) {
+                              const chatId = await findOrCreateChat(musicianIdToNotify, event.id);
+                              const cancelMsg = `Hola, lamentamos informarte que hemos tenido que cancelar tu actuación para el evento "${event.title}" del ${format(eventDate, "d 'de' MMMM", { locale: es })}.`;
+                              await sendMessage(chatId, cancelMsg);
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            alert("Error al cancelar el evento.");
+                          }
+                        }}
+                        className="w-full sm:w-auto px-4 py-2 border border-red-500/50 bg-red-900/30 text-red-500 hover:bg-red-500 hover:text-white transition-colors text-[10px] uppercase tracking-widest font-bold"
+                      >
+                        Cancelar Bolo
+                      </button>
+                    )}
                     <button 
                       onClick={(e) => { e.stopPropagation(); navigate('/venue/events'); }}
                       className="w-full sm:w-auto px-4 py-2 border border-white/20 text-white/50 hover:border-gold hover:text-gold transition-colors text-[10px] uppercase tracking-widest font-bold"

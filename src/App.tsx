@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { Home } from './pages/public/Home';
 import { EventDetail } from './pages/public/EventDetail';
@@ -50,7 +50,8 @@ function App() {
               <MusicianLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<DashboardHome />} />
+            <Route index element={<Navigate to="calendar" replace />} />
+            <Route path="dashboard" element={<DashboardHome />} />
             <Route path="opportunities" element={<MusicianOpportunities />} />
             <Route path="offers" element={<DirectOffers />} />
             <Route path="epk" element={<EPKManager />} />
@@ -65,7 +66,8 @@ function App() {
               <VenueLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<EventManager />} />
+            <Route index element={<Navigate to="calendar" replace />} />
+            <Route path="dashboard" element={<EventManager />} />
             <Route path="search" element={<ArtistSearch />} />
             <Route path="events" element={<EventManager />} />
             <Route path="calendar" element={<VenueCalendar />} />

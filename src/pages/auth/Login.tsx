@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { FiMail, FiLock } from 'react-icons/fi';
 import { Header } from '../../components/public/Header';
@@ -14,6 +14,25 @@ export const Login = () => {
   const [role, setRole] = useState<'musician' | 'venue'>('musician');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Por favor, introduce tu email para recuperar la contraseña.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await sendPasswordResetEmail(auth, email);
+      setResetSent(true);
+      setError('');
+    } catch (err: any) {
+      console.error(err);
+      setError('Error al enviar el correo de recuperación.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +97,11 @@ export const Login = () => {
           {error && (
             <div className="mb-6 p-4 border border-red-900/50 bg-red-900/10 text-red-500 text-xs uppercase tracking-widest text-center">
               {error}
+            </div>
+          )}
+          {resetSent && (
+            <div className="mb-6 p-4 border border-green-900/50 bg-green-900/10 text-green-500 text-xs uppercase tracking-widest text-center">
+              Correo de recuperación enviado. Revisa tu bandeja de entrada.
             </div>
           )}
 
@@ -148,7 +172,7 @@ export const Login = () => {
             </button>
           </form>
 
-          <div className="mt-8 text-center border-t border-white/10 pt-6">
+          <div className="mt-8 text-center border-t border-white/10 pt-6 space-y-4">
             <p className="text-white/40 text-xs">
               {isLogin ? '¿No tienes cuenta?' : '¿Ya tienes una cuenta?'}
               <button 
@@ -158,6 +182,18 @@ export const Login = () => {
                 {isLogin ? 'Regístrate aquí' : 'Inicia Sesión'}
               </button>
             </p>
+            {isLogin && (
+              <p className="text-white/40 text-xs">
+                ¿Has olvidado tu contraseña?
+                <button 
+                  onClick={handleResetPassword}
+                  type="button"
+                  className="ml-2 text-gold hover:text-white transition-colors font-bold uppercase tracking-widest text-[10px]"
+                >
+                  Recuperar Contraseña
+                </button>
+              </p>
+            )}
           </div>
 
         </div>

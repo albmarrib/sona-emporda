@@ -1,90 +1,63 @@
 import { useState } from 'react';
 import { db } from '../firebase/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
-import { mockEvents } from '../data/mockEvents';
-import { mockSosUrgencies as mockSOS } from '../data/mockSosData';
-import { mockMusicianProfile, mockMusicianCalendar } from '../data/mockMusicianData';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 export const SeedDatabase = () => {
-  const [status, setStatus] = useState<string>('Ready to seed database');
+  const [status, setStatus] = useState<string>('Listo para limpiar la base de datos');
   const [loading, setLoading] = useState(false);
 
-  const handleSeed = async () => {
+  const protectedEmails = [
+    'axonai.ia@gmail.com',
+    'alberto-martinez@idexx.com',
+    'albmarrib@gmail.com'
+  ];
+
+  const handleWipe = async () => {
+    if (!window.confirm("ATENCIÓN: Esto borrará TODOS los datos excepto tus 3 cuentas. ¿Estás seguro?")) return;
+    
     setLoading(true);
-    setStatus('Seeding started...');
+    setStatus('Iniciando borrado...');
     
     try {
-      const batch = writeBatch(db);
+      // 1. Borrar eventos
+      setStatus('Borrando eventos...');
+      const eventsSnap = await getDocs(collection(db, 'events'));
+      for (const eventDoc of eventsSnap.docs) {
+        await deleteDoc(doc(db, 'events', eventDoc.id));
+      }
 
-      // 1. Seed Events
-      setStatus('Seeding events...');
-      mockEvents.forEach(event => {
-        const docRef = doc(collection(db, 'events'), event.id);
-        batch.set(docRef, {
-          ...event,
-          createdAt: new Date().toISOString()
-        });
-      });
+      // 2. Borrar SOS
+      setStatus('Borrando alertas SOS...');
+      const sosSnap = await getDocs(collection(db, 'sos_alerts'));
+      for (const sosDoc of sosSnap.docs) {
+        await deleteDoc(doc(db, 'sos_alerts', sosDoc.id));
+      }
 
-      // 2. Seed SOS Alerts
-      setStatus('Seeding SOS alerts...');
-      mockSOS.forEach((sos: any) => {
-        const docRef = doc(collection(db, 'sos_alerts'), sos.id);
-        batch.set(docRef, {
-          ...sos,
-          createdAt: new Date().toISOString(),
-          applications: [] // For musicians to apply
-        });
-      });
+      // 3. Borrar booking_proposals (si existen)
+      setStatus('Borrando propuestas...');
+      const proposalsSnap = await getDocs(collection(db, 'booking_proposals'));
+      for (const propDoc of proposalsSnap.docs) {
+        await deleteDoc(doc(db, 'booking_proposals', propDoc.id));
+      }
 
-      // 3. Seed Users (Musicians)
-      setStatus('Seeding musicians...');
-      const musicianRef = doc(collection(db, 'users'), mockMusicianProfile.id);
-      batch.set(musicianRef, {
-        ...mockMusicianProfile,
-        calendar: mockMusicianCalendar,
-        role: 'musician',
-        email: 'musico@sonaemporda.com' // Mock email for auth matching
-      });
+      // 4. Borrar chats
+      setStatus('Borrando chats...');
+      const chatsSnap = await getDocs(collection(db, 'chats'));
+      for (const chatDoc of chatsSnap.docs) {
+        await deleteDoc(doc(db, 'chats', chatDoc.id));
+      }
 
-      // Add a couple more mock musicians
-      const m2Ref = doc(collection(db, 'users'), 'musician-456');
-      batch.set(m2Ref, {
-        id: "musician-456", 
-        stageName: "Midnight Jazz Trio", 
-        mainGenre: "Jazz",
-        profileImageUrl: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400",
-        rating: 4.5,
-        reviewsCount: 8,
-        calendar: { '2026-08-15': 'booked', '2026-08-25': 'available' },
-        role: 'musician'
-      });
+      // 5. Borrar usuarios (excepto los protegidos)
+      setStatus('Limpiando usuarios...');
+      const usersSnap = await getDocs(collection(db, 'users'));
+      for (const userDoc of usersSnap.docs) {
+        const userData = userDoc.data();
+        if (!protectedEmails.includes(userData.email)) {
+          await deleteDoc(doc(db, 'users', userDoc.id));
+        }
+      }
 
-      const m3Ref = doc(collection(db, 'users'), 'musician-789');
-      batch.set(m3Ref, {
-        id: "musician-789", 
-        stageName: "DJ Riera", 
-        mainGenre: "Electrónica",
-        profileImageUrl: "https://images.unsplash.com/photo-1542222835-300b12bc173c?auto=format&fit=crop&q=80&w=400",
-        rating: 4.8,
-        reviewsCount: 32,
-        calendar: {},
-        role: 'musician'
-      });
-
-      // 4. Seed Venue Profile
-      setStatus('Seeding venue...');
-      const venueRef = doc(collection(db, 'users'), 'venue-123');
-      batch.set(venueRef, {
-        id: 'venue-123',
-        name: 'Sala Soho',
-        type: 'Club',
-        email: 'local@sonaemporda.com',
-        role: 'venue'
-      });
-
-      await batch.commit();
-      setStatus('✅ Seeding completed successfully!');
+      setStatus('✅ Limpieza completada con éxito. Base de datos vacía (preservando tus cuentas).');
     } catch (error: any) {
       console.error(error);
       setStatus(`❌ Error: ${error.message}`);
@@ -96,10 +69,10 @@ export const SeedDatabase = () => {
   return (
     <div className="min-h-screen bg-black text-white p-12 flex flex-col items-center justify-center font-sans">
       <div className="bg-zinc-950 border border-white/10 p-8 max-w-lg w-full flex flex-col gap-6 text-center">
-        <h1 className="text-3xl font-serif text-gold">Database Seeder</h1>
+        <h1 className="text-3xl font-serif text-red-500">Wipe Database</h1>
         <p className="text-white/60 text-sm">
-          This will write mock data to Firebase Firestore.
-          Make sure your Firestore rules allow writing.
+          Esto eliminará todos los datos de Firestore (eventos, chats, SOS, y usuarios) 
+          EXCEPTO tus cuentas: {protectedEmails.join(', ')}.
         </p>
         
         <div className="p-4 bg-white/5 border border-white/10 text-xs font-mono break-all text-left">
@@ -107,11 +80,11 @@ export const SeedDatabase = () => {
         </div>
 
         <button 
-          onClick={handleSeed}
+          onClick={handleWipe}
           disabled={loading}
-          className="bg-gold text-black font-bold uppercase tracking-widest py-4 px-8 hover:bg-white transition-colors disabled:opacity-50"
+          className="bg-red-500 text-white font-bold uppercase tracking-widest py-4 px-8 hover:bg-red-600 transition-colors disabled:opacity-50"
         >
-          {loading ? 'Seeding...' : 'Run Seed'}
+          {loading ? 'Borrando...' : '🔥 BORRAR TODO 🔥'}
         </button>
       </div>
     </div>

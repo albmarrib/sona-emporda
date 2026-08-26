@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
-import type { SonaEvent } from "../../data/mockEvents";
+import type { SonaEvent } from "../../types";
 import { EventCard } from "./EventCard";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { type MusicianProfile } from '../data/mockMusicianData';
+import { type MusicianProfile } from '../types';
 import { db } from '../firebase/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';

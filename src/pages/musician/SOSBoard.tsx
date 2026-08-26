@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiAlertTriangle, FiClock, FiMapPin, FiFilter, FiPlus, FiX } from 'react-icons/fi';
+import { FiAlertTriangle, FiClock, FiMapPin, FiFilter, FiPlus, FiX, FiMessageSquare } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
 import { collection, onSnapshot, query, addDoc, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
@@ -161,9 +161,9 @@ export const SOSBoard = () => {
         {!isMine && (
           <button 
             onClick={() => openChat(sos)}
-            className="w-full py-2.5 text-[9px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 bg-green-900/30 border border-green-500/50 hover:bg-green-600 text-white mt-1"
+            className="w-full py-2.5 text-[9px] uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 bg-white/5 border border-white/20 hover:bg-gold hover:border-gold hover:text-black text-white mt-1"
           >
-            <FaWhatsapp className="w-4 h-4" /> Hablar por Chat
+            <FiMessageSquare className="w-4 h-4" /> Hablar por Chat
           </button>
         )}
 

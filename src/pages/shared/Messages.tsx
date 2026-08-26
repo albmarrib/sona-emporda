@@ -6,7 +6,7 @@ import { ChatWindow } from '../../components/chat/ChatWindow';
 import { useAuth } from '../../contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
-import { allMockMusicians } from '../../data/mockMusicianData';
+// mock data removed
 import type { ChatRoom } from '../../types/chat';
 
 export const Messages = () => {
@@ -37,12 +37,6 @@ export const Messages = () => {
       for (const chat of chats) {
         const otherId = chat.participants.find(id => id !== currentUser.uid);
         if (otherId && !names[otherId]) {
-          // Try mock musicians first
-          const mock = allMockMusicians.find(m => m.id === otherId);
-          if (mock) {
-            names[otherId] = mock.stageName;
-            updated = true;
-          } else {
             // Try firestore
             const docRef = doc(db, 'users', otherId);
             const docSnap = await getDoc(docRef);
@@ -54,7 +48,6 @@ export const Messages = () => {
               names[otherId] = 'Usuario Desconocido';
               updated = true;
             }
-          }
         }
       }
 

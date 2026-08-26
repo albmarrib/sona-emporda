@@ -2,7 +2,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
-import type { SonaEvent } from "../../data/mockEvents";
+import type { SonaEvent } from "../../types";
 
 interface EventCardProps {
   event: SonaEvent;
@@ -13,11 +13,18 @@ export const EventCard = ({ event }: EventCardProps) => {
   const dateObj = event.date ? parseISO(event.date) : new Date();
   if (isNaN(dateObj.getTime())) return null;
 
+  const isCancelled = event.status === 'cancelled';
+
   return (
     <article 
-      onClick={() => navigate(`/event/${event.id}`)}
-      className="group relative flex flex-col md:flex-row gap-6 border-b border-white/10 py-10 hover:bg-white/5 transition-colors duration-500 cursor-pointer"
+      onClick={() => isCancelled ? null : navigate(`/event/${event.id}`)}
+      className={`group relative flex flex-col md:flex-row gap-6 border-b border-white/10 py-10 transition-colors duration-500 ${isCancelled ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}`}
     >
+      {isCancelled && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold text-2xl md:text-4xl px-8 py-2 border-y-4 border-black -rotate-12 z-30 shadow-2xl tracking-[0.2em] whitespace-nowrap">
+          CANCELADO
+        </div>
+      )}
       {/* Date Column (Desktop) */}
       <div className="hidden md:flex flex-col shrink-0 w-32 justify-start pt-2">
         <span className="text-white/40 text-[10px] uppercase tracking-widest mb-1">
@@ -65,9 +72,13 @@ export const EventCard = ({ event }: EventCardProps) => {
               {event.title}
             </h3>
           )}
-          {event.musicianName && (
+          {event.musicianName ? (
             <p className="text-white/80 text-sm font-bold mb-3 truncate">
               Artista / Grupo: <span className="text-gold font-normal">{event.musicianName}</span>
+            </p>
+          ) : (
+            <p className="text-white/80 text-sm font-bold mb-3 truncate">
+              Artista / Grupo: <span className="text-white/50 font-normal italic">Banda por confirmar</span>
             </p>
           )}
           

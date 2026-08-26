@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { type MusicianCalendar, type DayStatus, mockMusicianCalendar } from '../data/mockMusicianData';
+import { type MusicianCalendar, type DayStatus } from '../types';
+import { db } from '../firebase/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useEvents } from './useEvents';
+import { useAuth } from '../contexts/AuthContext';
 
 export const useMusicianCalendar = (musicianId?: string) => {
   const [calendar, setCalendar] = useState<MusicianCalendar>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { currentUser } = useAuth();
   
   const { events, loading: eventsLoading } = useEvents(true);
 
@@ -15,11 +19,18 @@ export const useMusicianCalendar = (musicianId?: string) => {
     const fetchCalendar = async () => {
       setLoading(true);
       try {
-        // Empezamos con el calendario base del músico
-        const baseCalendar = { ...mockMusicianCalendar };
+        const myMusicianId = musicianId || currentUser?.uid;
+        if (!myMusicianId) return;
+        let baseCalendar: MusicianCalendar = {};
+        
+        // Fetch from Firestore
+        const docRef = doc(db, 'users', myMusicianId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().calendar) {
+          baseCalendar = docSnap.data().calendar;
+        }
         
         // Inyectamos dinámicamente todos sus eventos confirmados como 'booked'
-        const myMusicianId = musicianId || "musician-123";
         const myConfirmedEvents = events.filter(e => 
           e.musicianId === myMusicianId && 
           (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId)
@@ -28,7 +39,10 @@ export const useMusicianCalendar = (musicianId?: string) => {
         myConfirmedEvents.forEach(event => {
           // Extraemos YYYY-MM-DD de la fecha ISO
           const dateKey = event.date.split('T')[0];
-          baseCalendar[dateKey] = 'booked';
+          // Por defecto al haber evento confirmado es rojo (booked_full), salvo que el músico lo abra
+          if (baseCalendar[dateKey] !== 'booked_partial') {
+            baseCalendar[dateKey] = 'booked_full';
+          }
         });
 
         setCalendar(baseCalendar);
@@ -54,28 +68,17 @@ export const useMusicianCalendar = (musicianId?: string) => {
     
     setCalendar(newCalendar);
 
-    // Simular escritura en Firestore
-    await new Promise(resolve => setTimeout(resolve, 300));
-  };
-
-  const markAllAvailable = async (datesIso: string[]) => {
-    const newCalendar = { ...calendar };
-    let hasChanges = false;
-    
-    datesIso.forEach(dateIso => {
-      // Solo sobreescribir si NO está booked
-      if (newCalendar[dateIso] !== 'booked') {
-        newCalendar[dateIso] = 'available';
-        hasChanges = true;
-      }
-    });
-
-    if (hasChanges) {
-      setCalendar(newCalendar);
-      // Simular escritura batch en Firestore
-      await new Promise(resolve => setTimeout(resolve, 500));
+    // Escribir en Firestore
+    try {
+      const myMusicianId = musicianId || currentUser?.uid;
+      if (!myMusicianId) return;
+      await updateDoc(doc(db, 'users', myMusicianId), {
+        calendar: newCalendar
+      });
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  return { calendar, loading, error, updateDayStatus, markAllAvailable };
+  return { calendar, loading, error, updateDayStatus };
 };
