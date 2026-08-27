@@ -101,7 +101,6 @@ export const EventManager = () => {
   
   // Filter visible events based on showPastEvents
   const visibleEvents = events.filter(event => {
-    if (event.status === 'cancelled') return false;
     if (showPastEvents) return true;
     return parseISO(event.date) >= new Date();
   });
@@ -142,9 +141,10 @@ export const EventManager = () => {
         {visibleEvents.map(event => {
           const eventDate = parseISO(event.date);
           const isPast = eventDate < new Date();
+          const isCancelled = event.status === 'cancelled';
           
           return (
-            <div key={event.id} className={`py-3 border-b border-white/10 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between group hover:bg-white/5 transition-colors px-2 -mx-2 rounded-lg ${isPast ? 'opacity-50' : ''}`}>
+            <div key={event.id} className={`py-3 border-b flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between group transition-colors px-2 -mx-2 rounded-lg ${isPast && !isCancelled ? 'opacity-50' : ''} ${isCancelled ? 'bg-red-950/30 border-red-900/50 opacity-70' : 'border-white/10 hover:bg-white/5'}`}>
               
               <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto overflow-hidden">
                 <div className="text-center flex flex-col items-center justify-center w-12 h-12 bg-white/5 border border-white/10 shrink-0 rounded-md">
@@ -168,22 +168,24 @@ export const EventManager = () => {
                   
                   <div className="flex items-center gap-3 text-white/50 text-[9px] uppercase tracking-widest mt-1">
                     <span className="flex items-center gap-1 shrink-0"><FiClock className="text-gold w-2.5 h-2.5" /> {format(eventDate, "HH:mm")}</span>
-                    {!isPast && (
+                    {(!isPast || event.status === 'cancelled') && (
                       <span className={`flex items-center gap-1 shrink-0 ${
                           event.status === 'published' ? 'text-green-500' : 
                           event.status === 'rejected' ? 'text-red-500' :
                           event.status === 'pending_musician' ? 'text-yellow-500' :
                           event.status === 'musician_accepted' ? 'text-blue-400' :
                           event.status === 'musician_cancelled' ? 'text-red-500 animate-pulse' :
+                          event.status === 'cancelled' ? 'text-red-500 line-through' :
                           'text-white'
                         }`}><FiCheckCircle className="w-2.5 h-2.5" /> 
-                        <span className="truncate max-w-[100px] sm:max-w-none">
+                        <span className={`truncate max-w-[100px] sm:max-w-none ${event.status === 'cancelled' ? 'font-black' : ''}`}>
                           {
                             event.status === 'published' ? 'Buscando Grupo' : 
                             event.status === 'rejected' ? 'Rechazado' :
                             event.status === 'pending_musician' ? 'Esperando Respuesta' :
                             event.status === 'musician_accepted' ? 'Músico Interesado' :
                             event.status === 'musician_cancelled' ? '¡MÚSICO CANCELÓ!' :
+                            event.status === 'cancelled' ? 'CANCELADO' :
                             'Confirmado'
                           }
                         </span>

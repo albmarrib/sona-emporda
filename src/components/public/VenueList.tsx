@@ -45,12 +45,12 @@ const MapUpdater = ({ center }: { center: [number, number] | null }) => {
 
 export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
   const navigate = useNavigate();
-  const MOCK_TODAY = new Date("2026-08-14"); // Simulated "today"
+  const today = new Date();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   
   // Date filters
-  const [startDate, setStartDate] = useState(MOCK_TODAY);
-  const [endDate, setEndDate] = useState(addDays(MOCK_TODAY, 7));
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(addDays(today, 7));
 
   useEffect(() => {
     if ("geolocation" in navigator) {
@@ -64,13 +64,21 @@ export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
   }, []);
 
   const filteredEvents = events.filter(event => {
-    if (!event.date) return false;
+    if (!event.date || event.status === 'cancelled' || event.status === 'musician_cancelled') return false;
     const eventDate = parseISO(event.date);
     if (isNaN(eventDate.getTime())) return false;
     const matchesDate = isWithinInterval(eventDate, { start: startDate, end: endDate });
     const matchesVibe = selectedVibes.length === 0 || (event.vibes || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
     return matchesDate && matchesVibe;
   });
+
+  const groupedEvents = filteredEvents.reduce((acc, event) => {
+    if(!event.coordinates) return acc;
+    const key = `${event.coordinates.lat},${event.coordinates.lng}`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(event);
+    return acc;
+  }, {} as Record<string, typeof filteredEvents>);
 
   const mapCenter = userLocation || DEFAULT_CENTER;
 
@@ -136,38 +144,42 @@ export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
             </Marker>
           )}
 
-          {/* Marcadores de eventos */}
-          {filteredEvents.map(event => {
-            if(!event.coordinates) return null;
+          {/* Marcadores de eventos agrupados por ubicación */}
+          {Object.values(groupedEvents).map((locationEvents) => {
+            const firstEvent = locationEvents[0];
             return (
-            <Marker key={event.id} position={[event.coordinates.lat, event.coordinates.lng]}>
-              <Popup className="font-sans min-w-[200px] shadow-2xl">
-                <div className="flex flex-col gap-2 p-1">
-                  <span className="text-[10px] uppercase tracking-widest text-gold font-bold">
-                    {format(parseISO(event.date), "dd MMM - HH:mm", { locale: es })}
-                  </span>
-                  <h4 className="font-serif text-lg leading-tight m-0 text-black">{event.title}</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-black/60 m-0">
-                    {event.venueName}
-                  </p>
+            <Marker key={firstEvent.id} position={[firstEvent.coordinates.lat, firstEvent.coordinates.lng]}>
+              <Popup className="font-sans min-w-[250px] shadow-2xl">
+                <div className="flex flex-col gap-4 p-1 max-h-[300px] overflow-y-auto">
+                  <h4 className="font-serif text-lg leading-tight m-0 text-black border-b border-black/10 pb-2">
+                    {firstEvent.venueName}
+                  </h4>
                   
-                  <div className="flex flex-col gap-1 mt-4">
-                    <button 
-                      onClick={() => navigate(`/event/${event.id}`)}
-                      className="w-full block bg-gold !text-black text-[10px] uppercase tracking-widest text-center py-2 px-4 hover:bg-black hover:!text-gold transition-colors font-bold border border-gold cursor-pointer"
-                    >
-                      Ver Evento
-                    </button>
-                    <a 
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${event.coordinates.lat},${event.coordinates.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full block bg-black !text-white text-[10px] uppercase tracking-widest text-center py-2 px-4 hover:!bg-white/10 transition-colors border border-black cursor-pointer"
-                      style={{ color: 'white', textDecoration: 'none' }}
-                    >
-                      📍 Cómo llegar
-                    </a>
-                  </div>
+                  {locationEvents.map(event => (
+                    <div key={event.id} className="flex flex-col gap-1 border-b border-black/5 pb-2 last:border-0">
+                      <span className="text-[10px] uppercase tracking-widest text-gold font-bold">
+                        {format(parseISO(event.date), "dd MMM - HH:mm", { locale: es })}
+                      </span>
+                      <p className="font-bold text-sm leading-tight m-0 text-black">{event.title}</p>
+                      
+                      <button 
+                        onClick={() => navigate(`/event/${event.id}`)}
+                        className="w-full block bg-gold !text-black text-[10px] uppercase tracking-widest text-center py-1.5 px-4 hover:bg-black hover:!text-gold transition-colors font-bold border border-gold cursor-pointer mt-1"
+                      >
+                        Ver Evento
+                      </button>
+                    </div>
+                  ))}
+
+                  <a 
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${firstEvent.coordinates.lat},${firstEvent.coordinates.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full block bg-black !text-white text-[10px] uppercase tracking-widest text-center py-2 px-4 hover:!bg-white/10 transition-colors border border-black cursor-pointer mt-2"
+                    style={{ color: 'white', textDecoration: 'none' }}
+                  >
+                    📍 Cómo llegar
+                  </a>
                 </div>
               </Popup>
             </Marker>

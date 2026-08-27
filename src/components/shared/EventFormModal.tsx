@@ -112,8 +112,23 @@ export const EventFormModal = ({ isOpen, onClose, editingEventId, initialEventDa
         finalImageUrl = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000';
       }
 
+      let lat = 41.85;
+      let lng = 3.10;
+      if (userData?.address) {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(userData.address)}`);
+          const data = await res.json();
+          if (data && data.length > 0) {
+            lat = parseFloat(data[0].lat);
+            lng = parseFloat(data[0].lon);
+          }
+        } catch (e) {
+          console.error("Geocoding failed", e);
+        }
+      }
+
       const eventData = {
-        coordinates: { lat: 41.85, lng: 3.10 },
+        coordinates: { lat, lng },
         description: "Sin descripción por ahora.",
         title: newEvent.title,
         musicianName: newEvent.musicianName,
