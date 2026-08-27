@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase } from 'react-icons/fi';
+import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch } from 'react-icons/fi';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
 
@@ -34,7 +34,6 @@ export const MusicianLayout = () => {
   const navItems = [
     { name: 'Calendario', mobileName: 'Agenda', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
     { name: 'Oportunidades', mobileName: 'Buscar', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Invitaciones', mobileName: 'Ofertas', path: '/musician/offers', icon: <FiBriefcase className="w-5 h-5" /> },
     { name: 'Dashboard', mobileName: 'Inicio', path: '/musician/dashboard', icon: <FiHome className="w-5 h-5" /> },
     { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
     { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
@@ -110,7 +109,7 @@ export const MusicianLayout = () => {
         <div className="p-4 border-t border-white/10">
           <div className="px-4 pb-4">
             <p className="text-[9px] uppercase tracking-widest text-white/40 mb-1">Sesión iniciada como</p>
-            <p className="text-xs truncate font-bold text-gold">{profile?.stageName || currentUser?.email || 'Músico'}</p>
+            <p className="text-xs truncate font-bold text-gold">{profile?.stageName || userData?.stageName || userData?.name || currentUser?.email || 'Músico'}</p>
           </div>
           
           <div className="flex gap-2 w-full mb-2">

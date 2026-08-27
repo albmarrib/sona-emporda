@@ -44,11 +44,16 @@ export const VenueSOSManager = () => {
     setIsSubmitting(true);
     
     try {
+      const formattedDate = formData.dateStr ? new Date(formData.dateStr).toLocaleString('es-ES', { 
+        day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+      }) + 'h' : '';
+
       const newSos = {
         title: formData.title,
+        type: 'sos',
         venueName: userData?.name || 'Local Sin Nombre',
         location: userData?.address || 'Dirección no definida',
-        dateStr: formData.dateStr,
+        dateStr: formattedDate,
         price: formData.price || 'A convenir',
         requiredVibes: ['🎸 Urgente'],
         description: formData.description,
@@ -170,8 +175,8 @@ export const VenueSOSManager = () => {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Cuándo</label>
-                  <input required type="text" placeholder="Ej: Hoy 23:00h" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                  <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Fecha y Hora</label>
+                  <input required type="datetime-local" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark]" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Presupuesto Aprox.</label>

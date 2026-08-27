@@ -50,8 +50,13 @@ export const Home = () => {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // Mostramos eventos confirmados Y publicados (buscando grupo) Y cancelados
-  const confirmedEvents = events.filter(e => e.status !== 'draft');
+  // Mostramos solo eventos confirmados, cancelados, o con músico asignado. Ocultamos los que buscan músico.
+  const confirmedEvents = events.filter(e => 
+    e.status === 'confirmed' || 
+    e.status === 'cancelled' || 
+    e.status === 'musician_cancelled' || 
+    (e.status === 'published' && e.musicianId)
+  );
   
   // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
   const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');

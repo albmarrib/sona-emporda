@@ -1,4 +1,4 @@
-import { FiUsers, FiCalendar, FiArrowRight, FiSearch } from "react-icons/fi";
+import { FiUsers, FiCalendar, FiArrowRight, FiSearch, FiAlertTriangle } from "react-icons/fi";
 import { useEvents } from "../../hooks/useEvents";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useChat } from "../../hooks/useChat";
 import { doc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
+import { useSosAlerts } from "../../hooks/useSosAlerts";
 
 export const VenueDashboardHome = () => {
   const navigate = useNavigate();
@@ -15,11 +16,13 @@ export const VenueDashboardHome = () => {
   const venueName = userData?.name || 'Sala Soho';
   const venueId = currentUser?.uid;
   const { findOrCreateChat, sendMessage } = useChat();
+  const { activeSosCount, activeCollabCount } = useSosAlerts();
   
   const upcomingEvents = events
     .filter(e => (e.venueId && e.venueId === venueId) || (e.venueName && e.venueName === venueName))
     .filter(e => e.status !== 'cancelled')
     .filter(e => parseISO(e.date) >= new Date())
+    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
     .slice(0, 3);
   
   return (
@@ -62,6 +65,25 @@ export const VenueDashboardHome = () => {
       </div>
 
       <div className="flex flex-col md:flex-row gap-12">
+        {/* Simple Alert Notice */}
+        {(activeSosCount > 0 || activeCollabCount > 0) && (
+          <div className="w-full bg-zinc-900 border border-white/10 p-4 shadow-lg rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between cursor-pointer hover:bg-zinc-800 transition-colors mb-6 gap-4" onClick={() => navigate('/venue/sos')}>
+            <div className="flex items-center gap-3">
+              <FiAlertTriangle className={`w-6 h-6 shrink-0 ${activeSosCount > 0 ? 'text-red-500 animate-pulse' : 'text-green-500'}`} />
+              <div>
+                <p className="text-white font-serif text-lg">Nuevos avisos en el Tablón SOS</p>
+                <p className="text-white/50 text-xs">
+                  {activeSosCount > 0 && <span className="text-red-400 font-bold">{activeSosCount} urgentes</span>}
+                  {activeSosCount > 0 && activeCollabCount > 0 && <span className="mx-2">|</span>}
+                  {activeCollabCount > 0 && <span className="text-green-400 font-bold">{activeCollabCount} colaboraciones</span>}
+                </p>
+              </div>
+            </div>
+            <button className="whitespace-nowrap bg-white/10 hover:bg-gold hover:text-black text-white px-4 py-2 text-xs uppercase tracking-widest font-bold transition-colors rounded-sm">
+              Revisar
+            </button>
+          </div>
+        )}
         {/* Next Gigs List (Prominent) */}
         <div className="flex-1">
           <div className="flex items-center justify-between mb-6 border-b border-white/10 pb-4">

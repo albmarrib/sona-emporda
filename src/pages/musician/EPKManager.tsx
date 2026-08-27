@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FiUploadCloud, FiSave, FiMusic, FiLink2, FiFileText, FiImage, FiPhone, FiLoader } from 'react-icons/fi';
 import { useMusicianProfile } from '../../hooks/useMusicianProfile';
 import { storage } from '../../firebase/firebase';
@@ -61,8 +61,20 @@ export const EPKManager = () => {
     }
   };
 
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleChange = (field: keyof MusicianProfile, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        setSaving(true);
+        updateProfile(newData).finally(() => setSaving(false));
+      }, 1000);
+      
+      return newData;
+    });
   };
 
   if (profileLoading || settingsLoading) {
@@ -178,6 +190,16 @@ export const EPKManager = () => {
           <p className="text-white/40 text-xs">
             Esta información se usará para notificarte (y en el futuro mediante Agentes IA) cuando un local quiera contratarte.
           </p>
+          <div className="flex flex-col gap-2">
+            <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Población Base</label>
+            <input 
+              type="text" 
+              placeholder="Ej: Figueres, Girona..."
+              value={formData.baseLocation || ''} 
+              onChange={(e) => handleChange('baseLocation', e.target.value)}
+              className="bg-white/5 border border-white/10 py-3 px-4 text-sm font-sans text-white focus:outline-none focus:border-gold transition-colors" 
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex flex-col gap-2">
               <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Teléfono Móvil</label>

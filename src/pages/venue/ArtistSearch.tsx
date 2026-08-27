@@ -40,7 +40,7 @@ export const ArtistSearch = () => {
           calendar: data.calendar || {},
           contactWhatsapp: data.phone || data.contactWhatsapp || '',
           description: data.bio || data.shortBio || 'Músico registrado en Sona Empordà.',
-          location: data.location || 'Empordà'
+          baseLocation: data.baseLocation || ''
         };
       });
       setRealMusicians(musicians);
@@ -207,7 +207,7 @@ export const ArtistSearch = () => {
                   <div className="absolute bottom-4 left-4 z-20">
                     <h3 className="text-2xl font-serif text-white">{artist.stageName}</h3>
                     <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold mt-1">
-                      <FiMapPin /> {'Catalunya'}
+                      <FiMapPin /> {artist.baseLocation || 'Sin ubicación'}
                     </div>
                   </div>
                   <button className="absolute bottom-4 right-4 z-20 bg-gold text-black p-3 rounded-full hover:bg-white transition-colors shadow-lg">

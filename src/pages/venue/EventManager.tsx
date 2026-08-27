@@ -39,8 +39,8 @@ export const EventManager = () => {
       // Filter by venueId or venueName (to support mock data that lacks venueId)
       const myEvents = eventsList.filter((e: any) => (e.venueId && e.venueId === currentUser?.uid) || (e.venueName && e.venueName === (userData?.name || 'Sala Soho')));
       
-      // Sort by date descending for simple visualization
-      myEvents.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // Sort by date ascending for chronological visualization
+      myEvents.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setEvents(myEvents);
     });
     return () => unsubscribe();

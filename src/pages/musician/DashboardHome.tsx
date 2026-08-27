@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { FiClock, FiCheckCircle, FiMapPin, FiEye, FiEyeOff } from "react-icons/fi";
+import { FiClock, FiCheckCircle, FiMapPin, FiEye, FiEyeOff, FiRadio, FiAlertTriangle } from "react-icons/fi";
 import { useEvents } from "../../hooks/useEvents";
 import { db } from '../../firebase/firebase';
 import { PushNotificationBanner } from '../../components/chat/PushNotificationBanner';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { format, parseISO } from "date-fns";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSosAlerts } from "../../hooks/useSosAlerts";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 
@@ -16,6 +17,7 @@ export const DashboardHome = () => {
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [eventToEvaluate, setEventToEvaluate] = useState<any>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
+  const { activeSosCount, activeCollabCount } = useSosAlerts();
 
   // Solo mostramos en el Dashboard los bolos realmente CONFIRMADOS o los de relleno (mock)
   const myEvents = events.filter(event => 
@@ -173,6 +175,26 @@ export const DashboardHome = () => {
             })}
           </div>
         </div>
+
+        {/* Simple Alert Notice */}
+        {(activeSosCount > 0 || activeCollabCount > 0) && (
+          <div className="bg-zinc-900 border border-white/10 p-4 shadow-lg rounded-lg flex items-center justify-between cursor-pointer hover:bg-zinc-800 transition-colors" onClick={() => navigate('/musician/sos')}>
+            <div className="flex items-center gap-3">
+              <FiAlertTriangle className={`w-6 h-6 ${activeSosCount > 0 ? 'text-red-500 animate-pulse' : 'text-green-500'}`} />
+              <div>
+                <p className="text-white font-serif text-lg">Nuevos avisos en el Tablón SOS</p>
+                <p className="text-white/50 text-xs">
+                  {activeSosCount > 0 && <span className="text-red-400 font-bold">{activeSosCount} urgentes</span>}
+                  {activeSosCount > 0 && activeCollabCount > 0 && <span className="mx-2">|</span>}
+                  {activeCollabCount > 0 && <span className="text-green-400 font-bold">{activeCollabCount} colaboraciones</span>}
+                </p>
+              </div>
+            </div>
+            <button className="bg-white/10 hover:bg-gold hover:text-black text-white px-4 py-2 text-xs uppercase tracking-widest font-bold transition-colors rounded-sm">
+              Revisar
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Modal Evaluación de Local */}

@@ -17,8 +17,8 @@ export const SosAlarm = () => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
           const sos = change.doc.data();
-          // Si el SOS fue creado DESPUÉS de cargar la página, es nuevo
-          if (sos.postedAt > mountTime) {
+          // Si el SOS fue creado DESPUÉS de cargar la página, es nuevo, y SOLO saltará si es URGENTE
+          if (sos.postedAt > mountTime && (sos.type === 'sos' || sos.isUrgent)) {
             triggerAlarm(sos.title, sos.description);
           }
         }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiChevronLeft, FiChevronRight, FiInfo, FiX, FiMessageSquare, FiCheckCircle } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiInfo, FiX, FiMessageSquare, FiCheckCircle, FiAlertTriangle, FiUsers } from 'react-icons/fi';
 import { useMusicianCalendar } from '../../hooks/useMusicianCalendar';
 import type { DayStatus } from '../../types';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ export const AvailabilityCalendar = () => {
   const navigate = useNavigate();
   const { events } = useEvents();
   const { calendar, loading, updateDayStatus } = useMusicianCalendar();
-  const { activeSosCount } = useSosAlerts();
+  const { activeSosCount, activeCollabCount } = useSosAlerts();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedManageDate, setSelectedManageDate] = useState<string | null>(null);
   const [eventToView, setEventToView] = useState<any | null>(null);
@@ -80,14 +80,47 @@ export const AvailabilityCalendar = () => {
             Asegura tus fechas para recibir propuestas.
           </p>
         </div>
-        {activeSosCount > 0 && (
+        <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/musician/sos')}
-            className="flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500 hover:bg-red-600 hover:text-white transition-colors px-4 py-2 rounded-lg animate-pulse"
+            onClick={() => {
+              if (!currentUser) return;
+              const link = `${window.location.origin}/band/${currentUser.uid}/calendar`;
+              const text = `¡Hola! Aquí tenéis el calendario de nuestros bolos y disponibilidad en Sona Empordà: ${link}`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            }}
+            className="flex items-center gap-2 bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-4 py-2 rounded-lg"
           >
-            <span className="font-bold uppercase tracking-widest text-xs">¡{activeSosCount} SOS Activos!</span>
+            <span className="font-bold uppercase tracking-widest text-xs hidden sm:inline">Compartir con la Banda</span>
+            <span className="font-bold uppercase tracking-widest text-xs sm:hidden">Compartir</span>
           </button>
-        )}
+          {/* Alert Symbols */}
+          <div className="flex items-center gap-3">
+            {activeSosCount > 0 && (
+              <button 
+                onClick={() => navigate('/musician/sos')}
+                className="relative p-2.5 bg-red-600/20 text-red-500 border border-red-500/50 hover:bg-red-600 hover:text-white transition-colors rounded-full animate-pulse"
+                title={`${activeSosCount} SOS Activos`}
+              >
+                <FiAlertTriangle className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {activeSosCount}
+                </span>
+              </button>
+            )}
+            {activeCollabCount > 0 && (
+              <button 
+                onClick={() => navigate('/musician/sos')}
+                className="relative p-2.5 bg-green-900/40 text-green-400 border border-green-500/50 hover:bg-green-600 hover:text-white transition-colors rounded-full"
+                title={`${activeCollabCount} Nuevos Anuncios`}
+              >
+                <FiUsers className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {activeCollabCount}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="bg-black border border-white/10 p-4 md:p-10 shadow-2xl w-full overflow-hidden">

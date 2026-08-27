@@ -92,7 +92,7 @@ export const VenueCalendar = () => {
   // Get Venue's own events
   const venueName = userData?.name || 'Sala Soho';
   const venueId = currentUser?.uid;
-  const venueEvents = events.filter(e => e.venueId === venueId);
+  const venueEvents = events.filter(e => e.venueId === venueId && e.status !== 'cancelled');
 
   const selectedDayEvent = selectedDate ? venueEvents.find(e => format(parseISO(e.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')) : null;
   const isSelectedDayPending = selectedDayEvent?.status === 'published' && !selectedDayEvent.musicianId;
@@ -364,23 +364,42 @@ export const VenueCalendar = () => {
               <div className="px-4 md:px-6 pt-6">
                 <div className="bg-white/5 border border-white/10 p-4 mb-4">
                   <h3 className="text-white font-bold text-sm mb-1 flex items-center gap-2">Negociación Activa</h3>
-                  <p className="text-white/60 text-xs leading-relaxed mb-4">Tienes una negociación abierta con {selectedDayEvent.musicianName}. Si no llegáis a un acuerdo, puedes anularla aquí.</p>
-                  <button 
-                    onClick={async () => {
-                      if(window.confirm('¿Quieres cancelar esta negociación? El evento volverá a estar buscando músicos libremente.')) {
-                        import('firebase/firestore').then(({ doc, updateDoc }) => {
-                          updateDoc(doc(db, 'events', selectedDayEvent.id), {
-                            status: 'published',
-                            musicianId: null,
-                            musicianName: null
+                  <p className="text-white/60 text-xs leading-relaxed mb-4">Tienes una negociación abierta con {selectedDayEvent.musicianName}.</p>
+                  
+                  <div className="flex flex-col gap-2">
+                    {selectedDayEvent?.status === 'musician_accepted' && (
+                      <button 
+                        onClick={async () => {
+                          if(window.confirm('¿Quieres confirmar este evento? Se hará oficial y se publicará en la web.')) {
+                            import('firebase/firestore').then(({ doc, updateDoc }) => {
+                              updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                                status: 'confirmed'
+                              });
+                            });
+                          }
+                        }}
+                        className="w-full bg-green-600 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-green-500 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <FiCheckCircle className="w-4 h-4" /> Confirmar Evento
+                      </button>
+                    )}
+                    <button 
+                      onClick={async () => {
+                        if(window.confirm('¿Quieres cancelar esta negociación? El evento volverá a estar buscando músicos libremente.')) {
+                          import('firebase/firestore').then(({ doc, updateDoc }) => {
+                            updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                              status: 'published',
+                              musicianId: null,
+                              musicianName: null
+                            });
                           });
-                        });
-                      }
-                    }}
-                    className="w-full bg-red-600/20 text-red-400 border border-red-500/30 font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-red-600 hover:text-white transition-colors"
-                  >
-                    Anular
-                  </button>
+                        }
+                      }}
+                      className="w-full bg-red-600/20 text-red-400 border border-red-500/30 font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-red-600 hover:text-white transition-colors"
+                    >
+                      Anular Negociación
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -576,7 +595,9 @@ const ArtistCard = ({ artist, badge, isWarning, isDeclined, onSelect }: { artist
         </div>
         <div className="flex-1">
           <h3 className="text-sm font-serif text-white group-hover:text-gold transition-colors">{artist.stageName}</h3>
-          <p className="text-white/50 text-[10px] uppercase tracking-widest">{artist.mainGenre}</p>
+          <p className="text-white/50 text-[10px] uppercase tracking-widest truncate">
+            {artist.mainGenre} {artist.baseLocation ? `· ${artist.baseLocation}` : ''}
+          </p>
         </div>
       </div>
       

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuth } from './contexts/AuthContext';
 import { Home } from './pages/public/Home';
 import { EventDetail } from './pages/public/EventDetail';
+import { SharedBandCalendar } from './pages/public/SharedBandCalendar';
 import { Login } from './pages/auth/Login';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { SosAlarm } from './components/shared/SosAlarm';
@@ -41,6 +42,7 @@ function App() {
           {/* Área Pública */}
           <Route path="/" element={<Home />} />
           <Route path="/event/:id" element={<EventDetail />} />
+          <Route path="/band/:bandId/calendar" element={<SharedBandCalendar />} />
           <Route path="/login" element={<Login />} />
           <Route path="/seed" element={<SeedDatabase />} />
           

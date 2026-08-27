@@ -26,7 +26,7 @@ export const MusicianOpportunities = () => {
   // Filter for events that are NOT confirmed and have NOT been declined by the musician
   const opportunities = events
     .filter(e => {
-       if (e.status === 'confirmed' || e.status === 'draft' || e.declinedBy?.includes(profile?.id)) return false;
+       if (e.status === 'confirmed' || e.status === 'draft' || e.status === 'cancelled' || e.declinedBy?.includes(profile?.id)) return false;
        const eventDate = parseISO(e.date);
        const today = new Date();
        today.setHours(0, 0, 0, 0);

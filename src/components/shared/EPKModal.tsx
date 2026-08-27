@@ -49,10 +49,15 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
         </div>
 
         <div className="p-6 md:p-8 flex flex-col gap-6">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
               <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
                 {artist.mainGenre}
               </span>
+              {artist.baseLocation && (
+                <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
+                  📍 {artist.baseLocation}
+                </span>
+              )}
           </div>
 
           <div>

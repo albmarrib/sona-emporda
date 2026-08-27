@@ -32,6 +32,7 @@ export interface MusicianProfile {
   membersCount: number;
   membersNames: string;
   mainGenre: string;
+  baseLocation?: string;
   shortBio: string;
   contactPhone: string;
   contactWhatsapp: string;
@@ -56,6 +57,7 @@ export interface MusicianCalendar {
 export interface SosUrgency {
   id: string;
   title: string;
+  type?: 'sos' | 'collaboration';
   venueName: string;
   venueId?: string;
   location: string;

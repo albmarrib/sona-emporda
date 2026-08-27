@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firebase/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { X, ChevronLeft, ChevronRight, Calendar, User, Briefcase, LifeBuoy, Search, MessageSquare, FileText } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Calendar, User, Briefcase, LifeBuoy, Search, MessageSquare, FileText, CheckCircle, Users, Share2, XCircle, Home } from 'lucide-react';
 
 interface Slide {
   title: string;
@@ -12,47 +12,102 @@ interface Slide {
 
 const musicianSlides: Slide[] = [
   {
-    title: 'El Calendario es el Rey',
-    content: 'Tu pantalla principal ahora es el Calendario. Mantenlo actualizado marcando los días que no estés disponible. ¡Los locales se fijan en tu disponibilidad real!',
-    icon: <Calendar className="w-16 h-16 text-gold" />
+    title: 'Tu Disponibilidad',
+    content: 'Tu panel principal es el Calendario. Por defecto apareces como "Libre". Haz clic en cualquier día para bloquearlo si no estás disponible. ¡Mantenerlo al día es clave para que los locales te inviten a sus eventos!',
+    icon: <Calendar className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Navegación Fluida',
-    content: 'Desliza tu dedo hacia la izquierda o derecha por la pantalla para moverte rápidamente entre el Calendario, tus Oportunidades, y el Tablón de Urgencias SOS.',
-    icon: <Search className="w-16 h-16 text-gold" />
+    title: 'Invitaciones a Eventos',
+    content: 'Si un local te invita, verás un punto parpadeante en tu calendario y recibirás un mensaje en el chat para negociar. Podrás rechazar o aceptar la oferta entrando a los detalles del evento.',
+    icon: <MessageSquare className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Urgencias SOS',
-    content: 'Presta atención a las alertas rojas en la pantalla. Si un local tiene una cancelación de última hora, ¡es tu oportunidad para salvar la noche!',
-    icon: <LifeBuoy className="w-16 h-16 text-gold" />
+    title: 'Confirmaciones',
+    content: 'Al aceptar, el evento se confirma, el día se marca en rojo (Ocupado) y se publica en la web. Si quieres hacer "doblete", puedes reabrir tu disponibilidad. También puedes cancelar a última hora por imprevistos.',
+    icon: <CheckCircle className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Tu EPK Público',
-    content: 'Actualiza tus vídeos, Spotify y fotos desde tu Perfil. Siempre que lo necesites, puedes volver a ver este tutorial desde el icono de información en el menú.',
-    icon: <User className="w-16 h-16 text-gold" />
+    title: 'Buscador de Oportunidades',
+    content: 'En la sección "Oportunidades" verás eventos de locales que aún buscan artistas. Los puntos parpadeantes indican fechas con plazas abiertas. ¡Haz clic en el día para verlas!',
+    icon: <Search className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Postular y Negociar',
+    content: 'Si te interesa un evento, puedes postular directamente. Esto notificará al local y abrirá un chat privado para acordar las condiciones. Si llegáis a un acuerdo, se añadirá a tu agenda.',
+    icon: <Briefcase className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Alertas y Tablón SOS',
+    content: 'Atento a las alertas rojas. El Tablón SOS muestra urgencias de última hora: locales que necesitan cubrir cancelaciones o músicos que buscan sustitutos (batería, guitarra...). ¡Tú puedes salvar la noche!',
+    icon: <LifeBuoy className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Buscar Compañeros',
+    content: 'Puedes usar el tablón para buscar un músico extra para tu bolo. Buscarás por nombre o disponibilidad y hablaréis por chat. El anuncio se hará público para todos para asegurarte de que encuentras a alguien.',
+    icon: <Users className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Tu EPK y Chat Directo',
+    content: 'En tu perfil EPK puedes actualizar fotos y enlaces cuando lo necesites. Además, el botón de chat flotante te permite retomar conversaciones rápidamente con locales o músicos.',
+    icon: <User className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Trabajo en Equipo',
+    content: 'Usa el botón "Compartir con la Banda" del calendario para enviar tu agenda por WhatsApp a tu grupo. Ellos verán tus conciertos y, si usan la app, ¡podrán bloquear esos días en sus propias agendas!',
+    icon: <Share2 className="w-16 h-16 text-gold flex-shrink-0" />
   }
 ];
 
 const venueSlides: Slide[] = [
   {
-    title: 'Tu Programación',
-    content: 'Entras directamente al Calendario de la sala. Desde aquí puedes ver de un vistazo qué días tienes cubiertos y cuáles están buscando banda.',
-    icon: <Calendar className="w-16 h-16 text-gold" />
+    title: 'Tu Centro de Control',
+    content: 'El calendario es tu panel principal. Desde aquí, si haces clic en una fecha, podrás programar un nuevo evento y verás al instante los músicos disponibles en ese momento.',
+    icon: <Calendar className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Movilidad Rápida',
-    content: 'Desliza lateralmente la pantalla para navegar hacia tu Dashboard (para confirmar artistas), el Buscador de bandas, o lanzar una alerta SOS.',
-    icon: <Search className="w-16 h-16 text-gold" />
+    title: 'Eventos en Programación',
+    content: 'Al crear un evento, la fecha se pondrá en verde. Automáticamente, este evento aparecerá en el tablón de oportunidades de todos los músicos, donde podrán postular si les interesa.',
+    icon: <Calendar className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Alertas SOS',
-    content: 'Si te falla una banda a última hora, la sección SOS envía una notificación instantánea (Push/WhatsApp) a todos los músicos disponibles de tu zona.',
-    icon: <LifeBuoy className="w-16 h-16 text-gold" />
+    title: 'Buscar y Filtrar',
+    content: 'También puedes buscar músicos desde el calendario (solo aparecerán los que tienen disponibilidad). Al hacer clic en su ficha podrás ver sus datos y contactar con ellos.',
+    icon: <Users className="w-16 h-16 text-gold flex-shrink-0" />
   },
   {
-    title: 'Buscador y Configuración',
-    content: 'Encuentra a la banda ideal en el Buscador y mantén los datos de tu local actualizados en Perfil. Puedes volver a ver este tutorial desde el menú cuando quieras.',
-    icon: <Briefcase className="w-16 h-16 text-gold" />
+    title: 'Invitar y Negociar',
+    content: 'Al invitar a un músico, se generará un aviso en su calendario y se abrirá un chat privado para negociar las condiciones. La fecha en tu calendario se pondrá en amarillo (Esperando).',
+    icon: <MessageSquare className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Confirmación Final',
+    content: 'Si el músico rechaza, el día se pondrá rojo. Si confirma su interés, se pondrá azul. Haz clic en la fecha azul para confirmar el evento directamente y ¡publicarlo en la web pública!',
+    icon: <CheckCircle className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Cancelaciones Inesperadas',
+    content: 'Si un músico con evento confirmado cancela a última hora, tendrás un aviso inmediato. Podrás anular el evento por completo o mantener la fecha para seguir buscando otro grupo de inmediato.',
+    icon: <XCircle className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Dashboard de Eventos',
+    content: 'En tu sección Dashboard tendrás siempre la lista completa de todos tus eventos programados. Desde allí podrás revisarlos al detalle, editarlos o borrarlos si fuera necesario.',
+    icon: <Home className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Directorio de Músicos',
+    content: 'La sección "Buscador" te da acceso a toda la base de datos de músicos registrados. Explora sus perfiles sin necesidad de asociarlos a una fecha y ábreles un chat privado para contactarles.',
+    icon: <Search className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: 'Tablón de Urgencias SOS',
+    content: '¿Te falla un grupo en el último minuto? ¡Que no cunda el pánico! Lanza un SOS urgente para que aparezca una alarma en los móviles de todos los músicos disponibles y encuentra sustituto rápido.',
+    icon: <LifeBuoy className="w-16 h-16 text-gold flex-shrink-0" />
+  },
+  {
+    title: '¡Corre la Voz!',
+    content: 'En el menú tienes el botón de Compartir. Envíalo por WhatsApp a promotores y locales amigos; ¡cuantos más lo usemos, mejor funcionará para todos! Y recuerda que siempre puedes volver a ver este tutorial.',
+    icon: <Share2 className="w-16 h-16 text-gold flex-shrink-0" />
   }
 ];
 
@@ -147,7 +202,7 @@ export const TutorialSlides = ({ onClose }: { onClose: () => void }) => {
               {slides[currentSlide].title}
             </h2>
             
-            <p className="text-white/60 text-sm leading-relaxed max-w-sm px-2">
+            <p className="text-white/60 text-sm md:text-base leading-relaxed max-w-md px-4 whitespace-pre-line text-left">
               {slides[currentSlide].content}
             </p>
           </div>

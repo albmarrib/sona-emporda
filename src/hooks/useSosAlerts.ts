@@ -4,26 +4,22 @@ import { db } from '../firebase/firebase';
 
 export const useSosAlerts = () => {
   const [activeSosCount, setActiveSosCount] = useState(0);
+  const [activeCollabCount, setActiveCollabCount] = useState(0);
 
   useEffect(() => {
-    // Si la DB tiene status active
-    const q = query(collection(db, 'sos_alerts'), where('status', '==', 'active'));
+    const qAll = query(collection(db, 'sos_alerts'));
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      // Si la query falla por índices o algo, usamos un try/catch o quitamos el where
-      setActiveSosCount(snapshot.size);
-    }, (error) => {
-      console.warn("Error SOS:", error);
-      // Fallback sin index o con todos
-      const qAll = query(collection(db, 'sos_alerts'));
-      onSnapshot(qAll, (snap) => {
-        const count = snap.docs.filter(d => d.data().status === 'active').length;
-        setActiveSosCount(count);
-      });
+    const unsubscribe = onSnapshot(qAll, (snap) => {
+      const activeDocs = snap.docs.filter(d => d.data().status === 'active');
+      const sosCount = activeDocs.filter(d => d.data().type === 'sos' || d.data().isUrgent).length;
+      const collabCount = activeDocs.filter(d => d.data().type === 'collaboration' && !d.data().isUrgent).length;
+      
+      setActiveSosCount(sosCount);
+      setActiveCollabCount(collabCount);
     });
 
     return () => unsubscribe();
   }, []);
 
-  return { activeSosCount };
+  return { activeSosCount, activeCollabCount };
 };
