@@ -28,10 +28,9 @@ export const VenueDashboardHome = () => {
   return (
     <div className="flex flex-col gap-12">
       
-      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2">{venueName}</h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">Panel de Control</p>
+      <div className="border-b border-white/10 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center justify-between w-full md:w-auto">
+          <h1 className="text-xl md:text-2xl font-serif text-white uppercase tracking-widest truncate">{venueName}</h1>
         </div>
         
         {/* Ultra-Compact Stats Header */}

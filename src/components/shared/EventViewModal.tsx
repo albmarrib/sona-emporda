@@ -2,10 +2,10 @@ import React from 'react';
 import { FiX, FiMapPin, FiCalendar, FiClock, FiMusic } from 'react-icons/fi';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { GigEvent } from '../../types/event';
+
 
 interface EventViewModalProps {
-  event: GigEvent;
+  event: any;
   onClose: () => void;
 }
 

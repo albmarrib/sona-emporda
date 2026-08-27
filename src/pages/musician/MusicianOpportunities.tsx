@@ -92,32 +92,28 @@ export const MusicianOpportunities = () => {
       {/* Calendar Section */}
       <div className="flex-1 flex flex-col bg-slate-950 border border-slate-800 p-4 md:p-6 shadow-2xl overflow-hidden w-full">
         
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 border-b border-white/10 pb-4 gap-4">
-          <div>
-            <h1 className="text-2xl font-serif text-white flex items-center gap-3">
-              <FiBriefcase className="text-gold" /> Calendario de Ofertas
-            </h1>
-            <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">
-              Haz clic en los días señalados para ver quién busca músicos.
-            </p>
-          </div>
-          <div className="flex gap-2 md:gap-4 items-center w-full md:w-auto justify-between md:justify-end">
-            <button onClick={prevMonth} className="p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors">
-              <FiChevronLeft className="w-5 h-5" />
+        <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-3 gap-2">
+          <h1 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2 truncate">
+            <FiBriefcase className="text-gold w-5 h-5 shrink-0" /> <span className="uppercase tracking-widest text-base md:text-xl">Ofertas</span>
+          </h1>
+          <div className="flex items-center gap-1 md:gap-2">
+            <button onClick={prevMonth} className="p-1.5 md:p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors text-white/70">
+              <FiChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
             </button>
-            <div className="w-32 md:w-40 text-center">
-              <p className="text-lg font-serif text-white capitalize truncate">{format(currentDate, 'MMMM', { locale: es })}</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-widest">{format(currentDate, 'yyyy')}</p>
+            <div className="text-center min-w-[80px] md:min-w-[100px]">
+              <p className="text-sm md:text-base font-serif text-white capitalize truncate leading-none">
+                {format(currentDate, 'MMMM', { locale: es })} <span className="text-white/50 text-xs ml-1">{format(currentDate, 'yyyy')}</span>
+              </p>
             </div>
-            <button onClick={nextMonth} className="p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors">
-              <FiChevronRight className="w-5 h-5" />
+            <button onClick={nextMonth} className="p-1.5 md:p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors text-white/70">
+              <FiChevronRight className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 md:gap-px bg-slate-800 mb-1 md:mb-px w-full">
+        <div className="grid grid-cols-7 gap-1 md:gap-px mb-2 w-full">
           {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-            <div key={day} className="bg-slate-900 text-center py-2 text-[9px] md:text-[10px] uppercase tracking-widest font-bold text-white/40 truncate">
+            <div key={day} className="text-center text-gold text-[9px] md:text-[10px] uppercase tracking-widest font-bold pb-2 border-b border-white/10 truncate">
               {day}
             </div>
           ))}

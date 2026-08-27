@@ -154,8 +154,8 @@ export const VenueSOSManager = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/10 p-8 max-w-lg w-full shadow-2xl">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] overflow-y-auto p-4 flex flex-col items-center">
+          <div className="bg-black border border-white/10 p-8 max-w-lg w-full shadow-2xl my-auto shrink-0">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-serif text-white">Lanzar Pánico SOS</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-white/40 hover:text-white transition-colors">
@@ -173,14 +173,14 @@ export const VenueSOSManager = () => {
                 <input required type="text" placeholder="Ej: Se nos ha caído el grupo de rumba de hoy" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2 overflow-hidden">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Fecha y Hora</label>
-                  <input required type="datetime-local" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark]" />
+                  <input required type="datetime-local" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark] w-full" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Presupuesto Aprox.</label>
-                  <input type="text" placeholder="Ej: 200€" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                  <input type="text" placeholder="Ej: 200€" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none w-full" />
                 </div>
               </div>
 

@@ -68,19 +68,7 @@ export const DashboardHome = () => {
     <div className="flex flex-col gap-12">
       <PushNotificationBanner />
       
-      <div className="border-b border-white/10 pb-6">
-          {/* Ultra-Compact Stats Header */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white/50 uppercase tracking-widest">Próximos confirmados:</span>
-              <span className="text-sm font-bold text-white">{confirmedGigsCount}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-              <div className="w-1.5 h-1.5 rounded-full bg-gold shadow-[0_0_8px_rgba(197,160,89,0.8)]"></div>
-              <span className="text-[9px] text-gold uppercase tracking-widest font-bold">EPK 75%</span>
-            </div>
-          </div>
-        </div>
+
       {latestSos && (
         <div 
           onClick={() => navigate('/musician/sos')}
@@ -112,14 +100,18 @@ export const DashboardHome = () => {
       <div className="flex flex-col gap-8">
         {/* Next Gigs List (Prominent) */}
         <div>
-          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
-            <h2 className="text-xl font-serif text-white">Tus eventos</h2>
+          <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl md:text-2xl font-serif text-white uppercase tracking-widest">Eventos</h2>
+              <span className="bg-white/10 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{confirmedGigsCount}</span>
+            </div>
             <button 
               onClick={() => setShowPastEvents(!showPastEvents)}
-              className="flex items-center gap-2 text-white/50 hover:text-gold transition-colors text-lg"
+              className="flex items-center gap-1.5 text-white/50 hover:text-gold transition-colors text-[10px] uppercase tracking-widest font-bold"
               title={showPastEvents ? "Ocultar pasados" : "Ver pasados"}
             >
-              {showPastEvents ? <FiEyeOff /> : <FiEye />}
+              {showPastEvents ? <FiEyeOff className="w-3.5 h-3.5" /> : <FiEye className="w-3.5 h-3.5" />}
+              <span className="hidden md:inline">{showPastEvents ? "Ocultar pasados" : "Ver pasados"}</span>
             </button>
           </div>
           <div className="flex flex-col gap-4">

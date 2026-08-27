@@ -38,8 +38,8 @@ export const DirectOffers = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl h-[calc(100vh-8rem)]">
-      <div className="border-b border-white/10 pb-6">
+    <div className="flex flex-col gap-8 max-w-5xl min-h-[calc(100vh-8rem)] pb-20">
+      <div className="border-b border-white/10 pb-4">
         <h1 className="text-3xl font-serif text-white mb-2 flex items-center gap-3">
           <FiMessageSquare className="text-gold" />
           Invitaciones a Eventos

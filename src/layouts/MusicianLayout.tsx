@@ -1,15 +1,16 @@
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useOutlet } from 'react-router-dom';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch } from 'react-icons/fi';
+import { FiHome, FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch } from 'react-icons/fi';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
 
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Info } from 'lucide-react';
 
 export const MusicianLayout = () => {
@@ -17,6 +18,7 @@ export const MusicianLayout = () => {
   const navigate = useNavigate();
   const { currentUser, userData } = useAuth();
   const { profile } = useMusicianProfile();
+  const outlet = useOutlet();
   
   const [showWizard, setShowWizard] = useState(
     userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted
@@ -34,28 +36,27 @@ export const MusicianLayout = () => {
   const navItems = [
     { name: 'Calendario', mobileName: 'Agenda', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
     { name: 'Oportunidades', mobileName: 'Buscar', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Dashboard', mobileName: 'Inicio', path: '/musician/dashboard', icon: <FiHome className="w-5 h-5" /> },
+    { name: 'Mis Eventos', mobileName: 'Eventos', path: '/musician/dashboard', icon: <FiList className="w-5 h-5" /> },
     { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
     { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
   ];
 
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const minSwipeDistance = 50;
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 100;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    touchEndX.current = e.targetTouches[0].clientX;
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
@@ -168,8 +169,19 @@ export const MusicianLayout = () => {
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto">
-          <Outlet />
+        <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="w-full min-h-full"
+            >
+              {outlet}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 

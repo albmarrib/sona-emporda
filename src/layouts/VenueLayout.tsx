@@ -1,9 +1,10 @@
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useOutlet } from 'react-router-dom';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiSearch, FiCalendar, FiLifeBuoy, FiLogOut, FiSettings } from 'react-icons/fi';
-import { useEffect, useState } from 'react';
+import { FiHome, FiList, FiSearch, FiCalendar, FiLifeBuoy, FiLogOut, FiSettings } from 'react-icons/fi';
+import { useEffect, useState, useRef } from 'react';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
 import { Info } from 'lucide-react';
@@ -14,6 +15,7 @@ export const VenueLayout = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { currentUser, userData, loading } = useAuth();
+  const outlet = useOutlet();
   const [showWizard, setShowWizard] = useState(
     userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted
   );
@@ -34,29 +36,28 @@ export const VenueLayout = () => {
 
   const navItems = [
     { name: 'Calendario', path: '/venue/calendar', icon: <FiCalendar className="w-5 h-5" /> },
-    { name: 'Dashboard', path: '/venue/dashboard', icon: <FiHome className="w-5 h-5" /> },
+    { name: 'Eventos', path: '/venue/dashboard', icon: <FiList className="w-5 h-5" /> },
     { name: 'Buscador', path: '/venue/search', icon: <FiSearch className="w-5 h-5" /> },
     { name: 'Urgencias SOS', path: '/venue/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
     { name: 'Perfil', path: '/venue/profile', icon: <FiSettings className="w-5 h-5" /> },
   ];
 
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const minSwipeDistance = 50;
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 100;
 
   const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    touchEndX.current = e.targetTouches[0].clientX;
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
+    if (!touchStartX.current || !touchEndX.current) return;
+    const distance = touchStartX.current - touchEndX.current;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
@@ -108,14 +109,9 @@ export const VenueLayout = () => {
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <div className="px-4 pb-4 flex items-center justify-between">
-            <div>
-              <p className="text-[9px] uppercase tracking-widest text-white/40 mb-1">Local conectado</p>
-              <p className="text-xs truncate font-bold">{userData?.name || currentUser?.email || 'Mi Local'}</p>
-            </div>
-            <Link to="/venue/profile" className="text-white/40 hover:text-white transition-colors" title="Perfil del Local">
-              <FiSettings className="w-4 h-4" />
-            </Link>
+          <div className="px-4 pb-4">
+            <p className="text-[9px] uppercase tracking-widest text-white/40 mb-1">Local conectado</p>
+            <p className="text-xs truncate font-bold">{userData?.name || currentUser?.email || 'Mi Local'}</p>
           </div>
           
           <div className="flex gap-2 w-full mb-2">
@@ -169,17 +165,25 @@ export const VenueLayout = () => {
             >
               <Info className="w-5 h-5" />
             </button>
-            <Link to="/venue/profile" className="text-white/60 hover:text-white transition-colors active:scale-95">
-              <FiSettings className="w-5 h-5" />
-            </Link>
-            <button onClick={handleLogout} className="text-white/60 hover:text-red-400 active:scale-95 transition-transform">
+            <button onClick={handleLogout} className="text-white/60 hover:text-red-400 p-2 active:scale-95 transition-transform">
               <FiLogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto">
-          <Outlet />
+        <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full overflow-hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="w-full min-h-full"
+            >
+              {outlet}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
 

@@ -1,5 +1,5 @@
 export interface SonaEvent {
-  status?: 'draft' | 'published' | 'confirmed';
+  status?: 'draft' | 'published' | 'confirmed' | 'cancelled' | 'pending_musician' | 'musician_accepted' | 'musician_cancelled' | 'rejected';
   tags?: string[];
   id: string;
   title: string;

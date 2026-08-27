@@ -132,34 +132,28 @@ export const VenueCalendar = () => {
       {/* Calendar Section */}
       <div className="flex-1 flex flex-col bg-black border border-white/10 p-4 md:p-6 shadow-2xl overflow-hidden w-full">
         
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 border-b border-white/10 pb-4 gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-serif text-white">Calendario</h1>
-              <p className="text-white/40 text-[10px] uppercase tracking-widest mt-1">
-                Cruza tus fechas con la disponibilidad de los artistas
-              </p>
-            </div>
+        <div className="flex items-start md:items-center justify-between border-b border-white/10 pb-3 mb-4 gap-2">
+          <button onClick={prevMonth} className="p-1.5 md:p-2 border border-white/10 hover:border-gold text-white hover:text-gold transition-colors mt-1 md:mt-0">
+            <FiChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
+
+          <div className="flex flex-col items-center flex-1">
+            <h1 className="text-lg md:text-2xl font-serif text-white uppercase tracking-widest leading-none text-center">Calendario</h1>
+            <p className="text-[10px] md:text-sm text-gold capitalize mt-1 md:mt-1.5">{format(currentDate, 'MMMM yyyy', { locale: es })}</p>
+          </div>
+
+          <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-0">
+            <button onClick={nextMonth} className="p-1.5 md:p-2 border border-white/10 hover:border-gold text-white hover:text-gold transition-colors mr-1 md:mr-2">
+              <FiChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
             {activeSosCount > 0 && (
               <button 
                 onClick={() => navigate('/venue/sos')}
-                className="flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500 hover:bg-red-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg animate-pulse h-fit"
+                className="hidden md:flex items-center gap-2 bg-red-600/20 text-red-400 border border-red-500 hover:bg-red-600 hover:text-white transition-colors px-3 py-1.5 rounded-lg animate-pulse h-fit"
               >
                 <span className="font-bold uppercase tracking-widest text-[10px]">¡{activeSosCount} SOS!</span>
               </button>
             )}
-          </div>
-          <div className="flex gap-2 md:gap-4 items-center w-full md:w-auto justify-between md:justify-end">
-            <button onClick={prevMonth} className="p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors">
-              <FiChevronLeft className="w-5 h-5" />
-            </button>
-            <div className="w-32 md:w-40 text-center">
-              <p className="text-lg font-serif text-white capitalize truncate">{format(currentDate, 'MMMM', { locale: es })}</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-widest">{format(currentDate, 'yyyy')}</p>
-            </div>
-            <button onClick={nextMonth} className="p-2 border border-white/10 hover:border-gold hover:text-gold transition-colors">
-              <FiChevronRight className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
@@ -173,7 +167,7 @@ export const VenueCalendar = () => {
 
         <div className="grid grid-cols-7 gap-1 md:gap-px bg-white/10 w-full mb-4 md:mb-0">
           {Array.from({ length: getDay(monthStart) === 0 ? 6 : getDay(monthStart) - 1 }).map((_, index) => (
-            <div key={`empty-${index}`} className="bg-black/50 aspect-square p-1 md:p-2" />
+            <div key={`empty-${index}`} className="bg-black/50 aspect-[4/5] p-1 md:p-2" />
           ))}
           {daysInMonth.map(day => {
             const dayKey = format(day, 'yyyy-MM-dd');
@@ -218,9 +212,9 @@ export const VenueCalendar = () => {
             
             return (
               <div 
-                key={dayKey}
+                key={day.toString()}
                 onClick={() => handleDayClick(day)}
-                className={`${cellBg} aspect-square p-1 md:p-2 relative cursor-pointer hover:bg-white/5 transition-colors flex flex-col items-center justify-start gap-1 overflow-hidden ${!isCurrentMonth ? 'opacity-20' : ''} ${isToday ? 'ring-2 ring-blue-500/50 ring-inset' : ''} ${isSelected && !isPendingMusician && !isConfirmed ? 'ring-1 md:ring-2 ring-gold ring-inset z-10' : ''}`}
+                className={`${cellBg} aspect-[4/5] p-1 md:p-2 relative cursor-pointer hover:bg-white/5 transition-colors flex flex-col items-center justify-start gap-1 overflow-hidden ${!isCurrentMonth ? 'opacity-20' : ''} ${isToday ? 'ring-2 ring-blue-500/50 ring-inset' : ''} ${isSelected && !isPendingMusician && !isConfirmed ? 'ring-1 md:ring-2 ring-gold ring-inset z-10' : ''}`}
               >
                 {hasAlert && (
                   <div className="absolute top-1 right-1 w-2 h-2 md:w-2.5 md:h-2.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)] z-20"></div>

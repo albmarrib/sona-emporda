@@ -54,7 +54,7 @@ export const VenueProfile = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl mx-auto h-[calc(100vh-8rem)]">
+    <div className="flex flex-col gap-8 max-w-2xl mx-auto pb-20">
       <div>
         <h1 className="text-3xl font-serif text-white mb-2">Mi Local</h1>
         <p className="text-white/50 text-xs uppercase tracking-widest">

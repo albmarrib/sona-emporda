@@ -62,20 +62,24 @@ export const SOSBoard = () => {
   const [musicians, setMusicians] = useState<any[]>([]);
   const [musicianSearchQuery, setMusicianSearchQuery] = useState('');
   const [selectedMusician, setSelectedMusician] = useState<any | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'musician'));
+    const q = query(collection(db, 'users'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMusicians(list.filter(m => m.id !== currentUser?.uid));
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
+      setMusicians(list.filter(m => (m.role === 'musician' || m.stageName) && m.id !== currentUser?.uid));
     });
     return () => unsubscribe();
   }, [currentUser]);
 
-  const filteredMusicians = musicianSearchQuery.trim() === '' ? [] : musicians.filter(m => 
-    (m.stageName || m.name || '').toLowerCase().includes(musicianSearchQuery.toLowerCase()) || 
-    (m.mainGenre || '').toLowerCase().includes(musicianSearchQuery.toLowerCase())
-  );
+  const filteredMusicians = musicians.filter(m => {
+    if (musicianSearchQuery.trim() === '') return true;
+    const search = musicianSearchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const nameStr = (m.stageName || m.name || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const genreStr = (m.mainGenre || m.genre || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return nameStr.includes(search) || genreStr.includes(search);
+  });
 
   const handleCreateSos = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,26 +226,23 @@ export const SOSBoard = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl h-[calc(100vh-8rem)]">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2 flex items-center gap-3">
-            <FiUsers className="text-gold" /> 
-            Tablón de Músicos
-          </h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">Colaboraciones, búsquedas y alertas SOS</p>
-        </div>
+    <div className="flex flex-col gap-8 max-w-5xl min-h-[calc(100vh-8rem)] pb-20">
+      <div className="flex items-center justify-between border-b border-white/10 pb-3 gap-2">
+        <h1 className="text-xl md:text-2xl font-serif text-white flex items-center gap-2 truncate">
+          <FiUsers className="text-gold w-5 h-5 shrink-0" />
+          <span className="uppercase tracking-widest text-base md:text-xl truncate">Tablón SOS</span>
+        </h1>
         
-        <div className="flex gap-4 relative">
+        <div className="flex gap-2 relative shrink-0">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className="flex items-center gap-2 border border-white/10 hover:border-gold transition-colors px-4 py-2 text-[10px] uppercase tracking-widest text-white/70 hover:text-white"
+            className="flex items-center gap-1 border border-white/10 hover:border-gold transition-colors px-2 py-1.5 md:px-3 md:py-2 text-[10px] uppercase tracking-widest text-white/70 hover:text-white"
           >
-            <FiFilter /> Filtrar
+            <FiFilter className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden md:inline">Filtrar</span>
           </button>
 
           {isFilterOpen && (
-            <div className="absolute top-full right-auto left-0 md:left-auto md:right-1/2 mt-2 w-48 bg-black border border-white/10 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
+            <div className="absolute top-full right-0 mt-2 w-48 bg-black border border-white/10 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2">
               <button 
                 onClick={() => { setFilterMode('all'); setIsFilterOpen(false); }}
                 className={`w-full text-left px-4 py-3 text-[10px] uppercase tracking-widest hover:bg-white/5 transition-colors ${filterMode === 'all' ? 'text-gold font-bold' : 'text-white'}`}
@@ -265,9 +266,9 @@ export const SOSBoard = () => {
 
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-white/10 border border-white/20 hover:bg-white hover:text-black text-white transition-colors px-4 py-2 text-[10px] uppercase tracking-widest font-bold"
+            className="flex items-center gap-1 bg-white/10 border border-white/20 hover:bg-white hover:text-black text-white transition-colors px-2 py-1.5 md:px-3 md:py-2 text-[10px] uppercase tracking-widest font-bold"
           >
-            <FiPlus /> Publicar Anuncio
+            <FiPlus className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden md:inline">Publicar Anuncio</span><span className="md:hidden">Publicar</span>
           </button>
         </div>
       </div>
@@ -296,8 +297,8 @@ export const SOSBoard = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/10 p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] overflow-y-auto p-4 flex flex-col items-center">
+          <div className="bg-black border border-white/10 p-6 md:p-8 max-w-lg w-full shadow-2xl my-auto shrink-0">
             <div className="flex justify-between items-start md:items-center mb-6 gap-4">
               <h2 className="text-xl md:text-2xl font-serif text-white">Publicar Anuncio</h2>
               <button onClick={() => setIsModalOpen(false)} className="text-white/40 hover:text-white transition-colors mt-1 md:mt-0">
@@ -309,25 +310,25 @@ export const SOSBoard = () => {
               
               <div className="flex flex-col gap-2 mb-2">
                 <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Tipo de Anuncio</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, type: 'collaboration'})}
-                    className={`py-3 px-4 text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 border ${formData.type === 'collaboration' ? 'bg-gold text-black border-gold' : 'bg-white/5 text-white/50 border-white/10 hover:text-white'}`}
+                    className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 border rounded-sm ${formData.type === 'collaboration' ? 'bg-gold/20 text-gold border-gold/50' : 'bg-white/5 text-white/50 border-white/10 hover:text-white'}`}
                   >
-                    <FiUsers /> Búsqueda Normal
+                    <FiUsers className="w-3.5 h-3.5 shrink-0" /> Búsqueda
                   </button>
                   <button
                     type="button"
                     onClick={() => setFormData({...formData, type: 'sos'})}
-                    className={`py-3 px-4 text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2 border ${formData.type === 'sos' ? 'bg-red-600 text-white border-red-500' : 'bg-white/5 text-white/50 border-white/10 hover:text-white'}`}
+                    className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 border rounded-sm ${formData.type === 'sos' ? 'bg-red-900/40 text-red-400 border-red-500/50' : 'bg-white/5 text-white/50 border-white/10 hover:text-white'}`}
                   >
-                    <FiAlertTriangle /> Alerta SOS
+                    <FiAlertTriangle className="w-3.5 h-3.5 shrink-0" /> Alerta SOS
                   </button>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 relative">
+              <div className="flex flex-col gap-2 relative z-50">
                 <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold flex justify-between">
                   <span>¿Buscas a un músico en concreto? (Opcional)</span>
                   {selectedMusician && <span className="text-gold">Seleccionado</span>}
@@ -345,19 +346,30 @@ export const SOSBoard = () => {
                 ) : (
                   <input
                     type="text"
+                    name="musician_search_field"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
                     placeholder="Buscar por nombre..."
                     value={musicianSearchQuery}
                     onChange={(e) => setMusicianSearchQuery(e.target.value)}
+                    onFocus={() => setIsSearchFocused(true)}
+                    onBlur={() => setTimeout(() => setIsSearchFocused(false), 500)}
                     className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none"
                   />
                 )}
-                {filteredMusicians.length > 0 && !selectedMusician && (
-                  <div className="absolute top-full left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-zinc-900 border border-white/10 shadow-xl z-50">
+                {isSearchFocused && filteredMusicians.length > 0 && !selectedMusician && (
+                  <div className="absolute top-[100%] left-0 right-0 mt-1 w-full max-h-48 overflow-y-auto bg-zinc-900 border border-gold/50 shadow-xl z-[999] rounded-sm">
                     {filteredMusicians.map(m => (
                       <div 
                         key={m.id} 
                         className="p-3 hover:bg-white/10 cursor-pointer border-b border-white/5"
-                        onClick={() => { setSelectedMusician(m); setMusicianSearchQuery(''); }}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSelectedMusician(m); 
+                          setMusicianSearchQuery('');
+                          setIsSearchFocused(false);
+                        }}
                       >
                         <p className="text-white text-sm font-bold">{m.stageName || m.name}</p>
                         <p className="text-white/50 text-[10px] uppercase tracking-widest">{m.mainGenre}</p>
@@ -373,14 +385,14 @@ export const SOSBoard = () => {
                 <input required type="text" placeholder={formData.type === 'sos' ? "Ej: Bajista URGENTE para esta noche" : "Ej: Busco trompetista para bolo en agosto"} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2 overflow-hidden">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Cuándo</label>
-                  <input required type="datetime-local" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark]" />
+                  <input required type="datetime-local" value={formData.dateStr} onChange={e => setFormData({...formData, dateStr: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none [color-scheme:dark] w-full" />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-white/40 text-[10px] uppercase tracking-widest font-bold">Dónde</label>
-                  <input required type="text" placeholder="Ej: Palamós" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none" />
+                  <input required type="text" placeholder="Ej: Palamós" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none w-full" />
                 </div>
               </div>
 

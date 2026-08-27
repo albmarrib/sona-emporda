@@ -85,12 +85,11 @@ export const ArtistSearch = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl h-[calc(100vh-12rem)]">
+    <div className="flex flex-col gap-8 max-w-5xl min-h-[calc(100vh-12rem)] pb-20">
       
-      <div className="border-b border-white/10 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2">Booking & Búsqueda</h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">Encuentra el talento perfecto para tu próximo evento</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="flex items-center justify-between w-full md:w-auto">
+          <h1 className="text-xl md:text-2xl font-serif text-white uppercase tracking-widest truncate">Búsqueda</h1>
         </div>
 
         <div className="flex items-center gap-2 bg-black border border-white/10 p-1 rounded-sm">

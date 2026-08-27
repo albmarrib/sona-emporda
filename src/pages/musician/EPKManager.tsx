@@ -61,7 +61,7 @@ export const EPKManager = () => {
     }
   };
 
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = (field: keyof MusicianProfile, value: any) => {
     setFormData(prev => {

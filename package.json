@@ -12,6 +12,7 @@
   "dependencies": {
     "date-fns": "^4.4.0",
     "firebase": "^12.17.1",
+    "framer-motion": "^13.1.1",
     "leaflet": "^1.9.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

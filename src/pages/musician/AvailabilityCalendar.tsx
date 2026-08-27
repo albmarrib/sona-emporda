@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { FiChevronLeft, FiChevronRight, FiInfo, FiX, FiMessageSquare, FiCheckCircle, FiAlertTriangle, FiUsers } from 'react-icons/fi';
+import { FiSend, FiChevronLeft, FiChevronRight, FiInfo, FiX, FiMessageSquare, FiCheckCircle, FiAlertTriangle, FiUsers } from 'react-icons/fi';
 import { useMusicianCalendar } from '../../hooks/useMusicianCalendar';
 import type { DayStatus } from '../../types';
 import { useNavigate } from 'react-router-dom';
@@ -73,14 +73,23 @@ export const AvailabilityCalendar = () => {
   return (
     <div className="flex flex-col gap-6 max-w-5xl overflow-hidden w-full">
       
-      <div className="border-b border-white/10 pb-4 flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-serif text-white mb-2">Mi Disponibilidad</h1>
-          <p className="text-white/50 text-xs uppercase tracking-widest">
-            Asegura tus fechas para recibir propuestas.
-          </p>
+      <div className="flex items-start md:items-center justify-between border-b border-white/10 pb-3 gap-2">
+        <button onClick={prevMonth} className="p-1.5 md:p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold mt-1 md:mt-0">
+          <FiChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+        </button>
+        
+        <div className="flex flex-col items-center flex-1">
+          <h1 className="text-lg md:text-2xl font-serif text-white uppercase tracking-widest leading-none text-center">Mi Calendario</h1>
+          <h2 className="text-[10px] md:text-sm text-gold capitalize mt-1 md:mt-1.5">
+            {format(currentMonth, 'MMMM yyyy', { locale: es })}
+          </h2>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-1 md:gap-2 mt-1 md:mt-0">
+          <button onClick={nextMonth} className="p-1.5 md:p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold mr-1 md:mr-2">
+            <FiChevronRight className="w-4 h-4 md:w-5 md:h-5" />
+          </button>
+          
           <button 
             onClick={() => {
               if (!currentUser) return;
@@ -88,55 +97,41 @@ export const AvailabilityCalendar = () => {
               const text = `¡Hola! Aquí tenéis el calendario de nuestros bolos y disponibilidad en Sona Empordà: ${link}`;
               window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
             }}
-            className="flex items-center gap-2 bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-4 py-2 rounded-lg"
+            className="flex items-center justify-center bg-white/5 text-white/50 border border-white/10 hover:bg-gold hover:text-black hover:border-gold transition-colors w-7 h-7 md:w-8 md:h-8 rounded-full shrink-0"
+            title="Compartir con la Banda"
           >
-            <span className="font-bold uppercase tracking-widest text-xs hidden sm:inline">Compartir con la Banda</span>
-            <span className="font-bold uppercase tracking-widest text-xs sm:hidden">Compartir</span>
+            <FiSend className="w-3 h-3 md:w-3.5 md:h-3.5" />
           </button>
-          {/* Alert Symbols */}
-          <div className="flex items-center gap-3">
-            {activeSosCount > 0 && (
-              <button 
-                onClick={() => navigate('/musician/sos')}
-                className="relative p-2.5 bg-red-600/20 text-red-500 border border-red-500/50 hover:bg-red-600 hover:text-white transition-colors rounded-full animate-pulse"
-                title={`${activeSosCount} SOS Activos`}
-              >
-                <FiAlertTriangle className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {activeSosCount}
-                </span>
-              </button>
-            )}
-            {activeCollabCount > 0 && (
-              <button 
-                onClick={() => navigate('/musician/sos')}
-                className="relative p-2.5 bg-green-900/40 text-green-400 border border-green-500/50 hover:bg-green-600 hover:text-white transition-colors rounded-full"
-                title={`${activeCollabCount} Nuevos Anuncios`}
-              >
-                <FiUsers className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                  {activeCollabCount}
-                </span>
-              </button>
-            )}
-          </div>
+          
+          {activeSosCount > 0 && (
+            <button 
+              onClick={() => navigate('/musician/sos')}
+              className="relative p-1.5 md:p-2 bg-red-600/20 text-red-500 border border-red-500/50 hover:bg-red-600 hover:text-white transition-colors rounded-full animate-pulse"
+              title={`${activeSosCount} SOS Activos`}
+            >
+              <FiAlertTriangle className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                {activeSosCount}
+              </span>
+            </button>
+          )}
+          {activeCollabCount > 0 && (
+            <button 
+              onClick={() => navigate('/musician/sos')}
+              className="relative p-1.5 md:p-2 bg-green-900/40 text-green-400 border border-green-500/50 hover:bg-green-600 hover:text-white transition-colors rounded-full"
+              title={`${activeCollabCount} Nuevos Anuncios`}
+            >
+              <FiUsers className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                {activeCollabCount}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="bg-black border border-white/10 p-4 md:p-10 shadow-2xl w-full overflow-hidden">
-        
-        {/* Header Calendario */}
-        <div className="flex items-center justify-between mb-8">
-          <button onClick={prevMonth} className="p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold">
-            <FiChevronLeft className="w-5 h-5" />
-          </button>
-          <h2 className="text-xl md:text-2xl font-serif text-white capitalize text-center">
-            {format(currentMonth, 'MMMM yyyy', { locale: es })}
-          </h2>
-          <button onClick={nextMonth} className="p-2 text-white hover:text-gold transition-colors border border-white/10 hover:border-gold">
-            <FiChevronRight className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="bg-black border border-white/10 p-2 md:p-6 shadow-2xl w-full overflow-hidden">
+
 
         {/* Días de la semana */}
         <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 w-full">
@@ -151,7 +146,7 @@ export const AvailabilityCalendar = () => {
         <div className="grid grid-cols-7 gap-1 md:gap-2 w-full">
           {/* Espacios vacíos al principio del mes */}
           {Array.from({ length: (monthStart.getDay() + 6) % 7 }).map((_, idx) => (
-            <div key={`empty-${idx}`} className="aspect-square opacity-0"></div>
+            <div key={`empty-${idx}`} className="aspect-[4/5] opacity-0"></div>
           ))}
 
           {/* Días del mes */}
@@ -178,7 +173,7 @@ export const AvailabilityCalendar = () => {
                     toggleDayStatus(day);
                   }
                 }}
-                className={`aspect-square p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden relative
+                className={`aspect-[4/5] p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden relative
                   ${getStatusColor(status)}
                   ${isToday ? 'ring-1 md:ring-2 ring-white ring-inset' : ''}
                   ${(status === 'booked_full' || status === 'booked_partial') || isPendingNegotiation ? 'hover:border-gold hover:text-gold transition-all group' : ''}
