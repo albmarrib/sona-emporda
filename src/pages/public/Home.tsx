@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { Header } from "../../components/public/Header";
 import { EventCard } from "../../components/public/EventCard";
@@ -8,9 +8,10 @@ import { LoadingScreen } from "../../components/shared/LoadingScreen";
 import { useEvents } from "../../hooks/useEvents";
 import { useAuth } from "../../contexts/AuthContext";
 import { InstallPWAModal } from "../../components/public/InstallPWAModal";
-import { Info } from "lucide-react";
+import { Info, Heart, Search, User, X } from "lucide-react";
 import { FiAward } from "react-icons/fi";
 import { useSettings } from "../../hooks/useSettings";
+import { useFavorites } from "../../hooks/useFavorites";
 
 type ViewMode = "LISTA" | "CALENDARIO" | "LUGARES";
 
@@ -19,7 +20,15 @@ export const Home = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  
+  // Estados para filtro de Músicos
+  const [selectedMusician, setSelectedMusician] = useState<string | null>(null);
+  const [isMusicianDropdownOpen, setIsMusicianDropdownOpen] = useState(false);
+  const [musicianSearchTerm, setMusicianSearchTerm] = useState("");
+
   const [isStandalone, setIsStandalone] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
   
   const { settings, loading: settingsLoading } = useSettings();
   const VIBES = settings.vibes;
@@ -61,6 +70,20 @@ export const Home = () => {
   // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
   const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');
 
+  // Extraer músicos únicos para el filtro
+  const uniqueMusicians = useMemo(() => {
+    const musicians = confirmedEvents
+      .map(e => e.musicianName)
+      .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
+    return Array.from(new Set(musicians)).sort((a, b) => a.localeCompare(b));
+  }, [confirmedEvents]);
+
+  const filteredMusiciansList = useMemo(() => {
+    if (!musicianSearchTerm.trim()) return uniqueMusicians;
+    const term = musicianSearchTerm.toLowerCase();
+    return uniqueMusicians.filter(m => m.toLowerCase().includes(term));
+  }, [uniqueMusicians, musicianSearchTerm]);
+
   useEffect(() => {
     if (heroEvents.length <= 1) return;
     const interval = setInterval(() => {
@@ -86,9 +109,10 @@ export const Home = () => {
   const currentHeroEvent = heroEvents[carouselIndex];
   
   // Filtrar el resto de eventos para la lista
-  // Mostrar todos en la lista siempre para evitar confusiones de que "desaparecen"
   const filteredEvents = confirmedEvents
     .filter(e => {
+      if (showFavoritesOnly && !isFavorite(e.id)) return false;
+      if (selectedMusician && e.musicianName !== selectedMusician) return false;
       if (selectedVibes.length === 0) return true;
       return (e.vibes || []).some((v: any) => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
     });
@@ -162,12 +186,30 @@ export const Home = () => {
                   <p className="text-white/60 text-xs md:text-sm uppercase tracking-widest mb-8 max-w-xl">
                     {event.venueName} — {event.venueLocation}
                   </p>
-                  <Link 
-                    to={`/event/${event.id}`}
-                    className="bg-gold text-black hover:bg-white hover:text-black transition-colors duration-500 px-8 py-3 text-[10px] uppercase tracking-[0.2em] font-bold"
-                  >
-                    Descubrir Evento
-                  </Link>
+                  <div className="flex items-center gap-4">
+                    <Link 
+                      to={`/event/${event.id}`}
+                      className="bg-gold text-black hover:bg-white hover:text-black transition-colors duration-500 px-8 py-3 text-[10px] uppercase tracking-[0.2em] font-bold"
+                    >
+                      Descubrir Evento
+                    </Link>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleFavorite(event.id);
+                      }}
+                      className="p-3 border border-white/20 hover:bg-white/10 rounded-full transition-colors group/fav bg-black/30 backdrop-blur-sm"
+                    >
+                      <Heart 
+                        className={`w-6 h-6 transition-colors ${
+                          isFavorite(event.id) 
+                            ? "fill-red-500 text-red-500" 
+                            : "text-white/60 group-hover/fav:text-white"
+                        }`} 
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -206,27 +248,131 @@ export const Home = () => {
                 </button>
               )}
               
-              {/* Botón de Filtros Unificado */}
-              <button
-                onClick={() => setIsFilterOpen(true)}
-                className={`flex items-center gap-3 px-5 py-2.5 text-[10px] uppercase tracking-[0.2em] transition-all duration-500 ${
-                  selectedVibes.length > 0
-                    ? "bg-gold text-black shadow-[0_0_15px_rgba(197,160,89,0.3)]" 
-                    : "border border-white/20 text-white hover:border-white/60 hover:bg-white/5"
-                }`}
-              >
-                <span className={selectedVibes.length > 0 ? "font-bold" : ""}>
-                  Filtros {selectedVibes.length > 0 && `(${selectedVibes.length})`}
-                </span>
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-              </button>
+              {/* Botones de Filtro */}
+              <div className="flex flex-row items-center gap-3">
+                
+                {/* Botón Artistas */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsMusicianDropdownOpen(!isMusicianDropdownOpen);
+                      if (!isMusicianDropdownOpen) setIsFilterOpen(false); // cerrar el otro
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-[0.2em] transition-all duration-500 rounded-sm ${
+                      selectedMusician
+                        ? "bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+                        : "border border-white/20 text-white hover:border-white/60 hover:bg-white/5"
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">
+                      {selectedMusician ? selectedMusician.length > 15 ? `${selectedMusician.substring(0, 15)}...` : selectedMusician : "Artistas"}
+                    </span>
+                    <span className="sm:hidden">
+                      {selectedMusician ? "1" : "Art"}
+                    </span>
+                  </button>
 
-              {/* Panel Desplegable de Filtros Premium (Dropdown Compacto) */}
-              {isFilterOpen && (
+                  {isMusicianDropdownOpen && (
+                    <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 z-50 bg-[#0a0a0a] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 w-64 md:w-72 rounded-sm flex flex-col max-h-[350px]">
+                      
+                      <div className="p-3 border-b border-white/10 flex items-center gap-2 bg-black/40">
+                        <Search className="w-4 h-4 text-white/40" />
+                        <input 
+                          type="text" 
+                          placeholder="Buscar artista..." 
+                          value={musicianSearchTerm}
+                          onChange={(e) => setMusicianSearchTerm(e.target.value)}
+                          className="w-full bg-transparent border-none focus:outline-none text-white text-xs placeholder:text-white/30"
+                        />
+                        {musicianSearchTerm && (
+                          <button onClick={() => setMusicianSearchTerm("")} className="text-white/40 hover:text-white">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+                        <button
+                          onClick={() => {
+                            setSelectedMusician(null);
+                            setIsMusicianDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
+                        >
+                          <div className={`w-3 h-3 rounded-full flex-shrink-0 border flex items-center justify-center transition-all mr-3 ${!selectedMusician ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
+                            {!selectedMusician && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                          </div>
+                          <span className={`text-xs transition-colors ${!selectedMusician ? "text-gold font-bold" : "text-white/60 group-hover:text-white"}`}>
+                            Todos los artistas
+                          </span>
+                        </button>
+                        
+                        {filteredMusiciansList.length === 0 ? (
+                          <div className="px-4 py-6 text-center text-white/30 text-xs italic">
+                            No se encontraron artistas
+                          </div>
+                        ) : (
+                          filteredMusiciansList.map(musician => (
+                            <button
+                              key={musician}
+                              onClick={() => {
+                                setSelectedMusician(musician);
+                                setIsMusicianDropdownOpen(false);
+                              }}
+                              className="w-full flex items-center px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
+                            >
+                              <div className={`w-3 h-3 rounded-full flex-shrink-0 border flex items-center justify-center transition-all mr-3 ${selectedMusician === musician ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
+                                {selectedMusician === musician && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                              </div>
+                              <span className={`text-xs transition-colors truncate ${selectedMusician === musician ? "text-white font-bold" : "text-white/60 group-hover:text-white"}`}>
+                                {musician}
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón de Filtros Unificado */}
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setIsFilterOpen(!isFilterOpen);
+                      if (!isFilterOpen) setIsMusicianDropdownOpen(false);
+                    }}
+                    className={`flex items-center gap-3 px-5 py-2.5 text-[10px] uppercase tracking-[0.2em] transition-all duration-500 rounded-sm ${
+                      selectedVibes.length > 0
+                        ? "bg-gold text-black shadow-[0_0_15px_rgba(197,160,89,0.3)]" 
+                        : "border border-white/20 text-white hover:border-white/60 hover:bg-white/5"
+                    }`}
+                  >
+                    <span className={selectedVibes.length > 0 ? "font-bold" : ""}>
+                      Filtros {selectedVibes.length > 0 && `(${selectedVibes.length})`}
+                    </span>
+                    <svg className="w-3 h-3 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                  </button>
+
+                  {isFilterOpen && (
                 <div className="absolute right-0 top-full mt-2 z-50 bg-[#0a0a0a] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 w-48 rounded-sm">
                   <div className="flex flex-col py-2">
+                    {/* Botón Favoritos */}
+                    <button
+                      onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors group border-b border-white/5 mb-1"
+                    >
+                      <div className={`w-3 h-3 rounded-sm flex-shrink-0 border flex items-center justify-center transition-all ${showFavoritesOnly ? "border-red-500 bg-red-500/20" : "border-white/20 group-hover:border-white/40"}`}>
+                        {showFavoritesOnly && <Heart className="w-2.5 h-2.5 text-red-500 fill-red-500" />}
+                      </div>
+                      <span className={`text-[10px] uppercase tracking-widest transition-colors ${showFavoritesOnly ? "text-red-500 font-bold" : "text-white/60 group-hover:text-white"}`}>
+                        Favoritos
+                      </span>
+                    </button>
+
                     <button
                       onClick={() => setSelectedVibes([])}
                       className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
@@ -280,6 +426,8 @@ export const Home = () => {
               )}
             </div>
           </div>
+        </div>
+        </div>
           
           {/* Main Content Area based on View */}
           <section className="min-h-[40vh]">
@@ -300,11 +448,11 @@ export const Home = () => {
             )}
 
             {activeView === "CALENDARIO" && (
-              <EventCalendar events={confirmedEvents} selectedVibes={selectedVibes} />
+              <EventCalendar events={confirmedEvents} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
             )}
 
             {activeView === "LUGARES" && (
-              <VenueList events={events} selectedVibes={selectedVibes} />
+              <VenueList events={events} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
             )}
           </section>
         </div>

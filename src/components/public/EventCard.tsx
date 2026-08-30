@@ -2,6 +2,8 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
 import { FiAward } from "react-icons/fi";
+import { Heart } from "lucide-react";
+import { useFavorites } from "../../hooks/useFavorites";
 import type { SonaEvent } from "../../types";
 
 interface EventCardProps {
@@ -10,6 +12,8 @@ interface EventCardProps {
 
 export const EventCard = ({ event }: EventCardProps) => {
   const navigate = useNavigate();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  
   const dateObj = event.date ? parseISO(event.date) : new Date();
   if (isNaN(dateObj.getTime())) return null;
 
@@ -56,12 +60,31 @@ export const EventCard = ({ event }: EventCardProps) => {
       {/* Content */}
       <div className="flex-1 flex flex-col justify-between py-2">
         <div>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {(event.vibes || event.tags || []).map((vibe) => (
-              <span key={vibe} className="text-white/40 text-[9px] uppercase tracking-[0.2em] border border-white/10 px-2 py-1">
-                {vibe.replace(/[^\w\s]/gi, '')}
-              </span>
-            ))}
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex flex-wrap gap-2">
+              {(event.vibes || event.tags || []).map((vibe) => (
+                <span key={vibe} className="text-white/40 text-[9px] uppercase tracking-[0.2em] border border-white/10 px-2 py-1">
+                  {vibe.replace(/[^\w\s]/gi, '')}
+                </span>
+              ))}
+            </div>
+            
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(event.id);
+              }}
+              className="p-2 -mr-2 -mt-2 hover:bg-white/10 rounded-full transition-colors group/fav"
+              aria-label={isFavorite(event.id) ? "Quitar de favoritos" : "Añadir a favoritos"}
+            >
+              <Heart 
+                className={`w-6 h-6 transition-colors ${
+                  isFavorite(event.id) 
+                    ? "fill-red-500 text-red-500" 
+                    : "text-white/40 group-hover/fav:text-white"
+                }`} 
+              />
+            </button>
           </div>
           
           <p className="text-gold text-xs font-bold uppercase tracking-widest mb-1 truncate">

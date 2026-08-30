@@ -5,6 +5,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { addDays, isWithinInterval, parseISO, format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Heart } from "lucide-react";
+import { useFavorites } from "../../hooks/useFavorites";
 import type { SonaEvent } from "../../types";
 
 // Fix Leaflet default icon issues in React
@@ -29,6 +31,8 @@ const userIcon = new L.DivIcon({
 interface VenueMapProps {
   events: SonaEvent[];
   selectedVibes: string[];
+  showFavorites?: boolean;
+  selectedMusician?: string | null;
 }
 
 const DEFAULT_CENTER: [number, number] = [41.85, 3.10]; 
@@ -43,10 +47,12 @@ const MapUpdater = ({ center }: { center: [number, number] | null }) => {
   return null;
 };
 
-export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
+export const VenueList = ({ events, selectedVibes, showFavorites = false, selectedMusician = null }: VenueMapProps) => {
   const navigate = useNavigate();
   const today = new Date();
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  
+  const { isFavorite } = useFavorites();
   
   // Date filters
   const [startDate, setStartDate] = useState(today);
@@ -69,7 +75,9 @@ export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
     if (isNaN(eventDate.getTime())) return false;
     const matchesDate = isWithinInterval(eventDate, { start: startDate, end: endDate });
     const matchesVibe = selectedVibes.length === 0 || (event.vibes || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
-    return matchesDate && matchesVibe;
+    const matchesFavorite = showFavorites ? isFavorite(event.id) : true;
+    const matchesMusician = selectedMusician ? event.musicianName === selectedMusician : true;
+    return matchesDate && matchesVibe && matchesFavorite && matchesMusician;
   });
 
   const groupedEvents = filteredEvents.reduce((acc, event) => {
@@ -84,7 +92,7 @@ export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-6xl mx-auto pb-12 relative">
-      {/* Controles de fecha superiores (Solo fechas) */}
+      {/* Controles de fecha superiores */}
       <div className="flex justify-end p-4">
         <div className="flex items-center gap-4 bg-black p-3 border border-white/10 shadow-xl">
           <div className="flex flex-col">
@@ -156,11 +164,14 @@ export const VenueList = ({ events, selectedVibes }: VenueMapProps) => {
                   </h4>
                   
                   {locationEvents.map(event => (
-                    <div key={event.id} className="flex flex-col gap-1 border-b border-black/5 pb-2 last:border-0">
+                    <div key={event.id} className="flex flex-col gap-1 border-b border-black/5 pb-2 last:border-0 relative pr-6">
                       <span className="text-[10px] uppercase tracking-widest text-gold font-bold">
                         {format(parseISO(event.date), "dd MMM - HH:mm", { locale: es })}
                       </span>
                       <p className="font-bold text-sm leading-tight m-0 text-black">{event.title}</p>
+                      {isFavorite(event.id) && (
+                        <Heart className="w-4 h-4 absolute top-1 right-0 text-red-500 fill-red-500" />
+                      )}
                       
                       <button 
                         onClick={() => navigate(`/event/${event.id}`)}

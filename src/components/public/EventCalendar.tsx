@@ -8,13 +8,17 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 interface EventCalendarProps {
   events: SonaEvent[];
   selectedVibes: string[];
+  showFavorites?: boolean;
+  selectedMusician?: string | null;
 }
+import { useFavorites } from "../../hooks/useFavorites";
 
-export const EventCalendar = ({ events, selectedVibes }: EventCalendarProps) => {
+export const EventCalendar = ({ events, selectedVibes, showFavorites = false, selectedMusician = null }: EventCalendarProps) => {
   const MOCK_TODAY = new Date("2026-08-14");
   const [currentDate, setCurrentDate] = useState(startOfMonth(MOCK_TODAY));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const eventsContainerRef = useRef<HTMLDivElement>(null);
+  const { isFavorite } = useFavorites();
 
   // Auto-scroll en móvil al seleccionar una fecha
   useEffect(() => {
@@ -29,8 +33,10 @@ export const EventCalendar = ({ events, selectedVibes }: EventCalendarProps) => 
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Filtrar eventos globalmente por vibes
+  // Filtrar eventos globalmente por vibes, favoritos y músicos
   const filteredEvents = events.filter(e => {
+    if (showFavorites && !isFavorite(e.id)) return false;
+    if (selectedMusician && e.musicianName !== selectedMusician) return false;
     if (selectedVibes.length === 0) return true;
     return (e.vibes || e.tags || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
   });
