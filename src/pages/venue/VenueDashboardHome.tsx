@@ -16,7 +16,7 @@ export const VenueDashboardHome = () => {
   const venueName = userData?.name || 'Sala Soho';
   const venueId = currentUser?.uid;
   const { findOrCreateChat, sendMessage } = useChat();
-  const { activeSosCount, activeCollabCount } = useSosAlerts();
+  const { activeSosCount, activeCollabCount } = useSosAlerts(venueId, true);
   
   const upcomingEvents = events
     .filter(e => (e.venueId && e.venueId === venueId) || (e.venueName && e.venueName === venueName))

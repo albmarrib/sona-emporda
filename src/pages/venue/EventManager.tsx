@@ -31,10 +31,15 @@ export const EventManager = () => {
     
     const q = query(collection(db, 'events'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsList = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const eventsList = snapshot.docs.map(doc => {
+        const data = doc.data();
+        if (data.date && typeof data.date.toDate === 'function') data.date = data.date.toDate().toISOString();
+        if (data.createdAt && typeof data.createdAt.toDate === 'function') data.createdAt = data.createdAt.toDate().toISOString();
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
       
       // Filter by venueId or venueName (to support mock data that lacks venueId)
       const myEvents = eventsList.filter((e: any) => (e.venueId && e.venueId === currentUser?.uid) || (e.venueName && e.venueName === (userData?.name || 'Sala Soho')));

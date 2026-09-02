@@ -15,10 +15,22 @@ export const useEvents = (includeDrafts = false) => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (isMounted) {
         try {
-          let eventsList: any[] = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          let eventsList: any[] = snapshot.docs.map(doc => {
+            const data = doc.data();
+            
+            // Handle n8n inserting Firestore Timestamps instead of strings
+            if (data.date && typeof data.date.toDate === 'function') {
+              data.date = data.date.toDate().toISOString();
+            }
+            if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+              data.createdAt = data.createdAt.toDate().toISOString();
+            }
+
+            return {
+              id: doc.id,
+              ...data
+            };
+          });
           
           if (!includeDrafts) {
             eventsList = eventsList.filter(e => e.status !== 'draft');

@@ -22,7 +22,6 @@ export const VenueCalendar = () => {
   const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
   const [realMusicians, setRealMusicians] = useState<any[]>([]);
   const { findOrCreateChat, sendMessage } = useChat();
-  const { activeSosCount } = useSosAlerts();
   
   useEffect(() => {
     const fetchRealMusicians = () => {
@@ -92,6 +91,7 @@ export const VenueCalendar = () => {
   // Get Venue's own events
   const venueName = userData?.name || 'Sala Soho';
   const venueId = currentUser?.uid;
+  const { activeSosCount } = useSosAlerts(venueId, true);
   const venueEvents = events.filter(e => e.venueId === venueId && e.status !== 'cancelled');
 
   const selectedDayEvent = selectedDate ? venueEvents.find(e => format(parseISO(e.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')) : null;

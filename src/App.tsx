@@ -4,6 +4,7 @@ import { Home } from './pages/public/Home';
 import { EventDetail } from './pages/public/EventDetail';
 import { SharedBandCalendar } from './pages/public/SharedBandCalendar';
 import { Login } from './pages/auth/Login';
+import { ClaimProfile } from './pages/auth/ClaimProfile';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { SosAlarm } from './components/shared/SosAlarm';
 import { LoadingScreen } from './components/shared/LoadingScreen';
@@ -44,6 +45,7 @@ function App() {
           <Route path="/event/:id" element={<EventDetail />} />
           <Route path="/band/:bandId/calendar" element={<SharedBandCalendar />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/claim-profile" element={<ClaimProfile />} />
           <Route path="/seed" element={<SeedDatabase />} />
           
           {/* Área de Músicos */}

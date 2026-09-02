@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../../firebase/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { FiMail, FiLock } from 'react-icons/fi';
 import { Header } from '../../components/public/Header';
 
@@ -59,16 +59,70 @@ export const Login = () => {
         }
       } else {
         // REGISTRO
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Guardar el rol en Firestore
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          email,
-          role,
-          createdAt: new Date().toISOString()
-        });
-        
-        navigate(`/${role}`);
+        // 1. Buscar si existe perfil fantasma (unclaimed)
+        const usersRef = collection(db, 'users');
+        const q = query(
+          usersRef, 
+          where('email', '==', email.trim()),
+          where('claimStatus', '==', 'unclaimed')
+        );
+        const querySnapshot = await getDocs(q);
+
+        // 2. Crear usuario en Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const newUid = userCredential.user.uid;
+
+        if (!querySnapshot.empty) {
+          // --- FUSIÓN DE PERFIL FANTASMA ---
+          const unclaimedDoc = querySnapshot.docs[0];
+          const unclaimedId = unclaimedDoc.id;
+          const unclaimedData = unclaimedDoc.data();
+
+          const batch = writeBatch(db);
+
+          // Crear nuevo doc
+          const newUserRef = doc(db, 'users', newUid);
+          batch.set(newUserRef, {
+            ...unclaimedData,
+            claimStatus: 'claimed',
+            claimedAt: new Date().toISOString()
+          });
+
+          // Actualizar eventos donde es músico
+          const eventsAsMusicianQuery = query(collection(db, 'events'), where('musicianId', '==', unclaimedId));
+          const eventsAsMusicianSnap = await getDocs(eventsAsMusicianQuery);
+          eventsAsMusicianSnap.forEach((eventDoc) => {
+            batch.update(eventDoc.ref, { musicianId: newUid });
+          });
+
+          // Actualizar eventos donde es local
+          const eventsAsVenueQuery = query(collection(db, 'events'), where('venueId', '==', unclaimedId));
+          const eventsAsVenueSnap = await getDocs(eventsAsVenueQuery);
+          eventsAsVenueSnap.forEach((eventDoc) => {
+            batch.update(eventDoc.ref, { venueId: newUid });
+          });
+
+          // Eliminar el documento antiguo
+          const oldUserRef = doc(db, 'users', unclaimedId);
+          batch.delete(oldUserRef);
+
+          // Ejecutar batch
+          await batch.commit();
+
+          const finalRole = unclaimedData.role || role;
+          navigate(`/${finalRole}`);
+
+        } else {
+          // --- REGISTRO NORMAL (Sin perfil fantasma) ---
+          await setDoc(doc(db, 'users', newUid), {
+            email: email.trim(),
+            role,
+            createdAt: new Date().toISOString()
+          });
+          
+          navigate(`/${role}`);
+        }
       }
     } catch (err: any) {
       console.error(err);

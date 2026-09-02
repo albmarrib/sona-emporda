@@ -21,9 +21,22 @@ interface WizardStep {
 }
 
 export const OnboardingWizard = ({ onComplete }: { onComplete: () => void }) => {
-  const { currentUser, userRole } = useAuth();
+  const { currentUser, userRole, userData } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<any>({
+    ...userData,
+    address: userData?.address || userData?.location || ''
+  });
+
+  React.useEffect(() => {
+    if (userData) {
+      setFormData((prev: any) => ({
+        ...prev,
+        ...userData,
+        address: userData.address || userData.location || prev.address || ''
+      }));
+    }
+  }, [userData]);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

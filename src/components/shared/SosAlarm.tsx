@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { FiBell, FiSmartphone, FiX } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
 import { collection, query, onSnapshot } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const SosAlarm = () => {
+  const { userRole } = useAuth();
   const [activeAlert, setActiveAlert] = useState<{title: string, message: string} | null>(null);
+
+  if (userRole !== 'musician') return null;
 
   useEffect(() => {
     // Escuchar nuevos SOS en Firestore
