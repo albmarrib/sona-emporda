@@ -149,7 +149,7 @@ export const EventDetail = () => {
             <div className="flex flex-wrap gap-3 mb-6">
               {event.vibes?.map((vibe: any) => (
                 <span key={vibe} className="text-white/40 text-[10px] uppercase tracking-[0.2em] border border-white/10 px-3 py-1">
-                  {vibe.replace(/[^\w\s]/gi, '')}
+                  {String(vibe).replace(/[^\w\s]/gi, '')}
                 </span>
               ))}
             </div>
@@ -284,12 +284,12 @@ export const EventDetail = () => {
                   <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Contacto con el Local</h3>
                   <div className="flex flex-wrap gap-2">
                     {venueProfile.contactWhatsapp && (
-                      <a href={`https://wa.me/${venueProfile.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                      <a href={`https://wa.me/${String(venueProfile.contactWhatsapp).replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
                         WhatsApp
                       </a>
                     )}
                     {venueProfile.contactPhone && (
-                      <a href={`tel:${venueProfile.contactPhone.replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                      <a href={`tel:${String(venueProfile.contactPhone).replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
                         Llamar
                       </a>
                     )}

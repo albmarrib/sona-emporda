@@ -59,13 +59,16 @@ export const Home = () => {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // Mostramos solo eventos confirmados, cancelados, o con músico asignado. Ocultamos los que buscan músico.
-  const confirmedEvents = events.filter(e => 
-    e.status === 'confirmed' || 
-    e.status === 'cancelled' || 
-    e.status === 'musician_cancelled' || 
-    (e.status === 'published' && e.musicianId)
-  );
+  // Mostramos solo eventos confirmados, cancelados, o con músico asignado. Ocultamos los que buscan músico y los pasados.
+  const confirmedEvents = events.filter(e => {
+    const isPast = e.date ? new Date(e.date).getTime() < new Date().setHours(0,0,0,0) : false;
+    if (isPast) return false;
+    
+    return e.status === 'confirmed' || 
+           e.status === 'cancelled' || 
+           e.status === 'musician_cancelled' || 
+           (e.status === 'published' && e.musicianId);
+  });
   
   // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
   const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');

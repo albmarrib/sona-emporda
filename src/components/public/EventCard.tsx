@@ -64,7 +64,7 @@ export const EventCard = ({ event }: EventCardProps) => {
             <div className="flex flex-wrap gap-2">
               {(event.vibes || event.tags || []).map((vibe) => (
                 <span key={vibe} className="text-white/40 text-[9px] uppercase tracking-[0.2em] border border-white/10 px-2 py-1">
-                  {vibe.replace(/[^\w\s]/gi, '')}
+                  {String(vibe).replace(/[^\w\s]/gi, '')}
                 </span>
               ))}
             </div>

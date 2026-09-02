@@ -19,11 +19,40 @@ export const useEvents = (includeDrafts = false) => {
             const data = doc.data();
             
             // Handle n8n inserting Firestore Timestamps instead of strings
-            if (data.date && typeof data.date.toDate === 'function') {
-              data.date = data.date.toDate().toISOString();
+            if (data.date) {
+              if (typeof data.date.toDate === 'function') {
+                data.date = data.date.toDate().toISOString();
+              } else if (typeof data.date === 'number') {
+                const timestamp = data.date < 10000000000 ? data.date * 1000 : data.date;
+                data.date = new Date(timestamp).toISOString();
+              } else if (data.date instanceof Date) {
+                data.date = data.date.toISOString();
+              } else if (typeof data.date === 'string') {
+                const parsed = new Date(data.date);
+                if (!isNaN(parsed.getTime())) {
+                  data.date = parsed.toISOString();
+                }
+              }
             }
             if (data.createdAt && typeof data.createdAt.toDate === 'function') {
               data.createdAt = data.createdAt.toDate().toISOString();
+            }
+
+            // Normalizar coordenadas (para n8n u otros formatos)
+            if (!data.coordinates) {
+              const lat = data.latitud ?? data.latitude ?? data.lat;
+              const lng = data.longitud ?? data.longitude ?? data.lng;
+              if (lat !== undefined && lng !== undefined) {
+                data.coordinates = { lat: Number(lat), lng: Number(lng) };
+              }
+            }
+
+            // Normalizar arrays
+            if (data.vibes && typeof data.vibes === 'string') {
+              data.vibes = data.vibes.split(',').map((v: string) => v.trim());
+            }
+            if (data.tags && typeof data.tags === 'string') {
+              data.tags = data.tags.split(',').map((t: string) => t.trim());
             }
 
             return {
