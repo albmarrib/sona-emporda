@@ -94,6 +94,12 @@ export const EventFormModal = ({ isOpen, onClose, editingEventId, initialEventDa
     }
 
     const eventDateObj = new Date(`${newEvent.date}T${newEvent.time}`);
+    
+    const tzOffset = -eventDateObj.getTimezoneOffset();
+    const diff = tzOffset >= 0 ? '+' : '-';
+    const pad = (num: number) => String(Math.floor(Math.abs(num))).padStart(2, '0');
+    const offsetStr = `${diff}${pad(tzOffset / 60)}:${pad(tzOffset % 60)}`;
+
     const today = new Date();
     if (!editingEventId && eventDateObj < today) {
       alert("No puedes programar eventos en fechas pasadas.");
@@ -133,7 +139,7 @@ export const EventFormModal = ({ isOpen, onClose, editingEventId, initialEventDa
         title: newEvent.title,
         musicianName: newEvent.musicianName,
         musicianId: newEvent.musicianId || null,
-        date: `${newEvent.date}T${newEvent.time}:00Z`,
+        date: `${newEvent.date}T${newEvent.time}:00${offsetStr}`,
         time: newEvent.time,
         ticketType: newEvent.ticketType,
         imageUrl: finalImageUrl,

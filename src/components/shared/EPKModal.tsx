@@ -1,4 +1,4 @@
-import { FiX, FiStar, FiCalendar, FiCheckCircle } from 'react-icons/fi';
+import { FiX, FiStar, FiCalendar, FiCheckCircle, FiMessageSquare, FiPhone, FiMail, FiGlobe, FiInstagram } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { db } from '../../firebase/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -49,101 +49,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
         </div>
 
         <div className="p-6 md:p-8 flex flex-col gap-6">
-          <div className="flex gap-2 flex-wrap">
-              <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
-                {artist.mainGenre}
-              </span>
-              {artist.baseLocation && (
-                <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
-                  📍 {artist.baseLocation}
-                </span>
-              )}
-          </div>
-
-          <div>
-            <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-2">EPK DEL ARTISTA (Biografía)</h3>
-            <p className="text-white/80 text-sm leading-relaxed">{artist.shortBio || "No hay biografía disponible."}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 border border-white/10">
-            <div>
-              <h4 className="text-[10px] uppercase tracking-widest text-white/50">Formación</h4>
-              <p className="text-lg text-white font-serif capitalize">
-                {artist.formationType || "Solista"} {artist.membersCount ? `(${artist.membersCount} personas)` : ''}
-              </p>
-              {artist.membersNames && <p className="text-xs text-white/50 mt-1">{artist.membersNames}</p>}
-            </div>
-            <div>
-              <h4 className="text-[10px] uppercase tracking-widest text-white/50">Valoración</h4>
-              <div className="flex items-center gap-1 text-gold">
-                <FiStar className="fill-gold w-4 h-4" />
-                <span className="text-lg text-white font-serif">{artist.rating || 5.0}</span>
-                <span className="text-xs text-white/50">({artist.reviewsCount || 0} res)</span>
-              </div>
-            </div>
-          </div>
-
-          {(artist.youtubeUrl || artist.spotifyUrl) && (
-            <div>
-              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-3">ENLACES MULTIMEDIA</h3>
-              <div className="flex flex-col sm:flex-row gap-4">
-                {artist.youtubeUrl && (
-                  <a href={artist.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600/20 text-red-500 border border-red-600/50 hover:bg-red-600 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
-                    Ver Video Destacado
-                  </a>
-                )}
-                {artist.spotifyUrl && (
-                  <a href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-500/20 text-green-500 border border-green-500/50 hover:bg-green-500 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
-                    Escuchar en Spotify
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          {artist.technicalRider && (
-            <div>
-              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-2">TECHNICAL RIDER (Necesidades)</h3>
-              <div className="bg-white/5 border border-white/10 p-4">
-                <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">{artist.technicalRider}</p>
-              </div>
-            </div>
-          )}
           
-          {(artist.contactPhone || artist.contactWhatsapp || artist.contactEmail || artist.websiteUrl || artist.instagramUrl) && (
-            <div>
-              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-3">CONTACTO DIRECTO</h3>
-              <div className="flex flex-wrap gap-2">
-                {artist.contactWhatsapp && (
-                  <a href={`https://wa.me/${artist.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-                    WhatsApp
-                  </a>
-                )}
-                {artist.contactPhone && (
-                  <a href={`tel:${artist.contactPhone.replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-                    Llamar
-                  </a>
-                )}
-                {artist.contactEmail && (
-                  <a href={`mailto:${artist.contactEmail}`} className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-                    Email
-                  </a>
-                )}
-                {artist.websiteUrl && (
-                  <a href={artist.websiteUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-                    Web
-                  </a>
-                )}
-                {artist.instagramUrl && (
-                  <a href={artist.instagramUrl} target="_blank" rel="noopener noreferrer" className="bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors px-4 py-2 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest font-bold">
-                    Instagram
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-            <div className="mt-4 border-t border-white/10 pt-6">
               {isApplicantForEventId ? (
                 <>
                   <h3 className="text-[10px] uppercase tracking-widest text-green-400 mb-3 flex items-center gap-2">
@@ -151,21 +57,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                   </h3>
                   <div className="flex flex-col gap-4 bg-green-900/10 border border-green-500/20 p-4">
                     <p className="text-white/70 text-sm">El músico ya ha enviado un mensaje para actuar en este evento.</p>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          const chatId = await findOrCreateChat(artist.id, isApplicantForEventId);
-                          onClose();
-                          navigate('/venue/messages', { state: { chatId } });
-                        } catch (e) {
-                          console.error(e);
-                          alert('Error al abrir el chat.');
-                        }
-                      }}
-                      className="w-full bg-green-900 hover:bg-green-800 text-white font-bold uppercase tracking-widest text-[12px] py-4 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <FaWhatsapp className="w-5 h-5" /> Abrir Chat para Responder
-                    </button>
+                    
                     <button 
                       onClick={async () => {
                         if (!window.confirm(`¿Quieres aceptar a ${artist.stageName} para este bolo de forma definitiva?`)) return;
@@ -250,7 +142,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                         if (template) {
                           template = template.replace('[Músico]', artist.stageName).replace('[Local]', venueName).replace('[Evento]', selectedEvt?.title || '');
                         } else {
-                          template = `Hola ${artist.stageName}, te escribo de ${venueName} porque quería ver si podrías actuar en el evento "${selectedEvt?.title}" el ${evtDate}. Te acabo de enviar la invitación por Sona-Empordà también por si quieres revisar los datos.`;
+                          template = `Hola ${artist.stageName}, te escribo de ${venueName} porque quería ver si podrías actuar en el evento "${selectedEvt?.title}" el ${evtDate}. Te acabo de enviar la invitación por el sistema de Sona-Empordà de forma que debería aparecer directamente en tu calendario donde puedes acceder para revisar los datos y confirmar si te interesa o rechazarla si no es el caso. En cualquier caso podemos comentar por este chat cualquier detalle o cuestión que tengáis al respecto. Muchas gracias por vuestra atención.`;
                         }
                         
                         const chatId = await findOrCreateChat(artist.id, selectedEventId);
@@ -267,13 +159,122 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                       selectedEventId ? 'bg-gold text-black hover:bg-white' : 'bg-white/10 text-white/30 cursor-not-allowed'
                     }`}
                   >
-                    <FaWhatsapp className="w-5 h-5" /> Invitar y Abrir Chat
+                    <FiMessageSquare className="w-5 h-5" /> Invitar y Abrir Chat
                   </button>
                 </div>
               )}
                 </>
               )}
+            
+          <div className="flex gap-2 flex-wrap">
+              <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
+                {artist.mainGenre}
+              </span>
+              {artist.baseLocation && (
+                <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
+                  📍 {artist.baseLocation}
+                </span>
+              )}
+          </div>
+
+          <div>
+            <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-2">EPK DEL ARTISTA (Biografía)</h3>
+            <p className="text-white/80 text-sm leading-relaxed">{artist.shortBio || "No hay biografía disponible."}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 bg-white/5 p-4 border border-white/10">
+            <div>
+              <h4 className="text-[10px] uppercase tracking-widest text-white/50">Formación</h4>
+              <p className="text-lg text-white font-serif capitalize">
+                {artist.formationType || "Solista"} {artist.membersCount ? `(${artist.membersCount} personas)` : ''}
+              </p>
+              {artist.membersNames && <p className="text-xs text-white/50 mt-1">{artist.membersNames}</p>}
             </div>
+            <div>
+              <h4 className="text-[10px] uppercase tracking-widest text-white/50">Valoración</h4>
+              <div className="flex items-center gap-1 text-gold">
+                <FiStar className="fill-gold w-4 h-4" />
+                <span className="text-lg text-white font-serif">{artist.rating || 5.0}</span>
+                <span className="text-xs text-white/50">({artist.reviewsCount || 0} res)</span>
+              </div>
+            </div>
+          </div>
+
+          {(artist.youtubeUrl || artist.spotifyUrl) && (
+            <div>
+              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-3">ENLACES MULTIMEDIA</h3>
+              <div className="flex flex-col sm:flex-row gap-4">
+                {artist.youtubeUrl && (
+                  <a href={artist.youtubeUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600/20 text-red-500 border border-red-600/50 hover:bg-red-600 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
+                    Ver Video Destacado
+                  </a>
+                )}
+                {artist.spotifyUrl && (
+                  <a href={artist.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-500/20 text-green-500 border border-green-500/50 hover:bg-green-500 hover:text-white transition-colors py-3 flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold">
+                    Escuchar en Spotify
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {artist.technicalRider && (
+            <div>
+              <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-2">TECHNICAL RIDER (Necesidades)</h3>
+              <div className="bg-white/5 border border-white/10 p-4">
+                <p className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap">{artist.technicalRider}</p>
+              </div>
+            </div>
+          )}
+          
+          <div>
+            <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-3">CONTACTO DIRECTO</h3>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  try {
+                    const chatId = await findOrCreateChat(artist.id);
+                    onClose();
+                    navigate('/venue/messages', { state: { chatId } });
+                  } catch (e) {
+                    console.error(e);
+                    alert('Error al abrir el chat.');
+                  }
+                }}
+                className="w-full bg-gold/20 text-gold border border-gold/50 hover:bg-gold hover:text-black transition-colors px-4 py-4 flex items-center justify-center gap-2 text-[12px] uppercase tracking-widest font-bold"
+              >
+                <FiMessageSquare className="w-5 h-5" /> Chat Interno
+              </button>
+              
+              <div className="flex justify-center gap-4">
+                {artist.contactWhatsapp && (
+                  <a href={`https://wa.me/${artist.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors flex items-center justify-center" title="WhatsApp">
+                    <FaWhatsapp className="w-5 h-5" />
+                  </a>
+                )}
+                {artist.contactPhone && (
+                  <a href={`tel:${artist.contactPhone.replace(/\s/g, '')}`} className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center" title="Llamar">
+                    <FiPhone className="w-5 h-5" />
+                  </a>
+                )}
+                {artist.contactEmail && (
+                  <a href={`mailto:${artist.contactEmail}`} className="w-12 h-12 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors flex items-center justify-center" title="Email">
+                    <FiMail className="w-5 h-5" />
+                  </a>
+                )}
+                {artist.websiteUrl && (
+                  <a href={artist.websiteUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors flex items-center justify-center" title="Web">
+                    <FiGlobe className="w-5 h-5" />
+                  </a>
+                )}
+                {artist.instagramUrl && (
+                  <a href={artist.instagramUrl} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors flex items-center justify-center" title="Instagram">
+                    <FiInstagram className="w-5 h-5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

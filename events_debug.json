@@ -1,0 +1,384 @@
+{
+  "documents": [
+    {
+      "name": "projects/sona-emporda/databases/(default)/documents/events/09ZDYHJIPFS1xnS5MwtR",
+      "fields": {
+        "title": {
+          "stringValue": "MUSICAL HALL AUGUTST END"
+        },
+        "vibes": {
+          "arrayValue": {}
+        },
+        "coordinates": {
+          "mapValue": {
+            "fields": {
+              "lat": {
+                "doubleValue": 41.8606736
+              },
+              "lng": {
+                "doubleValue": 3.1451935
+              }
+            }
+          }
+        },
+        "reservationContact": {
+          "stringValue": ""
+        },
+        "location": {
+          "stringValue": "Carrer Comerç 6 , Palamos 17230"
+        },
+        "venueId": {
+          "stringValue": "NRcxcc2EPYV9B9MABDPRzMugGtu2"
+        },
+        "imageUrl": {
+          "stringValue": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000"
+        },
+        "musicianId": {
+          "stringValue": "wcy0EPaVEZMkdRONVxdoBKUSveo1"
+        },
+        "venueName": {
+          "stringValue": "Sala Soho"
+        },
+        "ticketType": {
+          "stringValue": "Entrada Libre"
+        },
+        "description": {
+          "stringValue": "Sin descripción por ahora."
+        },
+        "date": {
+          "stringValue": "2026-08-29T21:00:00Z"
+        },
+        "createdAt": {
+          "stringValue": "2026-08-27T05:59:46.841Z"
+        },
+        "status": {
+          "stringValue": "confirmed"
+        },
+        "musicianName": {
+          "stringValue": "Acoustic Real Sound"
+        },
+        "acceptsReservations": {
+          "booleanValue": false
+        },
+        "time": {
+          "stringValue": "21:00"
+        }
+      },
+      "createTime": "2026-08-27T05:59:47.100924Z",
+      "updateTime": "2026-08-27T16:58:25.450129Z"
+    },
+    {
+      "name": "projects/sona-emporda/databases/(default)/documents/events/7JqnJFE9YlYrQwic6z8V",
+      "fields": {
+        "status": {
+          "stringValue": "confirmed"
+        },
+        "date": {
+          "stringValue": "2026-08-31T21:00:00Z"
+        },
+        "title": {
+          "stringValue": "BYE SUMMER 26"
+        },
+        "vibes": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "TARDEO"
+              }
+            ]
+          }
+        },
+        "createdAt": {
+          "stringValue": "2026-08-26T16:16:00.364Z"
+        },
+        "time": {
+          "stringValue": "21:00"
+        },
+        "venueId": {
+          "stringValue": "NRcxcc2EPYV9B9MABDPRzMugGtu2"
+        },
+        "description": {
+          "stringValue": "Sin descripción por ahora."
+        },
+        "venueName": {
+          "stringValue": "Sala Soho"
+        },
+        "reservationContact": {
+          "stringValue": ""
+        },
+        "musicianName": {
+          "stringValue": "Acoustic Real Sound"
+        },
+        "ticketType": {
+          "stringValue": "Entrada Libre"
+        },
+        "applicants": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "wcy0EPaVEZMkdRONVxdoBKUSveo1"
+              }
+            ]
+          }
+        },
+        "location": {
+          "stringValue": "Carrer Comerç 6 , Palamos 17230"
+        },
+        "acceptsReservations": {
+          "booleanValue": false
+        },
+        "musicianId": {
+          "stringValue": "wcy0EPaVEZMkdRONVxdoBKUSveo1"
+        },
+        "coordinates": {
+          "mapValue": {
+            "fields": {
+              "lat": {
+                "doubleValue": 41.8606736
+              },
+              "lng": {
+                "doubleValue": 3.1451935
+              }
+            }
+          }
+        },
+        "imageUrl": {
+          "stringValue": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000"
+        }
+      },
+      "createTime": "2026-08-26T16:16:00.627051Z",
+      "updateTime": "2026-08-27T16:58:28.760254Z"
+    },
+    {
+      "name": "projects/sona-emporda/databases/(default)/documents/events/ExGgd8CgsqZzD46tx1tN",
+      "fields": {
+        "description": {
+          "stringValue": "Sin descripción por ahora."
+        },
+        "ticketType": {
+          "stringValue": "Entrada Libre"
+        },
+        "applicants": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "wcy0EPaVEZMkdRONVxdoBKUSveo1"
+              }
+            ]
+          }
+        },
+        "musicianId": {
+          "stringValue": "wcy0EPaVEZMkdRONVxdoBKUSveo1"
+        },
+        "musicianName": {
+          "stringValue": "Acoustic Real Sound"
+        },
+        "location": {
+          "stringValue": "Carrer Comerç 6 , Palamos 17230"
+        },
+        "venueId": {
+          "stringValue": "NRcxcc2EPYV9B9MABDPRzMugGtu2"
+        },
+        "imageUrl": {
+          "stringValue": "https://firebasestorage.googleapis.com/v0/b/sona-emporda.firebasestorage.app/o/events%2F1787758892794_playafest.png?alt=media&token=c083e2de-32f4-40df-8e53-eaac1604aa50"
+        },
+        "createdAt": {
+          "stringValue": "2026-08-26T15:41:35.680Z"
+        },
+        "coordinates": {
+          "mapValue": {
+            "fields": {
+              "lat": {
+                "doubleValue": 41.8606736
+              },
+              "lng": {
+                "doubleValue": 3.1451935
+              }
+            }
+          }
+        },
+        "title": {
+          "stringValue": "Last Summer night Rocanegra"
+        },
+        "vibes": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "CENA"
+              }
+            ]
+          }
+        },
+        "acceptsReservations": {
+          "booleanValue": false
+        },
+        "date": {
+          "stringValue": "2026-08-28T21:00:00Z"
+        },
+        "reservationContact": {
+          "stringValue": ""
+        },
+        "venueName": {
+          "stringValue": "Sala Soho"
+        },
+        "status": {
+          "stringValue": "confirmed"
+        },
+        "time": {
+          "stringValue": "21:00"
+        }
+      },
+      "createTime": "2026-08-26T15:41:35.907143Z",
+      "updateTime": "2026-08-27T16:58:21.925276Z"
+    },
+    {
+      "name": "projects/sona-emporda/databases/(default)/documents/events/mSUdBaFrMyWgXo7omNgZ",
+      "fields": {
+        "date": {
+          "timestampValue": "2026-09-03T20:00:00Z"
+        },
+        "musicianName": {
+          "stringValue": "Els Amics"
+        },
+        "createdAt": {
+          "stringValue": "  2026-09-01T19:01:33.783Z"
+        },
+        "venueId": {
+          "stringValue": "mqn3FsmQlZZFQIOzDg5orMZ7BMD3"
+        },
+        "reservationContact": {
+          "nullValue": null
+        },
+        "time": {
+          "stringValue": "22:00"
+        },
+        "imageUrl": {
+          "stringValue": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819"
+        },
+        "description": {
+          "nullValue": null
+        },
+        "location": {
+          "nullValue": null
+        },
+        "venueName": {
+          "stringValue": "Carrer Amnistia Internacional"
+        },
+        "status": {
+          "stringValue": "published"
+        },
+        "vibes": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "Directo"
+              }
+            ]
+          }
+        },
+        "title": {
+          "stringValue": "  Concierto en La Mirona"
+        },
+        "coordinates": {
+          "mapValue": {
+            "fields": {
+              "lat": {
+                "doubleValue": 41.9683861
+              },
+              "lng": {
+                "doubleValue": 2.7755513
+              }
+            }
+          }
+        },
+        "acceptsReservations": {
+          "nullValue": null
+        },
+        "ticketType": {
+          "stringValue": "Gratis"
+        },
+        "applicants": {
+          "arrayValue": {
+            "values": [
+              {
+                "stringValue": "7biic8Rn4RbOIeSdMUlQuvQ6BB83"
+              }
+            ]
+          }
+        },
+        "musicianId": {
+          "stringValue": "6xEqbJan4JQphWdLqd13caMPJis2"
+        }
+      },
+      "createTime": "2026-09-01T19:01:33.916309Z",
+      "updateTime": "2026-09-02T16:24:58.609833Z"
+    },
+    {
+      "name": "projects/sona-emporda/databases/(default)/documents/events/rRwjlsLDzCnuXBgAO9hM",
+      "fields": {
+        "musicianName": {
+          "stringValue": "The best of"
+        },
+        "title": {
+          "stringValue": "Fiesta final "
+        },
+        "vibes": {
+          "arrayValue": {}
+        },
+        "createdAt": {
+          "stringValue": "2026-08-27T18:05:29.489Z"
+        },
+        "coordinates": {
+          "mapValue": {
+            "fields": {
+              "lat": {
+                "doubleValue": 41.8606736
+              },
+              "lng": {
+                "doubleValue": 3.1451935
+              }
+            }
+          }
+        },
+        "reservationContact": {
+          "stringValue": ""
+        },
+        "location": {
+          "stringValue": "Carrer Comerç 6 , Palamos 17230"
+        },
+        "status": {
+          "stringValue": "confirmed"
+        },
+        "date": {
+          "stringValue": "2026-09-02T21:00:00Z"
+        },
+        "imageUrl": {
+          "stringValue": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&q=80&w=1000"
+        },
+        "venueName": {
+          "stringValue": "Sala Soho"
+        },
+        "acceptsReservations": {
+          "booleanValue": false
+        },
+        "time": {
+          "stringValue": "21:00"
+        },
+        "description": {
+          "stringValue": "Sin descripción por ahora."
+        },
+        "ticketType": {
+          "stringValue": "Entrada Libre"
+        },
+        "musicianId": {
+          "stringValue": "7biic8Rn4RbOIeSdMUlQuvQ6BB83"
+        },
+        "venueId": {
+          "stringValue": "NRcxcc2EPYV9B9MABDPRzMugGtu2"
+        }
+      },
+      "createTime": "2026-08-27T18:05:29.978750Z",
+      "updateTime": "2026-08-27T18:10:03.134850Z"
+    }
+  ]
+}

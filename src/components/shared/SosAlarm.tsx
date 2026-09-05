@@ -8,9 +8,9 @@ export const SosAlarm = () => {
   const { userRole } = useAuth();
   const [activeAlert, setActiveAlert] = useState<{title: string, message: string} | null>(null);
 
-  if (userRole !== 'musician') return null;
-
   useEffect(() => {
+    if (userRole !== 'musician') return;
+
     // Escuchar nuevos SOS en Firestore
     const q = query(collection(db, 'sos_alerts'));
     
@@ -30,7 +30,7 @@ export const SosAlarm = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [userRole]);
 
   const triggerAlarm = (title: string, message: string) => {
     setActiveAlert({ title, message });
@@ -62,6 +62,7 @@ export const SosAlarm = () => {
     }, 8000);
   };
 
+  if (userRole !== 'musician') return null;
   if (!activeAlert) return null;
 
   return (

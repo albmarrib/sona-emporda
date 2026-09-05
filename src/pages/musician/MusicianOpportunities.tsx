@@ -60,7 +60,11 @@ export const MusicianOpportunities = () => {
         finalMessage += `¡Nos encantaría poder participar y que contéis con nosotros!`;
       }
       
-      const chatId = await findOrCreateChat(event.venueId || 'venue', event.id);
+      if (!event.venueId) {
+        throw new Error("Este evento no tiene un Local asignado válido para chatear.");
+      }
+      
+      const chatId = await findOrCreateChat(event.venueId, event.id);
       await sendMessage(chatId, finalMessage);
       
       navigate('/musician/messages', { state: { chatId } });

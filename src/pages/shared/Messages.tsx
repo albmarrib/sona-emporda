@@ -42,7 +42,7 @@ export const Messages = () => {
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
               const data = docSnap.data();
-              names[otherId] = data.stageName || data.name || 'Usuario';
+              names[otherId] = data.stageName || data.venueName || data.name || 'Usuario';
               updated = true;
             } else {
               names[otherId] = 'Usuario Desconocido';

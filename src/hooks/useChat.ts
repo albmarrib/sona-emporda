@@ -78,6 +78,7 @@ export const useChat = () => {
 
   const findOrCreateChat = async (otherUserId: string, eventId?: string): Promise<string> => {
     if (!currentUser) throw new Error('No user logged in');
+    if (!otherUserId || otherUserId === 'venue') throw new Error('Invalid otherUserId provided to findOrCreateChat');
 
     // Check if chat exists with these exact two participants (and optionally eventId)
     // Note: A more robust query would ensure exact match, but this works for 2 participants
@@ -91,16 +92,15 @@ export const useChat = () => {
     querySnapshot.forEach((doc) => {
       const data = doc.data() as ChatRoom;
       if (data.participants.includes(otherUserId)) {
-        if (eventId) {
-          if (data.eventId === eventId) existingChatId = doc.id;
-        } else {
-          // If no eventId specified, find a chat without eventId, or just the first one
-          existingChatId = doc.id;
-        }
+        existingChatId = doc.id;
       }
     });
 
     if (existingChatId) {
+      if (eventId) {
+        // Update the chat's context to the most recent event they are discussing
+        await updateDoc(doc(db, 'chats', existingChatId), { eventId });
+      }
       return existingChatId;
     }
 
