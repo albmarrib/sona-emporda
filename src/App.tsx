@@ -44,7 +44,7 @@ function App() {
         <Routes>
           {/* Área Pública */}
           <Route path="/" element={<Home />} />
-          <Route path="/artist/:subdomain" element={<PublicLanding />} />
+          <Route path="/:subdomain" element={<PublicLanding />} />
           <Route path="/event/:id" element={<EventDetail />} />
           <Route path="/band/:bandId/calendar" element={<SharedBandCalendar />} />
           <Route path="/login" element={<Login />} />
