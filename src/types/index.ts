@@ -23,6 +23,22 @@ export interface SonaEvent {
     lng: number;
   };
   applicants?: string[];
+  type?: 'public' | 'private' | 'external_booking'; // Tipo de evento
+  
+  // External Booking Fields
+  externalContact?: {
+    name: string;
+    email: string;
+    phone: string;
+    type: string;
+    budget?: string;
+    details: string;
+  };
+  
+  // Monetization / Deposits
+  depositRequested?: boolean;
+  depositAmount?: number;
+  paymentStatus?: 'pending' | 'paid' | 'not_required';
 }
 
 export interface MusicianProfile {

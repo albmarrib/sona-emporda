@@ -12,7 +12,7 @@ import { useChat } from '../../hooks/useChat';
 import { useNavigate } from 'react-router-dom';
 
 export const MusicianOpportunities = () => {
-  const { events, loading } = useEvents(true);
+  const { events, loading } = useEvents(true, true);
   const { profile } = useMusicianProfile();
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
   const { findOrCreateChat, sendMessage } = useChat();

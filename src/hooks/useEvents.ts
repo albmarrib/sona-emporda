@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { db } from "../firebase/firebase";
 import { collection, onSnapshot, query } from "firebase/firestore";
 
-export const useEvents = (includeDrafts = false) => {
+export const useEvents = (includeDrafts = false, includePrivate = false) => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +63,9 @@ export const useEvents = (includeDrafts = false) => {
           
           if (!includeDrafts) {
             eventsList = eventsList.filter(e => e.status !== 'draft');
+          }
+          if (!includePrivate) {
+            eventsList = eventsList.filter(e => e.type !== 'private' && e.venueId !== 'external_booking');
           }
           
           // Sort by date ascending

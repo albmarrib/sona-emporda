@@ -22,7 +22,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<any>(null);
-  const { events } = useEvents();
+  const { events } = useEvents(false, true);
 
   const currentEvent = chat.eventId ? events.find(e => e.id === chat.eventId) : null;
   const isVenue = currentEvent && currentEvent.venueId === currentUser?.uid;

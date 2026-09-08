@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 export const DashboardHome = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { events } = useEvents(true);
+  const { events } = useEvents(true, true);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [eventToEvaluate, setEventToEvaluate] = useState<any>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);

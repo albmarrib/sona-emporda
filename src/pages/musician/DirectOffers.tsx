@@ -6,7 +6,7 @@ import { useEvents } from '../../hooks/useEvents';
 
 export const DirectOffers = () => {
   const { currentUser } = useAuth();
-  const { events } = useEvents(true);
+  const { events } = useEvents(true, true);
 
   // Filtrar los eventos donde soy el músico y el estado es pending_musician o musician_accepted
   // Añadimos una excepción para IDs de prueba ('musician-') para que se puedan probar los perfiles falsos
@@ -18,8 +18,11 @@ export const DirectOffers = () => {
   const handleUpdateStatus = async (id: string, action: 'accept' | 'decline') => {
     try {
       if (action === 'accept') {
+        const offer = offers.find(o => o.id === id);
+        const newStatus = offer?.venueId === 'external_booking' ? 'confirmed' : 'musician_accepted';
+        
         await updateDoc(doc(db, 'events', id), {
-          status: 'musician_accepted'
+          status: newStatus
         });
       } else {
         const offer = offers.find(o => o.id === id);
@@ -63,16 +66,31 @@ export const DirectOffers = () => {
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`text-[9px] uppercase tracking-widest font-bold px-2 py-1 ${
                     offer.status === 'musician_accepted' ? 'bg-green-900/30 text-green-500 border border-green-500/30' :
+                    offer.venueId === 'external_booking' ? 'bg-purple-900/30 text-purple-400 border border-purple-500/30' :
                     'bg-gold/10 text-gold border border-gold/30'
                   }`}>
-                    {offer.status === 'musician_accepted' ? 'Has Aceptado (Esperando Local)' : 'Pendiente de tu respuesta'}
+                    {offer.status === 'musician_accepted' ? 'Has Aceptado (Esperando Local)' : 
+                     offer.venueId === 'external_booking' ? 'Petición Privada' : 'Pendiente de tu respuesta'}
                   </span>
-                  <span className="text-white/40 text-xs">{offer.venueName}</span>
+                  <span className="text-white/40 text-xs">
+                    {offer.venueId === 'external_booking' && offer.externalContact 
+                      ? `${offer.externalContact.name} - ${offer.externalContact.type}`
+                      : offer.venueName}
+                  </span>
                 </div>
                 <h3 className="text-xl font-serif text-white mb-1">{offer.title}</h3>
-                <div className="flex gap-4 text-xs text-white/50 mt-3">
+                {offer.venueId === 'external_booking' && offer.externalContact && (
+                  <p className="text-white/60 text-sm mb-3 italic">"{offer.externalContact.details}"</p>
+                )}
+                <div className="flex gap-4 text-xs text-white/50 mt-3 flex-wrap">
                   <span className="flex items-center gap-1"><FiCalendar className="text-gold" /> {offer.date} {offer.time}</span>
                   <span className="flex items-center gap-1"><FiMapPin className="text-gold" /> {offer.location}</span>
+                  {offer.venueId === 'external_booking' && offer.externalContact?.phone && (
+                    <span className="flex items-center gap-1 text-white/70">Telf: {offer.externalContact.phone}</span>
+                  )}
+                  {offer.venueId === 'external_booking' && offer.externalContact?.email && (
+                    <span className="flex items-center gap-1 text-white/70">Email: {offer.externalContact.email}</span>
+                  )}
                 </div>
               </div>
 

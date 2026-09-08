@@ -17,7 +17,7 @@ import { useSosAlerts } from '../../hooks/useSosAlerts';
 export const AvailabilityCalendar = () => {
   const { currentUser, userData } = useAuth();
   const navigate = useNavigate();
-  const { events } = useEvents();
+  const { events } = useEvents(false, true);
   const { calendar, loading, updateDayStatus } = useMusicianCalendar();
   const { activeSosCount, activeCollabCount } = useSosAlerts();
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -292,26 +292,32 @@ export const AvailabilityCalendar = () => {
                     className="bg-white/5 border border-white/10 p-4 mb-2 cursor-pointer hover:bg-white/10 hover:border-gold transition-all group"
                   >
                     <p className="text-white/60 text-xs uppercase tracking-widest mb-1 flex justify-between items-center">
-                      Evento Confirmado
+                      {eventOnThisDay.venueId === 'external_booking' ? 'Contratación Privada' : 'Evento Confirmado'}
                       <span className="text-[9px] text-gold opacity-0 group-hover:opacity-100 transition-opacity">Ver Detalles →</span>
                     </p>
                     <p className="text-white font-bold text-lg group-hover:text-gold transition-colors">{eventOnThisDay.title}</p>
-                    <p className="text-white/40 text-sm">{eventOnThisDay.venueName}</p>
+                    <p className="text-white/40 text-sm">
+                      {eventOnThisDay.venueId === 'external_booking' && eventOnThisDay.externalContact
+                        ? `${eventOnThisDay.externalContact.name} - ${eventOnThisDay.externalContact.type}`
+                        : eventOnThisDay.venueName}
+                    </p>
                   </div>
 
-                  <button 
-                    onClick={async () => {
-                      if (!eventOnThisDay.venueId) {
-                        navigate('/musician/messages');
-                        return;
-                      }
-                      const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
-                      navigate('/musician/messages', { state: { chatId } });
-                    }}
-                    className="w-full flex items-center justify-center gap-2 bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-white/20 transition-colors"
-                  >
-                    <FiMessageSquare className="w-4 h-4" /> Abrir Chat con el Local
-                  </button>
+                  {eventOnThisDay.venueId !== 'external_booking' && (
+                    <button 
+                      onClick={async () => {
+                        if (!eventOnThisDay.venueId) {
+                          navigate('/musician/messages');
+                          return;
+                        }
+                        const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
+                        navigate('/musician/messages', { state: { chatId } });
+                      }}
+                      className="w-full flex items-center justify-center gap-2 bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] py-3 hover:bg-white/20 transition-colors"
+                    >
+                      <FiMessageSquare className="w-4 h-4" /> Abrir Chat con el Local
+                    </button>
+                  )}
 
                   <button 
                     onClick={async () => {
@@ -342,7 +348,7 @@ export const AvailabilityCalendar = () => {
                           cancelledByMusicianName: userData?.stageName || 'Un músico'
                         });
 
-                        if (eventOnThisDay.venueId) {
+                        if (eventOnThisDay.venueId && eventOnThisDay.venueId !== 'external_booking') {
                           const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
                           const formattedDate = format(new Date(eventOnThisDay.date), "d 'de' MMMM", { locale: es });
                           const cancelMsg = `Hola, lamentablemente no podré actuar en el evento "${eventOnThisDay.title}" del ${formattedDate}. Mi actuación queda anulada.`;

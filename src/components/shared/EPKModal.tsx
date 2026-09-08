@@ -11,7 +11,7 @@ import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, isApplicantForEventId }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void, isApplicantForEventId?: string }) => {
-  const { events } = useEvents(true); // true to include drafts
+  const { events } = useEvents(true, true); // true to include drafts
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const navigate = useNavigate();
   const { findOrCreateChat, sendMessage } = useChat();

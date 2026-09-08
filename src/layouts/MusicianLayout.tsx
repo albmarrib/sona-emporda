@@ -3,7 +3,7 @@ import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch } from 'react-icons/fi';
+import { FiHome, FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch, FiLayout } from 'react-icons/fi';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
 
@@ -39,6 +39,7 @@ export const MusicianLayout = () => {
     { name: 'Mis Eventos', mobileName: 'Eventos', path: '/musician/dashboard', icon: <FiList className="w-5 h-5" /> },
     { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
     { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
+    { name: 'Mi Landing Page', mobileName: 'Landing', path: '/musician/landing', icon: <FiLayout className="w-5 h-5" /> },
   ];
 
   const touchStartX = useRef<number | null>(null);

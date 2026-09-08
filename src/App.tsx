@@ -3,6 +3,7 @@ import { useAuth } from './contexts/AuthContext';
 import { Home } from './pages/public/Home';
 import { EventDetail } from './pages/public/EventDetail';
 import { SharedBandCalendar } from './pages/public/SharedBandCalendar';
+import { PublicLanding } from './pages/public/PublicLanding';
 import { Login } from './pages/auth/Login';
 import { ClaimProfile } from './pages/auth/ClaimProfile';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -16,6 +17,7 @@ import { AvailabilityCalendar } from './pages/musician/AvailabilityCalendar';
 import { SOSBoard } from './pages/musician/SOSBoard';
 import { MusicianOpportunities } from './pages/musician/MusicianOpportunities';
 import { DirectOffers } from './pages/musician/DirectOffers';
+import { LandingBuilderPage } from './pages/musician/LandingBuilderPage';
 import { VenueLayout } from './layouts/VenueLayout';
 import { ArtistSearch } from './pages/venue/ArtistSearch';
 import { EventManager } from './pages/venue/EventManager';
@@ -42,6 +44,7 @@ function App() {
         <Routes>
           {/* Área Pública */}
           <Route path="/" element={<Home />} />
+          <Route path="/artist/:subdomain" element={<PublicLanding />} />
           <Route path="/event/:id" element={<EventDetail />} />
           <Route path="/band/:bandId/calendar" element={<SharedBandCalendar />} />
           <Route path="/login" element={<Login />} />
@@ -59,6 +62,7 @@ function App() {
             <Route path="opportunities" element={<MusicianOpportunities />} />
             <Route path="offers" element={<DirectOffers />} />
             <Route path="epk" element={<EPKManager />} />
+            <Route path="landing" element={<LandingBuilderPage />} />
             <Route path="calendar" element={<AvailabilityCalendar />} />
             <Route path="sos" element={<SOSBoard />} />
             <Route path="messages" element={<Messages />} />
