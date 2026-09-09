@@ -213,7 +213,7 @@ export const PublicLanding = () => {
         style={{ backgroundColor: isDark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)' }}
         className="fixed top-0 w-full z-50 transition-colors duration-500"
       >
-        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between relative z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 md:h-24 flex items-center justify-between relative z-50">
           <a 
             href="#top" 
             onClick={(e) => handleScroll(e, 'top')} 
@@ -280,12 +280,12 @@ export const PublicLanding = () => {
           </div>
         )}
         
-        <div className="relative z-10 w-full max-w-4xl mx-auto text-center mt-20">
+        <div className="relative z-10 w-full max-w-4xl mx-auto text-center mt-32">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: "easeOut" }}
-            className="text-6xl md:text-8xl lg:text-9xl font-thin tracking-tighter leading-none mb-6"
+            className="text-6xl md:text-8xl lg:text-9xl font-thin tracking-tighter leading-none mb-4"
           >
             <span className={config.images.heroBackgroundUrl ? 'text-white' : textColor}>
               {config.hero.title}
@@ -296,7 +296,7 @@ export const PublicLanding = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-            className={`text-xl md:text-2xl font-light tracking-wide mb-16 ${config.images.heroBackgroundUrl ? 'text-white/90' : 'opacity-80'}`}
+            className={`text-xl md:text-2xl font-light tracking-wide mb-8 ${config.images.heroBackgroundUrl ? 'text-white/90' : 'opacity-80'}`}
           >
             {config.hero.subtitle}
           </motion.p>
@@ -418,9 +418,9 @@ export const PublicLanding = () => {
               {bandEvents.length > 0 ? (
                 bandEvents.map((ev) => (
                   <a 
-                    href={`/event/${ev.id}`} 
+                    href={`https://sonaemporda.com/event/${ev.id}`} 
                     target="_blank" 
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     key={ev.id} 
                     className="flex justify-between py-8 border-b border-current group hover:opacity-50 transition-opacity cursor-pointer block"
                   >
@@ -429,7 +429,7 @@ export const PublicLanding = () => {
                         {new Date(ev.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </span>
                       <span className="text-2xl font-light">{ev.title}</span>
-                      <span className="text-sm font-light opacity-50 md:ml-auto">{ev.venueName}</span>
+                      <span className="text-lg font-medium opacity-90 md:ml-auto text-right">{ev.venueName}</span>
                     </div>
                   </a>
                 ))
