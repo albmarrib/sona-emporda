@@ -6,7 +6,7 @@ import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { motion, useScroll } from 'framer-motion';
-import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes } from 'react-icons/fa';
 import { useEvents } from '../../hooks/useEvents';
 
 export const PublicLanding = () => {
@@ -25,6 +25,7 @@ export const PublicLanding = () => {
     details: '',
   });
   const [bookingStatus, setBookingStatus] = useState<'idle'|'submitting'|'success'|'error'>('idle');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { events } = useEvents(false); // fetch all published events
 
@@ -109,6 +110,7 @@ export const PublicLanding = () => {
 
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, targetId: string) => {
     e.preventDefault();
+    setIsMobileMenuOpen(false);
     if (targetId === 'top') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -211,14 +213,28 @@ export const PublicLanding = () => {
         style={{ backgroundColor: isDark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)' }}
         className="fixed top-0 w-full z-50 transition-colors duration-500"
       >
-        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between relative z-50">
           <a 
             href="#top" 
             onClick={(e) => handleScroll(e, 'top')} 
-            className="text-sm font-light tracking-[0.2em] uppercase mix-blend-difference text-white"
+            className="text-sm font-light tracking-[0.2em] uppercase mix-blend-difference text-white relative z-50"
           >
             {config.hero.title}
           </a>
+          
+          {/* Hamburger Menu Icon */}
+          <button 
+            className="md:hidden mix-blend-difference text-white z-50 p-2"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+            }}
+            aria-label="Toggle Menu"
+          >
+            {isMobileMenuOpen ? <FaTimes className="w-6 h-6" /> : <FaBars className="w-6 h-6" />}
+          </button>
+
+          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8 mix-blend-difference text-white">
             {config.hero.biography && (
               <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
@@ -234,6 +250,22 @@ export const PublicLanding = () => {
             )}
             <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
           </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        <div 
+          className={`absolute top-16 right-0 w-full flex flex-col items-end px-6 py-2 gap-4 transition-all duration-300 origin-top-right z-50 md:hidden mix-blend-difference text-white ${isMobileMenuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
+        >
+          {config.hero.biography && (
+            <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
+          )}
+          {(config.modules.showSpotify || config.modules.showYoutube) && (
+            <a href="#music" onClick={(e) => handleScroll(e, 'music')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Música</a>
+          )}
+          {config.modules.showLiveDates && (
+            <a href="#live" onClick={(e) => handleScroll(e, 'live')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Directos</a>
+          )}
+          <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
         </div>
       </motion.nav>
 
@@ -287,7 +319,7 @@ export const PublicLanding = () => {
 
       {/* Biography Section */}
       {config.hero.biography && (
-        <section id="about" className={`py-32 px-6 flex items-center justify-center ${bgColor}`}>
+        <section id="about" className={`scroll-mt-24 py-32 px-6 flex items-center justify-center ${bgColor}`}>
           <div className="max-w-3xl mx-auto text-center">
             <p className="text-2xl md:text-4xl font-light leading-relaxed tracking-wide">
               {config.hero.biography}
@@ -306,7 +338,7 @@ export const PublicLanding = () => {
 
       {/* Music Section (Horizontal Scroll Gallery) */}
       {(config.modules.showSpotify || config.modules.showYoutube) && (
-        <section id="music" className={`relative min-h-screen flex flex-col items-center justify-center py-32`}>
+        <section id="music" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32`}>
           {config.images.musicBackgroundUrl && (
             <div 
               className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
@@ -370,7 +402,7 @@ export const PublicLanding = () => {
 
       {/* Live Dates Section */}
       {config.modules.showLiveDates && (
-        <section id="live" className={`relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
+        <section id="live" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
            {config.images.liveBackgroundUrl && (
             <div 
               className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
@@ -413,7 +445,7 @@ export const PublicLanding = () => {
 
       {/* Booking Section */}
       {config.modules.showBookingWidget && (
-        <section id="booking" className={`relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
+        <section id="booking" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
           {config.images.contactBackgroundUrl && (
             <div 
               className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
@@ -424,7 +456,7 @@ export const PublicLanding = () => {
           )}
           
           <div className="relative z-10 w-full max-w-xl mx-auto">
-            <h2 className="text-xs tracking-[0.4em] uppercase mb-16 text-center opacity-70">Contacto</h2>
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-16 text-center opacity-70">Solicitud</h2>
             
             <form onSubmit={handleBookingSubmit} className="space-y-12">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -514,7 +546,7 @@ export const PublicLanding = () => {
       )}
 
       {/* Contact Section & Footer */}
-      <footer id="contact" className={`pt-24 pb-12 px-6 flex flex-col items-center gap-12 relative z-10 ${bgColor} border-t border-current/20`}>
+      <footer id="contact" className={`scroll-mt-24 pt-24 pb-12 px-6 flex flex-col items-center gap-12 relative z-10 ${bgColor} border-t border-current/20`}>
         <div className="text-center space-y-4 opacity-90 max-w-lg">
           <h2 className="text-xs tracking-[0.4em] uppercase mb-8 opacity-70">Contacto</h2>
           

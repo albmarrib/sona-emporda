@@ -282,8 +282,10 @@ export const LandingPageBuilder = () => {
                   className="bg-black border border-white/20 px-3 py-2 text-sm w-full focus:border-gold focus:outline-none transition-colors"
                 >
                   <option value="contact">Contacto</option>
+                  <option value="booking">Contratación</option>
                   <option value="live">Próximos Directos</option>
                   <option value="music">Música</option>
+                  <option value="about">Acerca Nuestro</option>
                 </select>
               </div>
             </div>
