@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { db } from '../../firebase/firebase';
+import { useParams, useNavigate } from 'react-router-dom';
+import { db, auth } from '../../firebase/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { query, where, getDocs, collection, doc, getDoc, addDoc } from 'firebase/firestore';
 import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { motion, useScroll } from 'framer-motion';
-import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock } from 'react-icons/fa';
 import { useEvents } from '../../hooks/useEvents';
 
 export const PublicLanding = () => {
@@ -26,6 +27,12 @@ export const PublicLanding = () => {
   });
   const [bookingStatus, setBookingStatus] = useState<'idle'|'submitting'|'success'|'error'>('idle');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const { events } = useEvents(false); // fetch all published events
 
@@ -157,6 +164,27 @@ export const PublicLanding = () => {
     } catch (err) {
       console.error(err);
       setBookingStatus('error');
+    }
+  };
+
+  const handleQuickLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const userEmail = (profile as any)?.email || profile?.contactEmail;
+    if (!userEmail || !password) {
+      setLoginError('No se encontró email para este usuario.');
+      return;
+    }
+    setIsLoggingIn(true);
+    setLoginError('');
+    try {
+      await signInWithEmailAndPassword(auth, userEmail, password);
+      setIsLoginModalOpen(false);
+      navigate('/musician');
+    } catch (err: any) {
+      console.error(err);
+      setLoginError('Contraseña incorrecta');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -578,12 +606,59 @@ export const PublicLanding = () => {
           )}
         </div>
 
-        <div className="mt-16 text-center">
+        <div className="mt-16 text-center flex flex-col items-center gap-3">
           <p className="text-[10px] tracking-widest uppercase opacity-40">
             Powered by Sona Empordà
           </p>
+          <button onClick={() => setIsLoginModalOpen(true)} className="opacity-10 hover:opacity-50 transition-opacity" title="Acceso Profesional">
+            <FaLock className="w-3 h-3" />
+          </button>
         </div>
       </footer>
+
+      {/* Quick Login Modal */}
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`w-full max-w-sm ${isDark ? 'bg-black border border-white/20' : 'bg-white border border-black/20'} p-8 shadow-2xl relative`}
+          >
+            <button 
+              onClick={() => setIsLoginModalOpen(false)}
+              className="absolute top-4 right-4 opacity-50 hover:opacity-100"
+            >
+              <FaTimes />
+            </button>
+            <h3 className="text-sm tracking-[0.2em] uppercase mb-6 text-center font-medium">Acceso Rápido</h3>
+            <p className="text-xs opacity-70 mb-6 text-center font-light">
+              Hola, <strong>{profile?.stageName}</strong>. Introduce tu contraseña para acceder a tu panel.
+            </p>
+            
+            <form onSubmit={handleQuickLogin} className="space-y-6">
+              <input 
+                type="password" 
+                autoFocus
+                required
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Tu contraseña"
+                className={`w-full bg-transparent border-0 border-b ${isDark ? 'border-white/30 focus:border-white' : 'border-black/30 focus:border-black'} py-3 px-0 focus:ring-0 transition-colors font-light outline-none text-center`}
+              />
+              {loginError && (
+                <p className="text-red-500 text-xs text-center">{loginError}</p>
+              )}
+              <button 
+                type="submit" 
+                disabled={isLoggingIn}
+                className={`w-full border border-current py-3 text-xs tracking-[0.2em] uppercase transition-all duration-300 ${btnHover} ${isLoggingIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isLoggingIn ? 'Entrando...' : 'Entrar al Panel'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
