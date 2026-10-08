@@ -278,18 +278,18 @@ export const PublicLanding = () => {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8 mix-blend-difference text-white">
             {config.hero.biography && (
-              <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
+              <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-base font-bold tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
             )}
             {(config.modules.showSpotify || config.modules.showYoutube) && (
-              <a href="#music" onClick={(e) => handleScroll(e, 'music')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Música</a>
+              <a href="#music" onClick={(e) => handleScroll(e, 'music')} className="text-base font-bold tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Música</a>
             )}
             {config.modules.showLiveDates && (
-              <a href="#live" onClick={(e) => handleScroll(e, 'live')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Directos</a>
+              <a href="#live" onClick={(e) => handleScroll(e, 'live')} className="text-base font-bold tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Directos</a>
             )}
             {config.modules.showBookingWidget && (
-              <a href="#booking" onClick={(e) => handleScroll(e, 'booking')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Contratación</a>
+              <a href="#booking" onClick={(e) => handleScroll(e, 'booking')} className="text-base font-bold tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Contratación</a>
             )}
-            <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-xs tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
+            <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-base font-bold tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
           </div>
         </div>
 
@@ -298,15 +298,15 @@ export const PublicLanding = () => {
           className={`absolute top-16 right-0 w-full flex flex-col items-end px-6 py-2 gap-4 transition-all duration-300 origin-top-right z-50 md:hidden mix-blend-difference text-white ${isMobileMenuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
         >
           {config.hero.biography && (
-            <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
+            <a href="#about" onClick={(e) => handleScroll(e, 'about')} className="text-xl font-black tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Acerca Nuestro</a>
           )}
           {(config.modules.showSpotify || config.modules.showYoutube) && (
-            <a href="#music" onClick={(e) => handleScroll(e, 'music')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Música</a>
+            <a href="#music" onClick={(e) => handleScroll(e, 'music')} className="text-xl font-black tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Música</a>
           )}
           {config.modules.showLiveDates && (
-            <a href="#live" onClick={(e) => handleScroll(e, 'live')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Directos</a>
+            <a href="#live" onClick={(e) => handleScroll(e, 'live')} className="text-xl font-black tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Directos</a>
           )}
-          <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-sm font-medium tracking-[0.2em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
+          <a href="#contact" onClick={(e) => handleScroll(e, 'contact')} className="text-xl font-black tracking-[0.3em] uppercase hover:opacity-50 transition-opacity">Contacto</a>
         </div>
       </motion.nav>
 
