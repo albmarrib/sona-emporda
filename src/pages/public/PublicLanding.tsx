@@ -6,7 +6,7 @@ import { query, where, getDocs, collection, doc, getDoc, addDoc } from 'firebase
 import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
-import { motion, useScroll } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock } from 'react-icons/fa';
 import { useEvents } from '../../hooks/useEvents';
 
@@ -90,6 +90,20 @@ export const PublicLanding = () => {
     fetchLandingData();
   }, [subdomain]);
 
+  const isDark = config?.design?.theme === 'dark';
+
+  const navBg = useTransform(
+    scrollY, 
+    [0, 100], 
+    ['rgba(0,0,0,0)', isDark ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.9)']
+  );
+  
+  const navBackdrop = useTransform(
+    scrollY,
+    [0, 100],
+    ['blur(0px)', 'blur(12px)']
+  );
+
   if (loading) return <LoadingScreen />;
   if (error || !config) {
     return (
@@ -105,7 +119,6 @@ export const PublicLanding = () => {
     );
   }
 
-  const isDark = config.design.theme === 'dark';
   const textColor = isDark ? 'text-white' : 'text-black';
   const bgColor = isDark ? 'bg-black' : 'bg-white';
   const borderColor = isDark ? 'border-white/20' : 'border-black/20';
@@ -238,8 +251,8 @@ export const PublicLanding = () => {
     <div className={`min-h-screen ${bgColor} ${textColor} ${fontClass} overflow-x-hidden selection:bg-gray-500/30 scroll-smooth`}>
       {/* Navbar Minimalista */}
       <motion.nav 
-        style={{ backgroundColor: isDark ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)' }}
-        className="fixed top-0 w-full z-50 transition-colors duration-500"
+        style={{ backgroundColor: navBg, backdropFilter: navBackdrop, WebkitBackdropFilter: navBackdrop }}
+        className="fixed top-0 w-full z-50"
       >
         <div className="max-w-7xl mx-auto px-6 h-16 md:h-24 flex items-center justify-between relative z-50">
           <a 

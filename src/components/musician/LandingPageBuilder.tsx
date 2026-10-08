@@ -134,13 +134,25 @@ export const LandingPageBuilder = () => {
           ))}
         </div>
         
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-gold text-black px-6 py-2 uppercase tracking-widest text-sm font-bold hover:bg-white transition-colors disabled:opacity-50"
-        >
-          {saving ? 'Guardando...' : 'Guardar Cambios'}
-        </button>
+        <div className="flex gap-3">
+          {config.isActive && config.subdomain && (
+            <a
+              href={`/${config.subdomain}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border border-gold text-gold px-4 py-2 uppercase tracking-widest text-xs sm:text-sm font-bold hover:bg-gold hover:text-black transition-colors flex items-center justify-center"
+            >
+              Ver Mi Web
+            </a>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-gold text-black px-4 sm:px-6 py-2 uppercase tracking-widest text-xs sm:text-sm font-bold hover:bg-white transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Guardando...' : 'Guardar Cambios'}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -160,8 +172,9 @@ export const LandingPageBuilder = () => {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-white/60 mb-2">Subdominio</label>
-              <div className="flex items-center">
+              <label className="block text-xs uppercase tracking-widest text-white/60 mb-2">Enlace de la página</label>
+              <div className="flex items-center flex-wrap gap-2">
+                <span className="text-white/40">sonaemporda.com/</span>
                 <input 
                   type="text" 
                   value={config.subdomain} 
@@ -169,7 +182,6 @@ export const LandingPageBuilder = () => {
                   className="bg-black border border-white/20 px-3 py-2 text-sm w-full max-w-xs focus:border-gold focus:outline-none transition-colors"
                   placeholder="mi-banda"
                 />
-                <span className="ml-2 text-white/40">.sonaemporda.com</span>
               </div>
             </div>
 
