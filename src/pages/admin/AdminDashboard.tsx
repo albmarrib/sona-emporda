@@ -19,10 +19,24 @@ export const AdminDashboard = () => {
   useEffect(() => {
     const q = query(collection(db, 'events'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const eventsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SonaEvent[];
+      const eventsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let safeDate = data.date;
+        if (safeDate) {
+          if (typeof safeDate.toDate === 'function') {
+            safeDate = safeDate.toDate().toISOString();
+          } else if (typeof safeDate === 'number') {
+            safeDate = new Date(safeDate < 10000000000 ? safeDate * 1000 : safeDate).toISOString();
+          } else if (safeDate instanceof Date) {
+            safeDate = safeDate.toISOString();
+          }
+        }
+        return {
+          id: doc.id,
+          ...data,
+          date: safeDate
+        };
+      }) as SonaEvent[];
       setEvents(eventsData);
       setLoading(false);
     });

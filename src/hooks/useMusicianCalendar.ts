@@ -7,73 +7,82 @@ import { useAuth } from '../contexts/AuthContext';
 
 export const useMusicianCalendar = (musicianId?: string) => {
   const [calendar, setCalendar] = useState<MusicianCalendar>({});
+  const [baseCalendar, setBaseCalendar] = useState<MusicianCalendar>({});
+  const [baseLoaded, setBaseLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { currentUser } = useAuth();
   
+  const { currentUser } = useAuth();
   const { events, loading: eventsLoading } = useEvents(true);
 
+  // 1. Fetch User Calendar from Firestore ONCE
   useEffect(() => {
-    if (eventsLoading) return;
+    const myMusicianId = musicianId || currentUser?.uid;
+    if (!myMusicianId) {
+      setBaseLoaded(true);
+      return;
+    }
 
-    const fetchCalendar = async () => {
-      setLoading(true);
+    const fetchBase = async () => {
       try {
-        const myMusicianId = musicianId || currentUser?.uid;
-        if (!myMusicianId) return;
-        let baseCalendar: MusicianCalendar = {};
-        
-        // Fetch from Firestore
         const docRef = doc(db, 'users', myMusicianId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists() && docSnap.data().calendar) {
-          baseCalendar = docSnap.data().calendar;
+          setBaseCalendar(docSnap.data().calendar);
         }
-        
-        // Inyectamos dinámicamente todos sus eventos confirmados como 'booked'
-        const myConfirmedEvents = events.filter(e => 
-          e.musicianId === myMusicianId && 
-          (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId)
-        );
-        
-        myConfirmedEvents.forEach(event => {
-          // Extraemos YYYY-MM-DD de la fecha ISO
-          const dateKey = event.date.split('T')[0];
-          // Por defecto al haber evento confirmado es rojo (booked_full), salvo que el músico lo abra
-          if (baseCalendar[dateKey] !== 'booked_partial') {
-            baseCalendar[dateKey] = 'booked_full';
-          }
-        });
-
-        setCalendar(baseCalendar);
       } catch (err: any) {
         setError(err.message);
       } finally {
-        setLoading(false);
+        setBaseLoaded(true);
       }
     };
-    
-    fetchCalendar();
-  }, [musicianId, events, eventsLoading]);
+    fetchBase();
+  }, [musicianId, currentUser?.uid]);
+
+  // 2. Combine baseCalendar with Events
+  useEffect(() => {
+    if (!baseLoaded || eventsLoading) return;
+
+    const myMusicianId = musicianId || currentUser?.uid;
+    const newCalendar = { ...baseCalendar };
+
+    if (myMusicianId) {
+      const myConfirmedEvents = events.filter(e => 
+        e.musicianId === myMusicianId && 
+        (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId)
+      );
+      
+      myConfirmedEvents.forEach(event => {
+        if (!event.date) return;
+        const dateKey = event.date.split('T')[0];
+        if (newCalendar[dateKey] !== 'booked_partial') {
+          newCalendar[dateKey] = 'booked_full';
+        }
+      });
+    }
+
+    setCalendar(newCalendar);
+    setLoading(false);
+  }, [baseCalendar, baseLoaded, events, eventsLoading, musicianId, currentUser?.uid]);
 
   const updateDayStatus = async (dateIso: string, status: DayStatus | null) => {
-    // Optimistic UI update (actualizamos la UI al instante, luego en Firebase en background)
-    const newCalendar = { ...calendar };
+    const newBase = { ...baseCalendar };
     
     if (status === null) {
-      delete newCalendar[dateIso];
+      delete newBase[dateIso];
     } else {
-      newCalendar[dateIso] = status;
+      newBase[dateIso] = status;
     }
     
-    setCalendar(newCalendar);
+    // Update local base (will instantly trigger effect to update 'calendar')
+    setBaseCalendar(newBase);
 
     // Escribir en Firestore
     try {
       const myMusicianId = musicianId || currentUser?.uid;
       if (!myMusicianId) return;
       await updateDoc(doc(db, 'users', myMusicianId), {
-        calendar: newCalendar
+        calendar: newBase
       });
     } catch (e) {
       console.error(e);
