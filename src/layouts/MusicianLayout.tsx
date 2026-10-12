@@ -10,6 +10,7 @@ import { InviteColleagues } from '../components/shared/InviteColleagues';
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
+import { PushNotificationBanner } from '../components/chat/PushNotificationBanner';
 import { useState, useRef } from 'react';
 import { Info } from 'lucide-react';
 
@@ -215,6 +216,7 @@ export const MusicianLayout = () => {
       </nav>
 
       <FloatingChatButton />
+      <PushNotificationBanner />
     </div>
   );
 };

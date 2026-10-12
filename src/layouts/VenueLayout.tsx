@@ -9,6 +9,7 @@ import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
 import { Info } from 'lucide-react';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
+import { PushNotificationBanner } from '../components/chat/PushNotificationBanner';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
 
 export const VenueLayout = () => {
@@ -216,6 +217,7 @@ export const VenueLayout = () => {
       </nav>
 
       <FloatingChatButton />
+      <PushNotificationBanner />
     </div>
   );
 };
