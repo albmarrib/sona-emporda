@@ -4,6 +4,7 @@ import { db, storage } from '../../firebase/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '../../utils/imageCompression';
+import { Palette, Image as ImageIcon, FileText, LayoutGrid, ExternalLink, Save } from 'lucide-react';
 import type { LandingConfig } from '../../types/landing';
 
 const DEFAULT_CONFIG: LandingConfig = {
@@ -115,42 +116,58 @@ export const LandingPageBuilder = () => {
     return <div className="text-white/60">Cargando constructor...</div>;
   }
 
+  const TABS = [
+    { id: 'design', label: 'Diseño', icon: Palette },
+    { id: 'images', label: 'Imágenes', icon: ImageIcon },
+    { id: 'texts', label: 'Textos', icon: FileText },
+    { id: 'modules', label: 'Módulos', icon: LayoutGrid }
+  ] as const;
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-col sm:flex-row justify-between mb-6 gap-4">
-        <div className="flex space-x-2 border-b border-white/10 w-full sm:w-auto">
-          {(['design', 'images', 'texts', 'modules'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm uppercase tracking-widest transition-colors border-b-2 ${
-                activeTab === tab 
-                  ? 'border-gold text-gold' 
-                  : 'border-transparent text-white/60 hover:text-white'
-              }`}
-            >
-              {tab === 'design' ? 'Diseño' : tab === 'images' ? 'Imágenes' : tab === 'texts' ? 'Textos' : 'Módulos'}
-            </button>
-          ))}
+        {/* Barra de pestañas adaptable a móvil (Grid de 4 en móvil garantizando que siempre se vea Módulos) */}
+        <div className="grid grid-cols-4 sm:flex border-b border-white/10 w-full sm:w-auto gap-1">
+          {TABS.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-xs md:text-sm uppercase tracking-wider transition-all border-b-2 font-medium ${
+                  isActive 
+                    ? 'border-gold text-gold font-bold bg-white/5 shadow-sm' 
+                    : 'border-transparent text-white/50 hover:text-white hover:bg-white/[0.02]'
+                }`}
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
         
-        <div className="flex gap-3">
+        {/* Botones de acción */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {config.isActive && config.subdomain && (
             <a
               href={`/${config.subdomain}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="border border-gold text-gold px-4 py-2 uppercase tracking-widest text-xs sm:text-sm font-bold hover:bg-gold hover:text-black transition-colors flex items-center justify-center"
+              className="flex-1 sm:flex-initial border border-gold text-gold px-3 sm:px-4 py-2.5 uppercase tracking-wider text-xs font-bold hover:bg-gold hover:text-black transition-colors flex items-center justify-center gap-1.5 text-center shadow-sm"
             >
-              Ver Mi Web
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Ver Mi Web</span>
             </a>
           )}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="bg-gold text-black px-4 sm:px-6 py-2 uppercase tracking-widest text-xs sm:text-sm font-bold hover:bg-white transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-initial bg-gold text-black px-4 sm:px-6 py-2.5 uppercase tracking-wider text-xs font-bold hover:bg-white transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 text-center shadow-sm cursor-pointer"
           >
-            {saving ? 'Guardando...' : 'Guardar Cambios'}
+            <Save className="w-3.5 h-3.5" />
+            <span>{saving ? 'Guardando...' : 'Guardar Cambios'}</span>
           </button>
         </div>
       </div>

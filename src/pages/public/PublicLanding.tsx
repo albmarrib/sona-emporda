@@ -459,7 +459,7 @@ export const PublicLanding = () => {
               {bandEvents.length > 0 ? (
                 bandEvents.map((ev) => (
                   <a 
-                    href={`https://sonaemporda.com/event/${ev.id}`} 
+                    href={`/event/${ev.id}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     key={ev.id} 

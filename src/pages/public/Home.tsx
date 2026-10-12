@@ -455,7 +455,7 @@ export const Home = () => {
             )}
 
             {activeView === "LUGARES" && (
-              <VenueList events={events} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
+              <VenueList events={confirmedEvents} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
             )}
           </section>
         </div>

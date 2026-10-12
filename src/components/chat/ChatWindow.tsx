@@ -151,7 +151,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 overscroll-contain">
         {messages.map((msg) => {
           const isMe = currentUser?.uid === msg.senderId;
           return (
@@ -182,11 +182,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} className="h-2" />
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSend} className="p-4 border-t border-white/10 bg-zinc-950">
+      <form onSubmit={handleSend} className="p-3 sm:p-4 border-t border-white/10 bg-zinc-950 sticky bottom-0 z-20">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -198,7 +198,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
           <button 
             type="submit"
             disabled={!newMessage.trim()}
-            className="p-3 bg-gold text-black rounded-full hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-3 bg-gold text-black rounded-full hover:bg-yellow-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 cursor-pointer shadow-md"
           >
             <Send className="w-5 h-5" />
           </button>

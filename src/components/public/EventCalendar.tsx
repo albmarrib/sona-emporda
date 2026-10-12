@@ -14,8 +14,7 @@ interface EventCalendarProps {
 import { useFavorites } from "../../hooks/useFavorites";
 
 export const EventCalendar = ({ events, selectedVibes, showFavorites = false, selectedMusician = null }: EventCalendarProps) => {
-  const MOCK_TODAY = new Date("2026-08-14");
-  const [currentDate, setCurrentDate] = useState(startOfMonth(MOCK_TODAY));
+  const [currentDate, setCurrentDate] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const eventsContainerRef = useRef<HTMLDivElement>(null);
   const { isFavorite } = useFavorites();
@@ -42,7 +41,7 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
   });
 
   const handlePrevMonth = () => {
-    if (!isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(MOCK_TODAY))) {
+    if (!isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(new Date()))) {
       setCurrentDate(subMonths(currentDate, 1));
     }
   };
@@ -51,7 +50,7 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
     setCurrentDate(addMonths(currentDate, 1));
   };
 
-  const canGoBack = !isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(MOCK_TODAY));
+  const canGoBack = !isBefore(startOfMonth(subMonths(currentDate, 1)), startOfMonth(new Date()));
 
   const selectedDayEvents = selectedDate 
     ? filteredEvents.filter(e => (e.date && !isNaN(parseISO(e.date).getTime()) && isSameDay(parseISO(e.date), selectedDate)))
@@ -94,6 +93,7 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
           {daysInMonth.map(day => {
             const hasEvents = filteredEvents.some(e => (e.date && !isNaN(parseISO(e.date).getTime()) && isSameDay(parseISO(e.date), day)));
             const isSelected = selectedDate && isSameDay(day, selectedDate);
+            const isToday = isSameDay(day, new Date());
             
             return (
               <button
@@ -104,6 +104,7 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
                   relative p-2 md:p-3 flex flex-col items-center justify-center transition-all duration-300 min-h-[48px]
                   ${hasEvents ? 'cursor-pointer hover:bg-white/5' : 'opacity-20 cursor-default'}
                   ${isSelected ? 'bg-gold text-black hover:bg-gold shadow-lg shadow-gold/20' : ''}
+                  ${isToday && !isSelected ? 'ring-1 ring-gold/40 ring-inset' : ''}
                 `}
               >
                 <span className={`text-sm font-serif z-10 ${isSelected ? 'text-black' : 'text-white'}`}>

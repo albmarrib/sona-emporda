@@ -23,11 +23,49 @@ export const MusicianOpportunities = () => {
 
   if (loading) return <LoadingScreen />;
 
-  // Filter for events that are NOT confirmed and have NOT been declined by the musician
+  // Filter for events that are genuinely searching for a musician
+  // Must exclude: confirmed events, events with assigned musicians, accepted offers, drafts, cancelled, private
   const opportunities = events
     .filter(e => {
-       if (e.status === 'confirmed' || e.status === 'draft' || e.status === 'cancelled' || e.declinedBy?.includes(profile?.id)) return false;
+       if (!e.date) return false;
+
+       const status = (e.status || '').toLowerCase().trim();
+
+       // 1. Descartar estados no disponibles para postularse
+       if (
+         status === 'confirmed' || 
+         status === 'musician_accepted' || 
+         status === 'pending_musician' ||
+         status === 'draft' || 
+         status === 'cancelled' || 
+         status === 'musician_cancelled' || 
+         status === 'rejected'
+       ) {
+         return false;
+       }
+
+       // 2. Descartar si el evento ya tiene un músico asignado (ID o nombre de banda)
+       const hasAssignedMusician = Boolean(
+         (e.musicianId && String(e.musicianId).trim().length > 0) ||
+         (e.musicianName && String(e.musicianName).trim().length > 0 && e.musicianName.trim().toLowerCase() !== 'banda por confirmar')
+       );
+       if (hasAssignedMusician) {
+         return false;
+       }
+
+       // 3. Descartar eventos privados o de contratación externa
+       if (e.type === 'private' || e.venueId === 'external_booking') {
+         return false;
+       }
+
+       // 4. Descartar si este músico ya declinó el evento
+       if (profile?.id && Array.isArray(e.declinedBy) && e.declinedBy.includes(profile.id)) {
+         return false;
+       }
+
+       // 5. Solo fechas futuras o de hoy en adelante
        const eventDate = parseISO(e.date);
+       if (isNaN(eventDate.getTime())) return false;
        const today = new Date();
        today.setHours(0, 0, 0, 0);
        return eventDate >= today;

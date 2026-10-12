@@ -18,6 +18,8 @@ export interface SonaEvent {
   sponsorMessage?: string;
   sponsorTier?: number;
   ticketType: "Gratis" | "Reserva Mesa" | "Comprar Entrada" | string;
+  acceptsReservations?: boolean;
+  reservationContact?: string;
   coordinates: {
     lat: number;
     lng: number;

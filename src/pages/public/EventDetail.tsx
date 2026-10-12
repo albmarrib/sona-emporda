@@ -3,7 +3,7 @@ import { Header } from "../../components/public/Header";
 import { useEvents } from "../../hooks/useEvents";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic, FiAward } from "react-icons/fi";
+import { FiArrowLeft, FiMapPin, FiCalendar, FiClock, FiMusic, FiAward, FiNavigation } from "react-icons/fi";
 import { useMusicianProfile } from "../../hooks/useMusicianProfile";
 import { useEffect, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
@@ -58,6 +58,69 @@ export const EventDetail = () => {
 
   const dateObj = event.date ? parseISO(event.date) : new Date();
   if (isNaN(dateObj.getTime())) return <div className="text-white text-center p-20">Error: Fecha de evento inválida</div>;
+
+  // Contact validation helpers - SOLO se muestran si el perfil del local tiene datos válidos
+  const contactWhatsapp = typeof venueProfile?.contactWhatsapp === 'string' && venueProfile.contactWhatsapp.trim().replace(/\D/g, '').length >= 6 
+    ? venueProfile.contactWhatsapp.trim() 
+    : null;
+
+  const contactPhone = typeof venueProfile?.contactPhone === 'string' && venueProfile.contactPhone.trim().replace(/\D/g, '').length >= 6 
+    ? venueProfile.contactPhone.trim() 
+    : (typeof venueProfile?.phone === 'string' && venueProfile.phone.trim().replace(/\D/g, '').length >= 6 ? venueProfile.phone.trim() : null);
+
+  const contactEmail = typeof venueProfile?.email === 'string' && venueProfile.email.trim().includes('@') && venueProfile.email.trim().length > 4 
+    ? venueProfile.email.trim() 
+    : (typeof venueProfile?.contactEmail === 'string' && venueProfile.contactEmail.trim().includes('@') ? venueProfile.contactEmail.trim() : null);
+
+  const websiteUrl = typeof venueProfile?.websiteUrl === 'string' && venueProfile.websiteUrl.trim().length > 3 
+    ? venueProfile.websiteUrl.trim() 
+    : null;
+
+  const instagramUrl = typeof venueProfile?.instagramUrl === 'string' && venueProfile.instagramUrl.trim().length > 2 
+    ? venueProfile.instagramUrl.trim() 
+    : null;
+
+  const hasAnyContact = Boolean(contactWhatsapp || contactPhone || contactEmail || websiteUrl || instagramUrl);
+
+  // Generar enlace a Google Maps "Cómo llegar al local"
+  const getDirectionsUrl = () => {
+    if (event.coordinates?.lat && event.coordinates?.lng) {
+      return `https://www.google.com/maps/dir/?api=1&destination=${event.coordinates.lat},${event.coordinates.lng}`;
+    }
+    const destinationQuery = [event.venueName, event.venueLocation, event.location]
+      .filter(Boolean)
+      .join(", ");
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destinationQuery || 'Empordà')}`;
+  };
+
+  // Lógica de acceso y reserva
+  const isFreeEntry = !event.ticketType || event.ticketType.toLowerCase().includes('libre') || event.ticketType.toLowerCase().includes('gratis');
+  const allowsReservations = Boolean(event.acceptsReservations || event.ticketType?.toLowerCase().includes('reserva'));
+  const isTicketPurchase = event.ticketType === "Comprar Entrada" || event.ticketType?.toLowerCase().includes('comprar');
+
+  const handleBookingClick = () => {
+    if (event.reservationContact) {
+      const contact = event.reservationContact.trim();
+      if (contact.startsWith('http://') || contact.startsWith('https://')) {
+        window.open(contact, '_blank');
+        return;
+      }
+      const digitsOnly = contact.replace(/\D/g, '');
+      if (digitsOnly.length >= 6) {
+        window.open(`https://wa.me/${digitsOnly}`, '_blank');
+        return;
+      }
+    }
+    if (contactWhatsapp) {
+      window.open(`https://wa.me/${contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}?text=${encodeURIComponent(`Hola, me gustaría información/reserva para el evento "${event.title}"`)}`, '_blank');
+    } else if (contactPhone) {
+      window.open(`tel:${contactPhone.replace(/\s/g, '')}`, '_self');
+    } else if (contactEmail) {
+      window.open(`mailto:${contactEmail}?subject=${encodeURIComponent(`Reserva: ${event.title}`)}`, '_self');
+    } else {
+      alert("Para reservar tu plaza o mesa, contacta directamente con el establecimiento.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -272,39 +335,72 @@ export const EventDetail = () => {
 
                 <div className="flex items-start gap-4 text-white/70">
                   <FiMapPin className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-serif text-white text-lg">{event.venueName}</p>
-                    <p className="text-xs uppercase tracking-widest mt-1">{event.venueLocation}</p>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-serif text-white text-lg leading-tight">{event.venueName}</p>
+                      <a 
+                        href={getDirectionsUrl()}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Ver ruta en Google Maps"
+                        className="p-1.5 text-gold hover:text-white bg-gold/10 hover:bg-gold/30 border border-gold/30 hover:border-gold transition-colors rounded flex items-center justify-center shrink-0"
+                      >
+                        <FiNavigation className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                    <p className="text-xs uppercase tracking-widest mt-1 text-white/60">{event.venueLocation}</p>
                   </div>
                 </div>
               </div>
 
-              {(venueProfile?.contactPhone || venueProfile?.contactWhatsapp || venueProfile?.email || venueProfile?.websiteUrl || venueProfile?.instagramUrl) && (
+              {/* Contacto con el Local (SOLO si el perfil tiene datos reales guardados) */}
+              {hasAnyContact && (
                 <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
                   <h3 className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Contacto con el Local</h3>
                   <div className="flex flex-wrap gap-2">
-                    {venueProfile.contactWhatsapp && (
-                      <a href={`https://wa.me/${String(venueProfile.contactWhatsapp).replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                    {contactWhatsapp && (
+                      <a 
+                        href={`https://wa.me/${contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors px-3 py-1.5 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-widest font-bold"
+                      >
                         WhatsApp
                       </a>
                     )}
-                    {venueProfile.contactPhone && (
-                      <a href={`tel:${String(venueProfile.contactPhone).replace(/\s/g, '')}`} className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                    {contactPhone && (
+                      <a 
+                        href={`tel:${contactPhone.replace(/\s/g, '')}`} 
+                        className="bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors px-3 py-1.5 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-widest font-bold"
+                      >
                         Llamar
                       </a>
                     )}
-                    {venueProfile.email && (
-                      <a href={`mailto:${venueProfile.email}`} className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                    {contactEmail && (
+                      <a 
+                        href={`mailto:${contactEmail}`} 
+                        className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1.5 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-widest font-bold"
+                      >
                         Email
                       </a>
                     )}
-                    {venueProfile.websiteUrl && (
-                      <a href={venueProfile.websiteUrl} target="_blank" rel="noopener noreferrer" className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                    {websiteUrl && (
+                      <a 
+                        href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors px-3 py-1.5 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-widest font-bold"
+                      >
                         Web
                       </a>
                     )}
-                    {venueProfile.instagramUrl && (
-                      <a href={venueProfile.instagramUrl} target="_blank" rel="noopener noreferrer" className="bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors px-3 py-1 flex items-center justify-center gap-2 text-[9px] uppercase tracking-widest font-bold">
+                    {instagramUrl && (
+                      <a 
+                        href={instagramUrl.startsWith('http') ? instagramUrl : `https://instagram.com/${instagramUrl.replace('@', '')}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="bg-[#E1306C]/20 text-[#E1306C] border border-[#E1306C]/50 hover:bg-[#E1306C] hover:text-white transition-colors px-3 py-1.5 flex items-center justify-center gap-1.5 text-[9px] uppercase tracking-widest font-bold"
+                      >
                         Instagram
                       </a>
                     )}
@@ -312,14 +408,37 @@ export const EventDetail = () => {
                 </div>
               )}
 
+              {/* Acceso y Reservas */}
               <div className="pt-6 border-t border-white/10 flex flex-col gap-4">
                 <div className="text-center">
-                  <span className="text-white/50 text-[10px] uppercase tracking-widest block mb-2">Acceso</span>
-                  <span className="font-serif text-xl text-white">{event.ticketType}</span>
+                  <span className="text-white/50 text-[10px] uppercase tracking-widest block mb-1">Acceso</span>
+                  <span className="font-serif text-xl text-white">{event.ticketType || "Entrada Libre"}</span>
                 </div>
-                <button className="w-full bg-gold text-black text-xs uppercase tracking-widest font-bold py-4 hover:bg-white transition-colors duration-300">
-                  {event.ticketType === "Comprar Entrada" ? "Comprar Entradas" : "Reservar Ahora"}
-                </button>
+
+                {/* Si es Entrada libre y NO hay reservas, NO se muestra el botón Reservar Ahora */}
+                {isFreeEntry && !allowsReservations ? (
+                  <div className="p-3 bg-white/5 border border-white/10 text-center">
+                    <p className="text-white/80 text-xs font-serif mb-0.5">Acceso libre y gratuito</p>
+                    <p className="text-gold text-[10px] uppercase tracking-widest font-bold">No requiere reserva previa</p>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={handleBookingClick}
+                    className="w-full bg-gold text-black text-xs uppercase tracking-widest font-bold py-4 hover:bg-white transition-colors duration-300 shadow-lg cursor-pointer"
+                  >
+                    {isTicketPurchase ? "Comprar Entradas" : "Reservar Ahora"}
+                  </button>
+                )}
+
+                {/* Botón directo Cómo llegar al local */}
+                <a
+                  href={getDirectionsUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-transparent border border-white/20 hover:border-gold hover:text-gold text-white/80 text-[11px] uppercase tracking-widest font-bold py-3 text-center transition-colors flex items-center justify-center gap-2"
+                >
+                  <FiNavigation className="w-3.5 h-3.5" /> Cómo llegar al local
+                </a>
               </div>
             </div>
           </div>
