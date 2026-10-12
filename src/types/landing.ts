@@ -1,6 +1,7 @@
 export interface LandingDesign {
   theme: 'dark' | 'light';
   typography: 'sans-serif' | 'serif' | 'mono';
+  layout?: 'vertical' | 'horizontal'; // 'vertical' (tradicional) o 'horizontal' (editorial en columnas continuas)
 }
 
 export interface LandingImages {
@@ -8,6 +9,10 @@ export interface LandingImages {
   liveBackgroundUrl: string;
   musicBackgroundUrl: string;
   contactBackgroundUrl: string;
+  heroOverlayOpacity?: number; // 0 to 100 (percentage of dark/light overlay, default 30)
+  liveOverlayOpacity?: number; // 0 to 100 (default 50)
+  musicOverlayOpacity?: number; // 0 to 100 (default 65)
+  contactOverlayOpacity?: number; // 0 to 100 (default 50)
 }
 
 export interface LandingHero {

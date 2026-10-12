@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -7,7 +7,7 @@ import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useEvents } from '../../hooks/useEvents';
 
 export const PublicLanding = () => {
@@ -33,6 +33,17 @@ export const PublicLanding = () => {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Estados para la sección multimedia (audio / vídeo)
+  const [activeMediaTab, setActiveMediaTab] = useState<'spotify' | 'youtube'>('youtube');
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+
+  // Estados y refs para navegación horizontal en pantalla completa
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const lastWheelTime = useRef(0);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartScrollLeftRef = useRef(0);
 
   const { events } = useEvents(false); // fetch all published events
 
@@ -104,6 +115,104 @@ export const PublicLanding = () => {
     ['blur(0px)', 'blur(12px)']
   );
 
+  // Lista ordenada de secciones activas para la barra horizontal y navegación
+  const activeSections = useMemo(() => {
+    if (!config) return [];
+    return [
+      { id: 'top', label: 'Inicio' },
+      ...(config.hero.biography ? [{ id: 'about', label: 'Bio' }] : []),
+      ...((config.modules.showSpotify || config.modules.showYoutube) ? [{ id: 'music', label: 'Música' }] : []),
+      ...(config.modules.showLiveDates ? [{ id: 'live', label: 'Directos' }] : []),
+      ...(config.modules.showBookingWidget ? [{ id: 'booking', label: 'Contratación' }] : []),
+      { id: 'contact', label: 'Contacto' }
+    ];
+  }, [config]);
+
+  // Transición suave entre pantallas en modo horizontal
+  const goToSectionIndex = (index: number) => {
+    if (index < 0 || index >= activeSections.length) return;
+    const track = document.getElementById('horizontal-track');
+    if (!track) return;
+    const targetX = index * track.clientWidth;
+    track.scrollTo({ left: targetX, behavior: 'smooth' });
+    setCurrentSectionIndex(index);
+  };
+
+  // Navegación fluida en Desktop para modo Horizontal (Rueda de ratón, Teclas Flecha)
+  useEffect(() => {
+    if (!config || config.design.layout !== 'horizontal') return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (window.innerWidth < 768) return;
+
+      const track = document.getElementById('horizontal-track');
+      if (!track) return;
+
+      // Si el cursor está en un elemento interno con scroll vertical (ej: lista de conciertos), respetarlo
+      const target = e.target as HTMLElement;
+      const scrollableChild = target?.closest('.custom-scrollbar, .overflow-y-auto') as HTMLElement | null;
+
+      if (scrollableChild && scrollableChild !== track) {
+        const isAtTop = scrollableChild.scrollTop <= 0;
+        const isAtBottom = Math.abs(scrollableChild.scrollHeight - scrollableChild.clientHeight - scrollableChild.scrollTop) < 2;
+
+        if ((e.deltaY < 0 && !isAtTop) || (e.deltaY > 0 && !isAtBottom)) {
+          return; // Permitir scroll vertical dentro del elemento
+        }
+      }
+
+      e.preventDefault();
+
+      const now = Date.now();
+      if (now - lastWheelTime.current < 450) return; // Cooldown para salto suave pantalla por pantalla
+
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta > 20) {
+        lastWheelTime.current = now;
+        setCurrentSectionIndex((prev) => {
+          const next = Math.min(prev + 1, activeSections.length - 1);
+          goToSectionIndex(next);
+          return next;
+        });
+      } else if (delta < -20) {
+        lastWheelTime.current = now;
+        setCurrentSectionIndex((prev) => {
+          const next = Math.max(prev - 1, 0);
+          goToSectionIndex(next);
+          return next;
+        });
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (window.innerWidth < 768) return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        e.preventDefault();
+        setCurrentSectionIndex((prev) => {
+          const next = Math.min(prev + 1, activeSections.length - 1);
+          goToSectionIndex(next);
+          return next;
+        });
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        setCurrentSectionIndex((prev) => {
+          const next = Math.max(prev - 1, 0);
+          goToSectionIndex(next);
+          return next;
+        });
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [config, activeSections]);
+
   if (loading) return <LoadingScreen />;
   if (error || !config) {
     return (
@@ -128,9 +237,20 @@ export const PublicLanding = () => {
   const fontClass = config.design.typography === 'serif' ? 'font-serif' : 
                     config.design.typography === 'mono' ? 'font-mono' : 'font-sans';
 
+  const isHorizontalLayout = config.design.layout === 'horizontal';
+
   const handleScroll = (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>, targetId: string) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
+
+    if (isHorizontalLayout && window.innerWidth >= 768) {
+      const targetIdx = activeSections.findIndex(s => s.id === targetId);
+      if (targetIdx !== -1) {
+        goToSectionIndex(targetIdx);
+        return;
+      }
+    }
+
     if (targetId === 'top') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -139,6 +259,36 @@ export const PublicLanding = () => {
     if (elem) {
       elem.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  // Soporte para arrastrar libremente con el cursor del ratón (Drag to Scroll)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isHorizontalLayout || window.innerWidth < 768) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, select, textarea, iframe, .custom-scrollbar')) return;
+
+    isDraggingRef.current = true;
+    dragStartXRef.current = e.pageX;
+    const track = document.getElementById('horizontal-track');
+    dragStartScrollLeftRef.current = track ? track.scrollLeft : 0;
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingRef.current) return;
+    const track = document.getElementById('horizontal-track');
+    if (!track) return;
+    e.preventDefault();
+    const walk = (e.pageX - dragStartXRef.current) * 1.3;
+    track.scrollLeft = dragStartScrollLeftRef.current - walk;
+  };
+
+  const handleMouseUp = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const track = document.getElementById('horizontal-track');
+    if (!track) return;
+    const targetIdx = Math.round(track.scrollLeft / track.clientWidth);
+    goToSectionIndex(targetIdx);
   };
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
@@ -248,7 +398,7 @@ export const PublicLanding = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className={`min-h-screen ${bgColor} ${textColor} ${fontClass} overflow-x-hidden selection:bg-gray-500/30 scroll-smooth`}>
+    <div className={`min-h-screen ${bgColor} ${textColor} ${fontClass} ${isHorizontalLayout ? 'overflow-y-hidden md:overflow-x-hidden' : 'overflow-x-hidden'} selection:bg-gray-500/30 scroll-smooth`}>
       {/* Navbar Minimalista */}
       <motion.nav 
         style={{ backgroundColor: navBg, backdropFilter: navBackdrop, WebkitBackdropFilter: navBackdrop }}
@@ -310,14 +460,47 @@ export const PublicLanding = () => {
         </div>
       </motion.nav>
 
-      {/* Hero Section */}
-      <section id="top" className="relative min-h-screen flex items-center justify-center pt-24 pb-12 px-6">
+      {/* Contenedor Principal: Vertical tradicional o Pista Horizontal Editorial en Desktop */}
+      <div 
+        id="horizontal-track" 
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        className={
+          isHorizontalLayout 
+            ? "md:flex md:flex-row md:overflow-x-hidden md:h-screen md:w-screen scroll-smooth cursor-grab active:cursor-grabbing select-none" 
+            : "flex flex-col"
+        }
+      >
+        {/* Hero Section (Ocupa la pantalla completa inicial 100vw) */}
+        <section 
+          id="top" 
+          className={`relative min-h-screen flex items-center justify-center pt-24 pb-12 px-6 overflow-hidden ${
+            isHorizontalLayout 
+              ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10" 
+              : "w-full"
+          }`}
+        >
+        {isHorizontalLayout && (
+          <>
+            <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+            <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+          </>
+        )}
         {config.images.heroBackgroundUrl && (
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
             style={{ backgroundImage: `url(${config.images.heroBackgroundUrl})` }}
           >
-            <div className={`absolute inset-0 ${isDark ? 'bg-black/30' : 'bg-white/20'}`}></div>
+            <div 
+              className="absolute inset-0"
+              style={{
+                backgroundColor: isDark 
+                  ? `rgba(0, 0, 0, ${(config.images.heroOverlayOpacity ?? 30) / 100})`
+                  : `rgba(255, 255, 255, ${(config.images.heroOverlayOpacity ?? 20) / 100})`
+              }}
+            ></div>
           </div>
         )}
         
@@ -358,18 +541,32 @@ export const PublicLanding = () => {
         </div>
       </section>
 
-      {/* Biography Section */}
-      {config.hero.biography && (
-        <section id="about" className={`scroll-mt-24 py-32 px-6 flex items-center justify-center ${bgColor}`}>
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="text-2xl md:text-4xl font-light leading-relaxed tracking-wide">
+        {/* Biography Section */}
+        {config.hero.biography && (
+          <section 
+            id="about" 
+            className={`scroll-mt-24 py-32 px-8 flex items-center justify-center relative overflow-hidden ${bgColor} ${
+              isHorizontalLayout 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10" 
+                : "w-full"
+            }`}
+          >
+          {isHorizontalLayout && (
+            <>
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+            </>
+          )}
+          <div className={`max-w-2xl mx-auto text-center ${isHorizontalLayout ? 'p-10 md:p-14 rounded-3xl bg-black/20 backdrop-blur-xl border border-white/10 shadow-2xl relative z-10' : ''}`}>
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-8 opacity-70">Bio</h2>
+            <p className="text-xl md:text-2xl font-light leading-relaxed tracking-wide">
               {config.hero.biography}
             </p>
             {instagramLink && (
-              <div className="mt-12 flex justify-center">
+              <div className="mt-8 flex justify-center">
                 <a href={instagramLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 hover:opacity-70 transition-transform hover:scale-105">
-                  <span className="font-light tracking-[0.2em] uppercase text-sm">Instagram</span>
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram" className="w-8 h-8" />
+                  <span className="font-light tracking-[0.2em] uppercase text-xs">Instagram</span>
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram" className="w-6 h-6" />
                 </a>
               </div>
             )}
@@ -377,85 +574,196 @@ export const PublicLanding = () => {
         </section>
       )}
 
-      {/* Music Section (Horizontal Scroll Gallery) */}
-      {(config.modules.showSpotify || config.modules.showYoutube) && (
-        <section id="music" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32`}>
+        {/* Music & Media Section */}
+        {(config.modules.showSpotify || config.modules.showYoutube) && (
+          <section 
+            id="music" 
+            className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
+              isHorizontalLayout 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                : "w-full"
+            }`}
+          >
           {config.images.musicBackgroundUrl && (
             <div 
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
+              className={`absolute inset-0 z-0 bg-cover bg-center bg-no-repeat ${isHorizontalLayout ? '' : 'fixed-bg'}`}
               style={{ backgroundImage: `url(${config.images.musicBackgroundUrl})` }}
             >
-              <div className={`absolute inset-0 ${isDark ? 'bg-black/80' : 'bg-white/80'}`}></div>
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: isDark 
+                    ? `rgba(0, 0, 0, ${(config.images.musicOverlayOpacity ?? 65) / 100})`
+                    : `rgba(255, 255, 255, ${(config.images.musicOverlayOpacity ?? 65) / 100})`
+                }}
+              ></div>
             </div>
           )}
+
+          {isHorizontalLayout && (
+            <>
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+            </>
+          )}
           
-          <div className="relative z-10 w-full max-w-7xl mx-auto">
-            <h2 className="text-sm tracking-[0.4em] uppercase mb-20 text-center opacity-100 font-medium text-current">Escucha</h2>
-            
-            <div className="flex flex-col gap-24 items-center w-full px-6 md:px-12">
-              
-              {/* Youtube Grid */}
-              {config.modules.showYoutube && ytIds.length > 0 && (
-                <div className="w-full">
-                  <FaYoutube className="text-[#FF0000] w-12 h-12 mx-auto mb-10 opacity-80 hover:opacity-100 transition-opacity" />
-                  <div className={`grid gap-12 ${ytIds.length === 1 ? 'grid-cols-1 max-w-4xl mx-auto' : 'grid-cols-1 md:grid-cols-2 max-w-6xl mx-auto'}`}>
-                    {ytIds.map((id, index) => (
-                      <div key={`yt-${index}`} className="w-full transition-all duration-700 grayscale hover:grayscale-0">
-                        <div className="w-full aspect-video">
-                          <iframe 
-                            width="100%" 
-                            height="100%" 
-                            src={`https://www.youtube.com/embed/${id}?vq=hd1080&rel=0&modestbranding=1`} 
-                            title="YouTube video" 
-                            frameBorder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                            allowFullScreen
-                            className="w-full h-full shadow-2xl"
-                          ></iframe>
-                        </div>
-                      </div>
-                    ))}
+          <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col items-center">
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-8 text-center opacity-70">
+              Música & Vídeos
+            </h2>
+
+            {/* Píldoras de selección (Audio vs Vídeo) sólo si tiene ambos */}
+            {config.modules.showSpotify && spotifyUrl && config.modules.showYoutube && ytIds.length > 0 && (
+              <div className="inline-flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/15 rounded-full mb-12 shadow-xl">
+                <button
+                  type="button"
+                  onClick={() => setActiveMediaTab('youtube')}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs uppercase tracking-widest font-semibold transition-all ${
+                    activeMediaTab === 'youtube'
+                      ? 'bg-white text-black shadow-md'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <FaYoutube className={activeMediaTab === 'youtube' ? 'text-[#FF0000]' : 'text-white/40'} />
+                  Vídeos ({ytIds.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMediaTab('spotify')}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs uppercase tracking-widest font-semibold transition-all ${
+                    activeMediaTab === 'spotify'
+                      ? 'bg-white text-black shadow-md'
+                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <FaSpotify className={activeMediaTab === 'spotify' ? 'text-[#1DB954]' : 'text-white/40'} />
+                  Audio
+                </button>
+              </div>
+            )}
+
+            {/* Panel de VÍDEOS (Formato Cine + Miniaturas) */}
+            {config.modules.showYoutube && ytIds.length > 0 && (activeMediaTab === 'youtube' || (!config.modules.showSpotify || !spotifyUrl)) && (
+              <div className="w-full flex flex-col items-center animate-in fade-in duration-300">
+                {/* Reproductor Principal Estilo Cine */}
+                <div className="w-full max-w-4xl bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl overflow-hidden shadow-2xl shadow-black/80">
+                  <div className="w-full aspect-video">
+                    <iframe 
+                      key={ytIds[activeVideoIndex] || ytIds[0]}
+                      width="100%" 
+                      height="100%" 
+                      src={`https://www.youtube.com/embed/${ytIds[activeVideoIndex] || ytIds[0]}?vq=hd1080&rel=0&modestbranding=1`} 
+                      title="Vídeo de la banda" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen
+                      className="w-full h-full"
+                    ></iframe>
                   </div>
                 </div>
-              )}
 
-              {/* Spotify */}
-              {config.modules.showSpotify && spotifyUrl && (
-                <div className="w-full max-w-3xl mx-auto mt-8 border-t border-current/20 pt-24">
-                  <FaSpotify className="text-[#1DB954] w-12 h-12 mx-auto mb-10 opacity-80 hover:opacity-100 transition-opacity" />
-                  <iframe 
-                    className="rounded-none w-full shadow-2xl grayscale hover:grayscale-0 transition-all duration-700" 
-                    src={spotifyUrl}
-                    width="100%" 
-                    height="352" 
-                    frameBorder="0" 
-                    allowFullScreen 
-                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                    loading="lazy"
-                  ></iframe>
+                {/* Tira de Miniaturas si hay más de 1 vídeo */}
+                {ytIds.length > 1 && (
+                  <div className="mt-6 flex items-center justify-center gap-3 flex-wrap max-w-4xl">
+                    {ytIds.map((id, index) => {
+                      const isSelected = index === activeVideoIndex;
+                      return (
+                        <button
+                          key={`thumb-${id}-${index}`}
+                          type="button"
+                          onClick={() => setActiveVideoIndex(index)}
+                          className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-200 cursor-pointer ${
+                            isSelected 
+                              ? 'border-gold scale-105 shadow-lg shadow-gold/20' 
+                              : 'border-white/20 hover:border-white/60 opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img 
+                            src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} 
+                            alt={`Vídeo ${index + 1}`}
+                            className="w-24 sm:w-28 h-14 sm:h-16 object-cover" 
+                          />
+                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`}>
+                            <span className="text-[10px] font-bold tracking-wider uppercase text-white bg-black/70 px-1.5 py-0.5 rounded">
+                              {index + 1}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Panel de SPOTIFY / AUDIO (Caja Glassmorphism compacta y limpia) */}
+            {config.modules.showSpotify && spotifyUrl && (activeMediaTab === 'spotify' || (!config.modules.showYoutube || ytIds.length === 0)) && (
+              <div className="w-full max-w-xl mx-auto flex flex-col items-center animate-in fade-in duration-300">
+                <div className="w-full bg-black/50 backdrop-blur-xl border border-white/15 p-4 sm:p-6 rounded-2xl shadow-2xl">
+                  <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/10">
+                    <FaSpotify className="text-[#1DB954] w-6 h-6 shrink-0" />
+                    <div>
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-white/50 block">Música Oficial</span>
+                      <h4 className="text-sm font-medium text-white">Escúchanos en Spotify</h4>
+                    </div>
+                  </div>
+                  <div className="overflow-hidden rounded-xl bg-black/80">
+                    <iframe 
+                      className="w-full" 
+                      src={spotifyUrl}
+                      width="100%" 
+                      height="352" 
+                      frameBorder="0" 
+                      allowFullScreen 
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                      loading="lazy"
+                    ></iframe>
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
 
-            </div>
           </div>
         </section>
       )}
 
-      {/* Live Dates Section */}
-      {config.modules.showLiveDates && (
-        <section id="live" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
+        {/* Live Dates Section */}
+        {config.modules.showLiveDates && (
+          <section 
+            id="live" 
+            className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
+              isHorizontalLayout 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                : "w-full"
+            }`}
+          >
            {config.images.liveBackgroundUrl && (
             <div 
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
+              className={`absolute inset-0 z-0 bg-cover bg-center bg-no-repeat ${isHorizontalLayout ? '' : 'fixed-bg'}`}
               style={{ backgroundImage: `url(${config.images.liveBackgroundUrl})` }}
             >
-              <div className={`absolute inset-0 ${isDark ? 'bg-black/90' : 'bg-white/90'}`}></div>
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: isDark 
+                    ? `rgba(0, 0, 0, ${(config.images.liveOverlayOpacity ?? 50) / 100})`
+                    : `rgba(255, 255, 255, ${(config.images.liveOverlayOpacity ?? 50) / 100})`
+                }}
+              ></div>
             </div>
           )}
-          <div className="relative z-10 w-full max-w-3xl mx-auto">
-            <h2 className="text-xs tracking-[0.4em] uppercase mb-16 text-center opacity-70">Directos</h2>
+
+          {isHorizontalLayout && (
+            <>
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+            </>
+          )}
+
+          <div className={`relative z-10 w-full max-w-2xl mx-auto ${isHorizontalLayout ? 'p-8 md:p-12 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/15 shadow-2xl' : ''}`}>
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-12 text-center opacity-70">Directos</h2>
             
-            <div className="space-y-0 border-t border-b border-current opacity-80 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="space-y-0 border-t border-b border-current opacity-80 max-h-[55vh] overflow-y-auto custom-scrollbar">
               {bandEvents.length > 0 ? (
                 bandEvents.map((ev) => (
                   <a 
@@ -463,14 +771,14 @@ export const PublicLanding = () => {
                     target="_blank" 
                     rel="noopener noreferrer"
                     key={ev.id} 
-                    className="flex justify-between py-8 border-b border-current group hover:opacity-50 transition-opacity cursor-pointer block"
+                    className="flex justify-between py-6 border-b border-current group hover:opacity-50 transition-opacity cursor-pointer block"
                   >
-                    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-12 w-full">
-                      <span className="text-sm tracking-widest font-light w-32 uppercase">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 w-full">
+                      <span className="text-sm tracking-widest font-light w-28 uppercase">
                         {new Date(ev.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                       </span>
-                      <span className="text-2xl font-light">{ev.title}</span>
-                      <span className="text-lg font-medium opacity-90 md:ml-auto text-right">{ev.venueName}</span>
+                      <span className="text-xl font-light">{ev.title}</span>
+                      <span className="text-base font-medium opacity-90 md:ml-auto text-right">{ev.venueName}</span>
                     </div>
                   </a>
                 ))
@@ -484,30 +792,51 @@ export const PublicLanding = () => {
         </section>
       )}
 
-      {/* Booking Section */}
-      {config.modules.showBookingWidget && (
-        <section id="booking" className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-32 px-6`}>
+        {/* Booking Section */}
+        {config.modules.showBookingWidget && (
+          <section 
+            id="booking" 
+            className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
+              isHorizontalLayout 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                : "w-full"
+            }`}
+          >
           {config.images.contactBackgroundUrl && (
             <div 
-              className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat fixed-bg"
+              className={`absolute inset-0 z-0 bg-cover bg-center bg-no-repeat ${isHorizontalLayout ? '' : 'fixed-bg'}`}
               style={{ backgroundImage: `url(${config.images.contactBackgroundUrl})` }}
             >
-              <div className={`absolute inset-0 ${isDark ? 'bg-black/90' : 'bg-white/90'}`}></div>
+              <div 
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: isDark 
+                    ? `rgba(0, 0, 0, ${(config.images.contactOverlayOpacity ?? 50) / 100})`
+                    : `rgba(255, 255, 255, ${(config.images.contactOverlayOpacity ?? 50) / 100})`
+                }}
+              ></div>
             </div>
           )}
+
+          {isHorizontalLayout && (
+            <>
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+            </>
+          )}
           
-          <div className="relative z-10 w-full max-w-xl mx-auto">
-            <h2 className="text-xs tracking-[0.4em] uppercase mb-16 text-center opacity-70">Solicitud</h2>
+          <div className={`relative z-10 w-full max-w-xl mx-auto ${isHorizontalLayout ? 'p-8 md:p-12 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/15 shadow-2xl' : ''}`}>
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-12 text-center opacity-70">Solicitud de Contratación</h2>
             
-            <form onSubmit={handleBookingSubmit} className="space-y-12">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+            <form onSubmit={handleBookingSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <input 
                   type="text" 
                   required
                   value={bookingForm.name}
                   onChange={e => setBookingForm({...bookingForm, name: e.target.value})}
                   placeholder="Tu Nombre o Empresa" 
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
                 />
                 <input 
                   type="email" 
@@ -515,21 +844,21 @@ export const PublicLanding = () => {
                   value={bookingForm.email}
                   onChange={e => setBookingForm({...bookingForm, email: e.target.value})}
                   placeholder="Email de contacto" 
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <input 
                   type="tel" 
                   value={bookingForm.phone}
                   onChange={e => setBookingForm({...bookingForm, phone: e.target.value})}
                   placeholder="Teléfono (opcional)" 
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
                 />
                 <select 
                   value={bookingForm.eventType}
                   onChange={e => setBookingForm({...bookingForm, eventType: e.target.value})}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg outline-none appearance-none cursor-pointer`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base outline-none appearance-none cursor-pointer`}
                   style={{ color: 'inherit' }}
                 >
                   <option value="Boda / Evento Privado" className="text-black">Boda / Evento Privado</option>
@@ -539,20 +868,20 @@ export const PublicLanding = () => {
                   <option value="Otro" className="text-black">Otro</option>
                 </select>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <input 
                   type="date" 
                   required
                   value={bookingForm.date}
                   onChange={e => setBookingForm({...bookingForm, date: e.target.value})}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg placeholder:font-light outline-none`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light outline-none`}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
                 />
                 <input 
                   type="time" 
                   value={bookingForm.time}
                   onChange={e => setBookingForm({...bookingForm, time: e.target.value})}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg placeholder:font-light outline-none`}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light outline-none`}
                   style={{ colorScheme: isDark ? 'dark' : 'light' }}
                 />
               </div>
@@ -561,21 +890,21 @@ export const PublicLanding = () => {
                   required
                   value={bookingForm.details}
                   onChange={e => setBookingForm({...bookingForm, details: e.target.value})}
-                  placeholder="Detalles del evento (lugar, presupuesto aproximado, dudas...)" 
-                  rows={4}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-4 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-lg resize-none placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
+                  placeholder="Detalles del evento..." 
+                  rows={3}
+                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base resize-none placeholder:font-light placeholder:text-${textColor}/30 outline-none`}
                 ></textarea>
               </div>
-              <div className="pt-8 text-center h-20">
+              <div className="pt-4 text-center">
                 {bookingStatus === 'success' ? (
-                  <p className="text-green-500 font-light text-lg animate-pulse">¡Petición enviada correctamente! Nos pondremos en contacto contigo.</p>
+                  <p className="text-green-500 font-light text-base animate-pulse">¡Petición enviada correctamente!</p>
                 ) : bookingStatus === 'error' ? (
-                  <p className="text-red-500 font-light text-lg">Hubo un error al enviar la petición. Inténtalo de nuevo.</p>
+                  <p className="text-red-500 font-light text-base">Hubo un error al enviar. Inténtalo de nuevo.</p>
                 ) : (
                   <button 
                     type="submit" 
                     disabled={bookingStatus === 'submitting'}
-                    className={`border border-current px-12 py-4 text-xs tracking-[0.3em] uppercase transition-all duration-300 ${btnHover} ${bookingStatus === 'submitting' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`border border-current px-10 py-3 text-xs tracking-[0.3em] uppercase transition-all duration-300 ${btnHover} ${bookingStatus === 'submitting' ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {bookingStatus === 'submitting' ? 'Enviando...' : 'Enviar Petición'}
                   </button>
@@ -586,48 +915,108 @@ export const PublicLanding = () => {
         </section>
       )}
 
-      {/* Contact Section & Footer */}
-      <footer id="contact" className={`scroll-mt-24 pt-24 pb-12 px-6 flex flex-col items-center gap-12 relative z-10 ${bgColor} border-t border-current/20`}>
-        <div className="text-center space-y-4 opacity-90 max-w-lg">
-          <h2 className="text-xs tracking-[0.4em] uppercase mb-8 opacity-70">Contacto</h2>
-          
-          {profile?.baseLocation && (
-            <p className="font-light tracking-wider text-lg">{profile.baseLocation}</p>
+        {/* Contact Section & Footer */}
+        <footer 
+          id="contact" 
+          className={`scroll-mt-24 pt-24 pb-12 px-6 flex flex-col items-center justify-center gap-12 relative z-10 overflow-hidden ${bgColor} ${
+            isHorizontalLayout 
+              ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0" 
+              : "border-t border-current/20 w-full"
+          }`}
+        >
+          {isHorizontalLayout && (
+            <>
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 left-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-r from-black/80 to-transparent' : 'bg-gradient-to-r from-white/80 to-transparent'}`} />
+              <div className={`hidden md:block pointer-events-none absolute inset-y-0 right-0 w-28 lg:w-40 z-20 ${isDark ? 'bg-gradient-to-l from-black/80 to-transparent' : 'bg-gradient-to-l from-white/80 to-transparent'}`} />
+            </>
           )}
-          {profile?.contactEmail && (
-            <p className="font-light tracking-wide text-lg">
-              <a href={`mailto:${profile.contactEmail}`} className="hover:opacity-70 transition-opacity">{profile.contactEmail}</a>
-            </p>
-          )}
-          {profile?.contactPhone && (
-            <p className="font-light tracking-widest text-lg">
-              <a href={`tel:${profile.contactPhone}`} className="hover:opacity-70 transition-opacity">{profile.contactPhone}</a>
-            </p>
-          )}
-        </div>
 
-        <div className="flex gap-10 items-center mt-4">
-          {instagramLink && (
-            <a href={instagramLink} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram" className="w-8 h-8" />
-            </a>
-          )}
-          {profile?.contactWhatsapp && (
-            <a href={`https://wa.me/${profile.contactWhatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
-              <FaWhatsapp className="w-8 h-8 text-[#25D366]" />
-            </a>
-          )}
-        </div>
+          <div className={`text-center space-y-4 opacity-90 max-w-lg ${isHorizontalLayout ? 'p-8 md:p-12 rounded-3xl bg-black/25 backdrop-blur-xl border border-white/10 shadow-2xl relative z-10' : ''}`}>
+            <h2 className="text-xs tracking-[0.4em] uppercase mb-8 opacity-70">Contacto</h2>
+            
+            {profile?.baseLocation && (
+              <p className="font-light tracking-wider text-lg">{profile.baseLocation}</p>
+            )}
+            {profile?.contactEmail && (
+              <p className="font-light tracking-wide text-lg">
+                <a href={`mailto:${profile.contactEmail}`} className="hover:opacity-70 transition-opacity">{profile.contactEmail}</a>
+              </p>
+            )}
+            {profile?.contactPhone && (
+              <p className="font-light tracking-widest text-lg">
+                <a href={`tel:${profile.contactPhone}`} className="hover:opacity-70 transition-opacity">{profile.contactPhone}</a>
+              </p>
+            )}
 
-        <div className="mt-16 text-center flex flex-col items-center gap-3">
-          <p className="text-[10px] tracking-widest uppercase opacity-40">
-            Powered by Sona Empordà
-          </p>
-          <button onClick={() => setIsLoginModalOpen(true)} className="opacity-10 hover:opacity-50 transition-opacity" title="Acceso Profesional">
-            <FaLock className="w-3 h-3" />
+            <div className="flex gap-10 items-center justify-center pt-4">
+              {instagramLink && (
+                <a href={instagramLink} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram" className="w-8 h-8" />
+                </a>
+              )}
+              {profile?.contactWhatsapp && (
+                <a href={`https://wa.me/${profile.contactWhatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
+                  <FaWhatsapp className="w-8 h-8 text-[#25D366]" />
+                </a>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-8 text-center flex flex-col items-center gap-3 relative z-10">
+            <p className="text-[10px] tracking-widest uppercase opacity-40">
+              Powered by Sona Empordà
+            </p>
+            <button onClick={() => setIsLoginModalOpen(true)} className="opacity-10 hover:opacity-50 transition-opacity" title="Acceso Profesional">
+              <FaLock className="w-3 h-3" />
+            </button>
+          </div>
+        </footer>
+      </div>
+
+      {/* Floating Navigation Dock en Desktop cuando Layout es Horizontal */}
+      {isHorizontalLayout && (
+        <div className="hidden md:flex fixed bottom-8 left-1/2 -translate-x-1/2 z-50 items-center gap-4 px-6 py-3 rounded-full bg-black/60 backdrop-blur-xl border border-white/20 shadow-2xl text-white animate-in fade-in duration-300">
+          <button
+            onClick={() => goToSectionIndex(currentSectionIndex - 1)}
+            disabled={currentSectionIndex === 0}
+            className="p-2 rounded-full hover:bg-white/20 transition-all disabled:opacity-20 disabled:hover:bg-transparent"
+            title="Sección anterior"
+            aria-label="Sección anterior"
+          >
+            <FaChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center gap-2 px-3">
+            {activeSections.map((sec, idx) => (
+              <button
+                key={sec.id}
+                onClick={() => goToSectionIndex(idx)}
+                className={`h-2 transition-all rounded-full ${
+                  currentSectionIndex === idx 
+                    ? 'w-8 bg-white' 
+                    : 'w-2 bg-white/30 hover:bg-white/60'
+                }`}
+                title={sec.label}
+                aria-label={sec.label}
+              />
+            ))}
+          </div>
+
+          <span className="text-xs uppercase tracking-widest font-mono text-white/70 min-w-[70px] text-center">
+            {String(currentSectionIndex + 1).padStart(2, '0')} / {String(activeSections.length).padStart(2, '0')}
+          </span>
+
+          <button
+            onClick={() => goToSectionIndex(currentSectionIndex + 1)}
+            disabled={currentSectionIndex === activeSections.length - 1}
+            className="p-2 rounded-full hover:bg-white/20 transition-all disabled:opacity-20 disabled:hover:bg-transparent"
+            title="Sección siguiente"
+            aria-label="Sección siguiente"
+          >
+            <FaChevronRight className="w-4 h-4" />
           </button>
         </div>
-      </footer>
+      )}
 
       {/* Quick Login Modal */}
       {isLoginModalOpen && (
