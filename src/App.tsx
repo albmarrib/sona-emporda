@@ -11,6 +11,7 @@ import { SosAlarm } from './components/shared/SosAlarm';
 import { LoadingScreen } from './components/shared/LoadingScreen';
 import { ScrollToTop } from './components/shared/ScrollToTop';
 import { MusicianLayout } from './layouts/MusicianLayout';
+import { MusicianHome } from './pages/musician/MusicianHome';
 import { DashboardHome } from './pages/musician/DashboardHome';
 import { EPKManager } from './pages/musician/EPKManager';
 import { AvailabilityCalendar } from './pages/musician/AvailabilityCalendar';
@@ -19,6 +20,7 @@ import { MusicianOpportunities } from './pages/musician/MusicianOpportunities';
 import { DirectOffers } from './pages/musician/DirectOffers';
 import { LandingBuilderPage } from './pages/musician/LandingBuilderPage';
 import { VenueLayout } from './layouts/VenueLayout';
+import { VenueHome } from './pages/venue/VenueHome';
 import { ArtistSearch } from './pages/venue/ArtistSearch';
 import { EventManager } from './pages/venue/EventManager';
 import { VenueProfile } from './pages/venue/VenueProfile';
@@ -57,7 +59,7 @@ function App() {
               <MusicianLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Navigate to="calendar" replace />} />
+            <Route index element={<MusicianHome />} />
             <Route path="dashboard" element={<DashboardHome />} />
             <Route path="opportunities" element={<MusicianOpportunities />} />
             <Route path="offers" element={<DirectOffers />} />
@@ -74,7 +76,7 @@ function App() {
               <VenueLayout />
             </ProtectedRoute>
           }>
-            <Route index element={<Navigate to="calendar" replace />} />
+            <Route index element={<VenueHome />} />
             <Route path="dashboard" element={<EventManager />} />
             <Route path="search" element={<ArtistSearch />} />
             <Route path="events" element={<EventManager />} />

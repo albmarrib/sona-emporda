@@ -1,18 +1,29 @@
-import { Link, Outlet, useLocation, useNavigate, useOutlet } from 'react-router-dom';
-import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
+import { Link, useLocation, useNavigate, useOutlet } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiHome, FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiSearch, FiLayout } from 'react-icons/fi';
+import { FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiLayout } from 'react-icons/fi';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
-
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
 import { PushNotificationBanner } from '../components/chat/PushNotificationBanner';
-import { useState, useRef } from 'react';
+import { SwipeWrapper } from '../components/musician/SwipeWrapper';
+import { useState } from 'react';
 import { Info } from 'lucide-react';
+
+/**
+ * Rutas de las 3 vistas principales — reciben SwipeWrapper en móvil
+ * y ocupan el espacio completo sin padding para que el calendario
+ * siempre arranque arriba.
+ */
+const HUB_ROUTES = [
+  '/musician/calendar',
+  '/musician/opportunities',
+  '/musician/dashboard',
+];
 
 export const MusicianLayout = () => {
   const { pathname } = useLocation();
@@ -20,13 +31,13 @@ export const MusicianLayout = () => {
   const { currentUser, userData } = useAuth();
   const { profile } = useMusicianProfile();
   const outlet = useOutlet();
-  
+
   const [showWizard, setShowWizard] = useState(
-    userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted
+    userData && userData.onboardingCompleted === undefined ? true : !userData?.onboardingCompleted,
   );
-  
+
   const [showTutorial, setShowTutorial] = useState(
-    userData && userData.tutorialSeen === undefined ? true : !userData?.tutorialSeen
+    userData && userData.tutorialSeen === undefined ? true : !userData?.tutorialSeen,
   );
 
   const handleLogout = async () => {
@@ -35,52 +46,26 @@ export const MusicianLayout = () => {
   };
 
   const navItems = [
-    { name: 'Calendario', mobileName: 'Agenda', path: '/musician/calendar', icon: <FiCalendar className="w-5 h-5" /> },
-    { name: 'Oportunidades', mobileName: 'Buscar', path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
-    { name: 'Mis Eventos', mobileName: 'Eventos', path: '/musician/dashboard', icon: <FiList className="w-5 h-5" /> },
-    { name: 'Tablón SOS', mobileName: 'SOS', path: '/musician/sos', icon: <FiLifeBuoy className="w-5 h-5" /> },
-    { name: 'Mi EPK', mobileName: 'EPK', path: '/musician/epk', icon: <FiUser className="w-5 h-5" /> },
-    { name: 'Mi Landing Page', mobileName: 'Landing', path: '/musician/landing', icon: <FiLayout className="w-5 h-5" /> },
+    { name: 'Calendario',      mobileName: 'Agenda',   path: '/musician/calendar',      icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Oportunidades',   mobileName: 'Buscar',   path: '/musician/opportunities', icon: <FiBriefcase className="w-5 h-5" /> },
+    { name: 'Mis Eventos',     mobileName: 'Eventos',  path: '/musician/dashboard',     icon: <FiList className="w-5 h-5" /> },
+    { name: 'Tablón SOS',      mobileName: 'SOS',      path: '/musician/sos',           icon: <FiLifeBuoy className="w-5 h-5" /> },
+    { name: 'Mi EPK',          mobileName: 'EPK',      path: '/musician/epk',           icon: <FiUser className="w-5 h-5" /> },
+    { name: 'Mi Landing Page', mobileName: 'Landing',  path: '/musician/landing',       icon: <FiLayout className="w-5 h-5" /> },
   ];
 
-  const touchStartX = useRef<number | null>(null);
-  const touchEndX = useRef<number | null>(null);
-  const minSwipeDistance = 100;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchEndX.current = null;
-    touchStartX.current = e.targetTouches[0].clientX;
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.targetTouches[0].clientX;
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
-    const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = navItems.findIndex(item => pathname === item.path || (item.path !== '/musician' && pathname.startsWith(item.path)));
-      if (currentIndex === -1) return;
-
-      if (isLeftSwipe && currentIndex < navItems.length - 1) {
-        navigate(navItems[currentIndex + 1].path);
-      }
-      if (isRightSwipe && currentIndex > 0) {
-        navigate(navItems[currentIndex - 1].path);
-      }
-    }
-  };
+  /**
+   * ¿Estamos en una de las 3 vistas principales en móvil?
+   * Si es así, cedemos todo el espacio y activamos el SwipeWrapper.
+   */
+  const isHubRoute = HUB_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'));
 
   return (
     <div className="flex h-[100dvh] w-full bg-black text-white font-sans overflow-hidden">
       {showWizard && <OnboardingWizard onComplete={() => setShowWizard(false)} />}
       {!showWizard && showTutorial && <TutorialSlides onClose={() => setShowTutorial(false)} />}
-      
-      {/* Sidebar Desktop */}
+
+      {/* ── Sidebar Desktop ───────────────────────────────────────────────── */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full">
         <div className="p-8 border-b border-white/10 flex flex-col gap-2">
           <Link to="/" className="text-xl tracking-widest uppercase">
@@ -112,14 +97,16 @@ export const MusicianLayout = () => {
         <div className="p-4 border-t border-white/10">
           <div className="px-4 pb-4">
             <p className="text-[9px] uppercase tracking-widest text-white/40 mb-1">Sesión iniciada como</p>
-            <p className="text-xs truncate font-bold text-gold">{profile?.stageName || userData?.stageName || userData?.name || currentUser?.email || 'Músico'}</p>
+            <p className="text-xs truncate font-bold text-gold">
+              {profile?.stageName || userData?.stageName || userData?.name || currentUser?.email || 'Músico'}
+            </p>
           </div>
-          
+
           <div className="flex gap-2 w-full mb-2">
             <div className="flex-shrink-0 flex items-center justify-center">
               <InviteColleagues userType="musician" />
             </div>
-            <button 
+            <button
               onClick={() => setShowTutorial(true)}
               className="flex-1 flex items-center justify-center gap-2 px-2 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors"
             >
@@ -128,7 +115,7 @@ export const MusicianLayout = () => {
             </button>
           </div>
 
-          <button 
+          <button
             onClick={handleLogout}
             className="w-full flex items-center gap-4 px-4 py-3 text-xs uppercase tracking-widest text-white/60 hover:text-red-400 hover:bg-red-900/20 transition-colors"
           >
@@ -138,62 +125,113 @@ export const MusicianLayout = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main 
-        className="flex-1 h-full overflow-y-auto overflow-x-hidden min-w-0 bg-zinc-950 pb-20 md:pb-0"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 border-b border-white/10 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+      {/* ── Main Content ──────────────────────────────────────────────────── */}
+      <main className="flex flex-col flex-1 h-full overflow-hidden min-w-0 bg-zinc-950">
+
+        {/* Mobile Header — siempre visible */}
+        <div className="md:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/80 backdrop-blur-md z-40">
           <div className="flex flex-col">
-            <Link to="/" className="text-lg tracking-widest uppercase">
+            <Link to="/musician" className="text-lg tracking-widest uppercase leading-none">
               SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
             </Link>
-            <span className="text-xs text-gold font-bold truncate max-w-[200px] mt-0.5">
+            <span className="text-[11px] text-gold/80 font-bold truncate max-w-[180px] mt-0.5 leading-none">
               {profile?.stageName || currentUser?.email || 'Músico'}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <InviteColleagues userType="musician" />
-            <button 
-              onClick={() => setShowTutorial(true)} 
-              className="text-white/60 hover:text-white p-2 active:scale-95 transition-transform"
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="text-white/50 hover:text-white p-2 active:scale-95 transition-transform"
               title="Ver Tutorial"
             >
               <Info className="w-5 h-5" />
             </button>
-            <button onClick={handleLogout} className="text-white/60 hover:text-red-400 p-2 active:scale-95 transition-transform">
+            <button
+              onClick={handleLogout}
+              className="text-white/50 hover:text-red-400 p-2 active:scale-95 transition-transform"
+            >
               <FiLogOut className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full overflow-hidden">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="w-full min-h-full"
-            >
-              {outlet}
-            </motion.div>
-          </AnimatePresence>
+        {/* ── Content area ──────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+
+          {/*
+           * MÓVIL — vistas principales (Hub Routes):
+           *   Sin padding, espacio completo entre header y bottom nav.
+           *   SwipeWrapper activo para gesto horizontal invisible.
+           */}
+          {isHubRoute ? (
+            <div className="md:hidden flex-1 min-h-0 pb-16 overflow-hidden">
+              <SwipeWrapper>
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={pathname}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="h-full w-full"
+                    >
+                      {outlet}
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </SwipeWrapper>
+            </div>
+          ) : (
+            /*
+             * MÓVIL — rutas secundarias (sos, epk, landing, messages, home):
+             *   Layout estándar con padding y scroll vertical.
+             */
+            <div className="md:hidden flex-1 overflow-y-auto overflow-x-hidden pb-16">
+              <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={pathname}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    {outlet}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
+
+          {/* DESKTOP — layout clásico, siempre con padding */}
+          <div className="hidden md:block flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={pathname}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="w-full min-h-full"
+                >
+                  {outlet}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* ── Mobile Bottom Navigation ──────────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-xl border-t border-white/10 z-50 safe-area-pb">
         <div className="flex justify-around items-center h-16">
           {navItems.map((item) => {
             const isActive = pathname === item.path || (item.path !== '/musician' && pathname.startsWith(item.path));
-            const isSOS = item.path.includes('sos');
-            
+            const isSOS    = item.path.includes('sos');
+
             return (
               <Link
                 key={item.path}
@@ -203,7 +241,7 @@ export const MusicianLayout = () => {
                 } ${isSOS ? 'relative' : ''}`}
               >
                 {isSOS && (
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-red-900/20 rounded-full blur-md"></div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-red-900/20 rounded-full blur-md" />
                 )}
                 <div className={`${isSOS ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10' : ''} relative`}>
                   {item.icon}
