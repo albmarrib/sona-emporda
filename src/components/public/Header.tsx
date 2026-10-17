@@ -1,8 +1,13 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiMenu, FiSearch, FiUser, FiX } from "react-icons/fi";
 
-export const Header = () => {
+interface HeaderProps {
+  onOpenSearch?: () => void;
+  activeFiltersCount?: number;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onOpenSearch, activeFiltersCount = 0 }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -13,6 +18,14 @@ export const Header = () => {
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 50);
+  };
+
+  const handleSearchClick = () => {
+    if (onOpenSearch) {
+      onOpenSearch();
+    } else {
+      navigate('/?search=open');
+    }
   };
 
   return (
@@ -52,25 +65,42 @@ export const Header = () => {
             )}
           </div>
 
-          {/* Logo (Center) */}
-          <div className="absolute left-1/2 -translate-x-1/2 text-center">
+          {/* Logo (Center): SONA (blanco mayúsculas) y Empordà (dorado, primera mayúscula, sin espacio) */}
+          <div className="absolute left-1/2 -translate-x-1/2 text-center select-none">
             <Link to="/">
-              <h1 className="text-2xl md:text-3xl tracking-widest uppercase">
-                SONA<span className="text-gold font-serif lowercase px-2">Empordà</span>
+              <h1 className="text-2xl md:text-3xl tracking-widest font-sans font-bold">
+                <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
               </h1>
             </Link>
           </div>
           
           {/* Actions (Right) */}
-          <div className="flex items-center gap-6">
-            <button className="text-white hover:text-gold transition-colors flex items-center gap-2 hidden md:flex active:scale-95">
-              <span className="text-xs uppercase tracking-[0.2em]">Buscar</span>
-              <FiSearch className="w-5 h-5 stroke-[1.5]" />
+          <div className="flex items-center gap-3 sm:gap-6">
+            <button 
+              onClick={handleSearchClick}
+              className={`transition-colors flex items-center gap-2 p-2 active:scale-95 ${
+                activeFiltersCount > 0 
+                  ? 'text-gold font-bold' 
+                  : 'text-white hover:text-gold'
+              }`}
+              title="Buscar y filtrar eventos"
+              aria-label="Buscar"
+            >
+              <span className="hidden sm:block text-xs uppercase tracking-[0.2em]">Buscar</span>
+              <div className="relative">
+                <FiSearch className="w-5 h-5 stroke-[1.5]" />
+                {activeFiltersCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-gold text-black text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold font-sans">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </div>
             </button>
             
             <button 
               onClick={() => navigate("/login")}
               className="text-white hover:text-gold transition-colors flex items-center gap-2 p-2 -mr-2 active:scale-95"
+              aria-label="Acceso"
             >
               <span className="hidden sm:block text-xs uppercase tracking-[0.2em]">Acceso</span>
               <FiUser className="w-5 h-5 stroke-[1.5]" />

@@ -64,6 +64,7 @@ export interface MusicianProfile {
   reviewsCount: number;
   profileImageUrl?: string;
   customApplyMessage?: string;
+  calendar?: MusicianCalendar;
 }
 
 export type DayStatus = 'available' | 'unavailable' | 'booked' | 'booked_full' | 'booked_partial';

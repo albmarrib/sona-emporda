@@ -60,11 +60,12 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
     <div className="flex flex-col lg:flex-row gap-10 lg:gap-12 items-start lg:h-[80vh] min-h-screen lg:min-h-[600px]">
       {/* Calendario (Izquierda en Desktop) */}
       <div className="w-full lg:w-[420px] shrink-0 bg-black border border-white/10 p-6 md:p-8 shadow-2xl h-fit">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <button 
             onClick={handlePrevMonth} 
             disabled={!canGoBack}
-            className={`p-2 transition-colors ${canGoBack ? 'text-white hover:text-gold' : 'text-white/20'}`}
+            className={`p-2 transition-colors ${canGoBack ? 'text-white hover:text-gold cursor-pointer' : 'text-white/20'}`}
+            title="Mes anterior"
           >
             <FiChevronLeft size={20} />
           </button>
@@ -73,9 +74,33 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
           </h3>
           <button 
             onClick={handleNextMonth}
-            className="p-2 text-white hover:text-gold transition-colors"
+            className="p-2 text-white hover:text-gold transition-colors cursor-pointer"
+            title="Mes siguiente"
           >
             <FiChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* Acceso rápido para situarse en Hoy */}
+        <div className="flex justify-center mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date();
+              setCurrentDate(startOfMonth(today));
+              const todayHasEvents = filteredEvents.some(e => e.date && !isNaN(parseISO(e.date).getTime()) && isSameDay(parseISO(e.date), today));
+              if (todayHasEvents) {
+                setSelectedDate(today);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-3.5 py-1 bg-white/5 hover:bg-gold/15 border border-gold/40 hover:border-gold rounded-full text-xs text-gold transition-all cursor-pointer shadow-sm active:scale-95"
+            title="Situar el calendario en la fecha de hoy"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
+            </span>
+            <span className="font-medium tracking-wide">Hoy: {format(new Date(), "d 'de' MMMM", { locale: es })}</span>
           </button>
         </div>
         
@@ -101,17 +126,24 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
                 onClick={() => setSelectedDate(day)}
                 disabled={!hasEvents}
                 className={`
-                  relative p-2 md:p-3 flex flex-col items-center justify-center transition-all duration-300 min-h-[48px]
-                  ${hasEvents ? 'cursor-pointer hover:bg-white/5' : 'opacity-20 cursor-default'}
-                  ${isSelected ? 'bg-gold text-black hover:bg-gold shadow-lg shadow-gold/20' : ''}
-                  ${isToday && !isSelected ? 'ring-1 ring-gold/40 ring-inset' : ''}
+                  relative p-1 md:p-2 flex flex-col items-center justify-center transition-all duration-300 min-h-[48px] rounded-lg
+                  ${hasEvents ? 'cursor-pointer hover:bg-white/10' : (isToday ? 'cursor-default' : 'opacity-20 cursor-default')}
+                  ${isToday && !isSelected ? 'border-2 border-gold bg-gold/15 shadow-[0_0_15px_rgba(197,160,89,0.25)] ring-1 ring-gold/50' : ''}
+                  ${isSelected ? 'bg-gold text-black font-bold shadow-lg shadow-gold/30 border-2 border-gold' : ''}
+                  ${!isToday && !isSelected && hasEvents ? 'hover:border hover:border-white/20' : ''}
                 `}
+                title={isToday ? "Hoy" : undefined}
               >
-                <span className={`text-sm font-serif z-10 ${isSelected ? 'text-black' : 'text-white'}`}>
+                {isToday && (
+                  <span className={`text-[7px] md:text-[8px] font-bold tracking-widest uppercase leading-none mb-0.5 ${isSelected ? 'text-black' : 'text-gold'}`}>
+                    HOY
+                  </span>
+                )}
+                <span className={`text-sm font-serif z-10 ${isSelected ? 'text-black font-bold' : (isToday ? 'text-white font-bold' : 'text-white')}`}>
                   {format(day, "d")}
                 </span>
                 {hasEvents && !isSelected && (
-                  <div className="absolute bottom-1 w-1 h-1 bg-gold rounded-full" />
+                  <div className={`mt-0.5 w-1.5 h-1.5 rounded-full ${isToday ? 'bg-gold shadow-sm' : 'bg-gold'}`} />
                 )}
               </button>
             );

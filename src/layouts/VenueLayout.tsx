@@ -118,8 +118,8 @@ export const VenueLayout = () => {
       {/* ── Sidebar Desktop ───────────────────────────────────────────────── */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full bg-zinc-950">
         <div className="p-8 border-b border-white/10 flex flex-col gap-2">
-          <Link to="/" className="text-xl tracking-widest uppercase">
-            SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+          <Link to="/" className="text-xl tracking-widest font-sans font-bold">
+            <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
           </Link>
           <div className="text-[10px] uppercase tracking-[0.2em] text-gold border border-gold/30 bg-gold/10 px-2 py-1 w-fit rounded-sm font-bold">
             Panel de Local
@@ -179,8 +179,8 @@ export const VenueLayout = () => {
         {/* Mobile Header */}
         <div className="md:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-zinc-950/80 backdrop-blur-md z-40">
           <div className="flex flex-col">
-            <Link to="/venue" className="text-lg tracking-widest uppercase leading-none">
-              SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+            <Link to="/venue" className="text-lg tracking-widest font-sans font-bold leading-none">
+              <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
             </Link>
             <span className="text-[11px] text-white/70 font-bold truncate max-w-[180px] mt-0.5 leading-none">
               {userData?.name || currentUser?.email || 'Mi Local'}

@@ -21,8 +21,8 @@ export const LoadingScreen = () => {
 
       {/* Floating Text */}
       <div className="z-10 text-center flex flex-col items-center gap-2">
-        <div className="text-gold font-serif text-3xl md:text-5xl tracking-widest animate-pulse drop-shadow-[0_0_15px_rgba(197,160,89,0.5)]">
-          SONA<span className="font-light">Empordà</span>
+        <div className="text-3xl md:text-5xl tracking-widest animate-pulse drop-shadow-[0_0_15px_rgba(197,160,89,0.5)] select-none">
+          <span className="text-white font-sans font-bold">SONA</span><span className="text-gold font-serif">Empordà</span>
         </div>
         <div className="text-white/40 text-[10px] uppercase tracking-[0.4em] mt-2">
           Cargando

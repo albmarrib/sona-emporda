@@ -68,8 +68,8 @@ export const MusicianLayout = () => {
       {/* ── Sidebar Desktop ───────────────────────────────────────────────── */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full">
         <div className="p-8 border-b border-white/10 flex flex-col gap-2">
-          <Link to="/" className="text-xl tracking-widest uppercase">
-            SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+          <Link to="/" className="text-xl tracking-widest font-sans font-bold">
+            <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
           </Link>
           <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 border border-white/20 bg-white/5 px-2 py-1 w-fit rounded-sm font-bold">
             Panel de Músico
@@ -131,8 +131,8 @@ export const MusicianLayout = () => {
         {/* Mobile Header — siempre visible */}
         <div className="md:hidden flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-white/10 bg-black/80 backdrop-blur-md z-40">
           <div className="flex flex-col">
-            <Link to="/musician" className="text-lg tracking-widest uppercase leading-none">
-              SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+            <Link to="/musician" className="text-lg tracking-widest font-sans font-bold leading-none">
+              <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
             </Link>
             <span className="text-[11px] text-gold/80 font-bold truncate max-w-[180px] mt-0.5 leading-none">
               {profile?.stageName || currentUser?.email || 'Músico'}

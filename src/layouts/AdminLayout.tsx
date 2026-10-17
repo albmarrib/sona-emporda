@@ -22,8 +22,8 @@ export const AdminLayout = () => {
       {/* Sidebar Desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-white/10 h-full">
         <div className="p-8 border-b border-white/10 flex flex-col gap-2">
-          <Link to="/" className="text-xl tracking-widest uppercase">
-            SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+          <Link to="/" className="text-xl tracking-widest font-sans font-bold">
+            <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
           </Link>
           <div className="text-[10px] uppercase tracking-[0.2em] text-white/40 border border-white/20 bg-red-900/20 px-2 py-1 w-fit rounded-sm font-bold">
             Administración
@@ -70,8 +70,8 @@ export const AdminLayout = () => {
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 border-b border-white/10 bg-black/80 backdrop-blur-md sticky top-0 z-50">
           <div className="flex flex-col">
-            <Link to="/" className="text-lg tracking-widest uppercase">
-              SONA<span className="text-gold font-serif lowercase px-1">Empordà</span>
+            <Link to="/" className="text-lg tracking-widest font-sans font-bold leading-none">
+              <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
             </Link>
             <span className="text-xs text-red-400 font-bold truncate max-w-[200px] mt-0.5">
               ADMINISTRADOR

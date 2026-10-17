@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type MusicianCalendar, type DayStatus } from '../types';
 import { db } from '../firebase/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useEvents } from './useEvents';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,33 +13,34 @@ export const useMusicianCalendar = (musicianId?: string) => {
   const [error, setError] = useState<string | null>(null);
   
   const { currentUser } = useAuth();
-  const { events, loading: eventsLoading } = useEvents(true);
+  const { events, loading: eventsLoading } = useEvents(true, true);
 
-  // 1. Fetch User Calendar from Firestore ONCE
+  // 1. Fetch User Calendar from Firestore in Realtime with onSnapshot
   useEffect(() => {
     const myMusicianId = musicianId || currentUser?.uid;
     if (!myMusicianId) {
+      setBaseCalendar({});
       setBaseLoaded(true);
       return;
     }
 
-    const fetchBase = async () => {
-      try {
-        const docRef = doc(db, 'users', myMusicianId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists() && docSnap.data().calendar) {
-          setBaseCalendar(docSnap.data().calendar);
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setBaseLoaded(true);
+    const docRef = doc(db, 'users', myMusicianId);
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists() && docSnap.data().calendar) {
+        setBaseCalendar(docSnap.data().calendar);
+      } else {
+        setBaseCalendar({});
       }
-    };
-    fetchBase();
+      setBaseLoaded(true);
+    }, (err: any) => {
+      setError(err.message);
+      setBaseLoaded(true);
+    });
+
+    return () => unsubscribe();
   }, [musicianId, currentUser?.uid]);
 
-  // 2. Combine baseCalendar with Events
+  // 2. Combine baseCalendar with Confirmed Events
   useEffect(() => {
     if (!baseLoaded || eventsLoading) return;
 
@@ -47,9 +48,10 @@ export const useMusicianCalendar = (musicianId?: string) => {
     const newCalendar = { ...baseCalendar };
 
     if (myMusicianId) {
+      // Un evento solo bloquea el día si está CONFIRMADO o publicado oficialmente
       const myConfirmedEvents = events.filter(e => 
         e.musicianId === myMusicianId && 
-        (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId)
+        (e.status === 'confirmed' || (e.status === 'published' && e.venueId !== 'external_booking'))
       );
       
       myConfirmedEvents.forEach(event => {
@@ -66,6 +68,9 @@ export const useMusicianCalendar = (musicianId?: string) => {
   }, [baseCalendar, baseLoaded, events, eventsLoading, musicianId, currentUser?.uid]);
 
   const updateDayStatus = async (dateIso: string, status: DayStatus | null) => {
+    const myMusicianId = musicianId || currentUser?.uid;
+    if (!myMusicianId) return;
+
     const newBase = { ...baseCalendar };
     
     if (status === null) {
@@ -74,18 +79,16 @@ export const useMusicianCalendar = (musicianId?: string) => {
       newBase[dateIso] = status;
     }
     
-    // Update local base (will instantly trigger effect to update 'calendar')
+    // Update local base immediately
     setBaseCalendar(newBase);
 
     // Escribir en Firestore
     try {
-      const myMusicianId = musicianId || currentUser?.uid;
-      if (!myMusicianId) return;
       await updateDoc(doc(db, 'users', myMusicianId), {
         calendar: newBase
       });
     } catch (e) {
-      console.error(e);
+      console.error('Error updating calendar day status:', e);
     }
   };
 

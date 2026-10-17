@@ -11,7 +11,7 @@ export const FloatingChatButton: React.FC = () => {
   const location = useLocation();
   const { unreadCount } = useChat();
   const { userRole } = useAuth();
-  const { bookingRequests, pendingBookingCount } = useBookingRequests();
+  const { bookingRequests, unreadBookingCount, pendingBookingCount, markAsRead } = useBookingRequests();
 
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -22,23 +22,23 @@ export const FloatingChatButton: React.FC = () => {
     return null;
   }
 
-  // Total acumulado de avisos para el globo numérico
-  const totalCount = unreadCount + pendingBookingCount;
+  // Total acumulado de avisos para el globo numérico: SOLO NO LEÍDOS
+  const totalCount = unreadCount + unreadBookingCount;
 
   const handleButtonClick = () => {
-    // Si hay de ambos tipos: abrir modal/selector emergente
-    if (unreadCount > 0 && pendingBookingCount > 0) {
+    // Si hay de ambos tipos NO LEÍDOS: abrir selector emergente
+    if (unreadCount > 0 && unreadBookingCount > 0) {
       setIsSelectorOpen(prev => !prev);
       return;
     }
 
-    // Si SOLO hay solicitudes de particular
-    if (pendingBookingCount > 0 && unreadCount === 0) {
+    // Si SOLO hay solicitudes de particular NO LEÍDAS: abrir modal
+    if (unreadBookingCount > 0 && unreadCount === 0) {
       setIsBookingModalOpen(true);
       return;
     }
 
-    // Si SOLO hay mensajes de locales o no hay nada: ir directo al chat
+    // Si ya fueron leídas o solo hay mensajes de locales o no hay nada: ir directo al chat
     goToMessages();
   };
 
@@ -127,9 +127,9 @@ export const FloatingChatButton: React.FC = () => {
 
         {/* Tooltip on desktop */}
         <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 px-3 py-1 bg-black/90 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none hidden md:block">
-          {pendingBookingCount > 0 && unreadCount === 0 
+          {unreadBookingCount > 0 && unreadCount === 0 
             ? 'Solicitud de Contratación' 
-            : (pendingBookingCount > 0 && unreadCount > 0 ? 'Notificaciones' : 'Mensajes')}
+            : (totalCount > 0 ? 'Notificaciones' : 'Mensajes')}
         </span>
       </button>
 
@@ -137,6 +137,7 @@ export const FloatingChatButton: React.FC = () => {
       <BookingRequestModal
         isOpen={isBookingModalOpen}
         requests={bookingRequests}
+        onMarkAsRead={markAsRead}
         onClose={() => setIsBookingModalOpen(false)}
       />
     </>

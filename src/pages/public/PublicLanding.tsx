@@ -7,8 +7,16 @@ import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import { useEvents } from '../../hooks/useEvents';
+import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock, FaChevronLeft, FaChevronRight, FaExclamationCircle } from 'react-icons/fa';
+
+const TIME_SLOTS = [
+  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+  '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+  '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30',
+  '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30',
+  '04:00'
+];
 
 export const PublicLanding = () => {
   const { subdomain } = useParams<{ subdomain: string }>();
@@ -45,23 +53,46 @@ export const PublicLanding = () => {
   const dragStartXRef = useRef(0);
   const dragStartScrollLeftRef = useRef(0);
 
-  const { events } = useEvents(false); // fetch all published events
+  const [bandEvents, setBandEvents] = useState<SonaEvent[]>([]);
 
   const { scrollY } = useScroll();
 
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchLandingData = async () => {
       if (!subdomain) return;
+      const cleanSubdomain = subdomain.toLowerCase();
+      const cacheKey = `sona_landing_${cleanSubdomain}`;
+
+      // 1. Restauración instantánea desde caché local (Stale-While-Revalidate)
+      try {
+        const cachedRaw = sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached.config) {
+            setConfig(cached.config);
+            if (cached.profile) setProfile(cached.profile);
+            if (cached.events) setBandEvents(cached.events);
+            setLoading(false);
+          }
+        }
+      } catch (e) {
+        // Ignorar fallos de parsing de caché
+      }
       
       try {
         const q = query(
           collection(db, 'public_landings'),
-          where('subdomain', '==', subdomain.toLowerCase())
+          where('subdomain', '==', cleanSubdomain)
         );
         const querySnapshot = await getDocs(q);
         
+        if (isCancelled) return;
+
         if (querySnapshot.empty) {
           setError(true);
+          setLoading(false);
           return;
         }
 
@@ -70,35 +101,90 @@ export const PublicLanding = () => {
         
         if (!data.isActive) {
           setError(true);
+          setLoading(false);
           return;
         }
 
+        // Renderizado del Hero y diseño en cuanto llega la config
         setConfig(data);
+        setLoading(false);
+
         const musId = docSnap.id;
         
-        // Fetch Musician EPK Profile for Contact Info
-        const profileRef = doc(db, 'users', musId);
-        const profileSnap = await getDoc(profileRef);
-        if (profileSnap.exists()) {
+        // 2. Cargar Perfil y Eventos en paralelo (sólo los de este músico en particular)
+        const profilePromise = getDoc(doc(db, 'users', musId)).catch(err => {
+          console.warn("Error fetching profile:", err);
+          return null;
+        });
+
+        const eventsPromise = (data.modules?.showLiveDates || data.modules?.showBookingWidget)
+          ? getDocs(query(collection(db, 'events'), where('musicianId', '==', musId))).catch(err => {
+              console.warn("Error fetching musician events:", err);
+              return null;
+            })
+          : Promise.resolve(null);
+
+        const [profileSnap, eventsSnap] = await Promise.all([profilePromise, eventsPromise]);
+        if (isCancelled) return;
+
+        let resolvedProfile: MusicianProfile | null = null;
+        if (profileSnap && profileSnap.exists()) {
           const pData = profileSnap.data();
-          setProfile({
-             ...pData,
-             id: musId,
-             contactWhatsapp: pData.phone || pData.contactWhatsapp || '',
-             instagramUrl: pData.instagramUrl || '',
-             contactEmail: pData.contactEmail || ''
-          } as MusicianProfile);
+          resolvedProfile = {
+            ...pData,
+            id: musId,
+            contactWhatsapp: pData.phone || pData.contactWhatsapp || '',
+            instagramUrl: pData.instagramUrl || '',
+            contactEmail: pData.contactEmail || ''
+          } as MusicianProfile;
+          setProfile(resolvedProfile);
+        }
+
+        let resolvedEvents: SonaEvent[] = [];
+        if (eventsSnap && !eventsSnap.empty) {
+          resolvedEvents = eventsSnap.docs
+            .map(d => {
+              const evData = d.data();
+              // Normalizar fecha si viene de Firestore Timestamp
+              let dateStr = evData.date;
+              if (dateStr && typeof dateStr.toDate === 'function') {
+                dateStr = dateStr.toDate().toISOString();
+              }
+              return { id: d.id, ...evData, date: dateStr } as SonaEvent;
+            })
+            .filter(e => e.status === 'published' || e.status === 'confirmed')
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setBandEvents(resolvedEvents);
+        }
+
+        // Guardar en caché para la próxima visita inmediata
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({
+            config: data,
+            profile: resolvedProfile,
+            events: resolvedEvents
+          }));
+        } catch (e) {
+          // Ignorar si la cuota de sessionStorage se excede
         }
 
       } catch (err) {
         console.error("Error fetching landing config:", err);
-        setError(true);
+        if (!config) {
+          setError(true);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchLandingData();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [subdomain]);
 
   const isDark = config?.design?.theme === 'dark';
@@ -127,6 +213,26 @@ export const PublicLanding = () => {
       { id: 'contact', label: 'Contacto' }
     ];
   }, [config]);
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const isDateUnavailable = useMemo(() => {
+    if (!bookingForm.date) return false;
+    
+    // 1. Revisar estado manual en el calendario del músico
+    const calStatus = profile?.calendar?.[bookingForm.date];
+    if (calStatus === 'unavailable' || calStatus === 'booked' || calStatus === 'booked_full') {
+      return true;
+    }
+    
+    // 2. Revisar si ya tiene eventos confirmados o publicados este día
+    const hasEvent = bandEvents.some(e => {
+      const d = e.date ? (typeof e.date === 'string' ? e.date.split('T')[0] : '') : '';
+      return d === bookingForm.date && (e.status === 'confirmed' || e.status === 'published');
+    });
+
+    return hasEvent;
+  }, [bookingForm.date, profile?.calendar, bandEvents]);
 
   // Transición suave entre pantallas en modo horizontal
   const goToSectionIndex = (index: number) => {
@@ -294,6 +400,10 @@ export const PublicLanding = () => {
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.id) return;
+    if (isDateUnavailable) {
+      alert('El grupo no está disponible para esta fecha. Por favor, selecciona otro día.');
+      return;
+    }
     setBookingStatus('submitting');
     try {
       const eventData = {
@@ -389,13 +499,7 @@ export const PublicLanding = () => {
   };
   const instagramLink = getCleanInstagramUrl(profile?.instagramUrl, config.modules.instagramUsername);
 
-  // Filter events for this band (All events, newest to oldest)
-  const bandEvents = events
-    .filter(e => 
-      e.musicianId === profile?.id && 
-      (e.status === 'published' || e.status === 'confirmed')
-    )
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 
   return (
     <div className={`min-h-screen ${bgColor} ${textColor} ${fontClass} ${isHorizontalLayout ? 'overflow-y-hidden md:overflow-x-hidden' : 'overflow-x-hidden'} selection:bg-gray-500/30 scroll-smooth`}>
@@ -652,6 +756,7 @@ export const PublicLanding = () => {
                       key={ytIds[activeVideoIndex] || ytIds[0]}
                       width="100%" 
                       height="100%" 
+                      loading="lazy"
                       src={`https://www.youtube.com/embed/${ytIds[activeVideoIndex] || ytIds[0]}?vq=hd1080&rel=0&modestbranding=1`} 
                       title="Vídeo de la banda" 
                       frameBorder="0" 
@@ -869,22 +974,48 @@ export const PublicLanding = () => {
                 </select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <input 
-                  type="date" 
-                  required
-                  value={bookingForm.date}
-                  onChange={e => setBookingForm({...bookingForm, date: e.target.value})}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light outline-none`}
-                  style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                />
-                <input 
-                  type="time" 
-                  value={bookingForm.time}
-                  onChange={e => setBookingForm({...bookingForm, time: e.target.value})}
-                  className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light outline-none`}
-                  style={{ colorScheme: isDark ? 'dark' : 'light' }}
-                />
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest opacity-60 mb-1">
+                    Fecha del evento
+                  </label>
+                  <input 
+                    type="date" 
+                    required
+                    min={todayStr}
+                    value={bookingForm.date}
+                    onChange={e => setBookingForm({...bookingForm, date: e.target.value})}
+                    className={`w-full bg-transparent border-0 border-b ${isDateUnavailable ? 'border-red-500 text-red-400' : `border-${inputBorder}/30`} py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base placeholder:font-light outline-none cursor-pointer`}
+                    style={{ colorScheme: isDark ? 'dark' : 'light' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase tracking-widest opacity-60 mb-1">
+                    Hora prevista
+                  </label>
+                  <select 
+                    required
+                    value={bookingForm.time}
+                    onChange={e => setBookingForm({...bookingForm, time: e.target.value})}
+                    className={`w-full bg-transparent border-0 border-b border-${inputBorder}/30 py-3 px-0 focus:ring-0 focus:border-${inputBorder} transition-colors font-light text-base outline-none cursor-pointer`}
+                    style={{ color: 'inherit' }}
+                  >
+                    <option value="" className="text-black">Seleccionar hora...</option>
+                    {TIME_SLOTS.map(slot => (
+                      <option key={slot} value={slot} className="text-black">
+                        {slot} h
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {isDateUnavailable && (
+                <div className="p-3 bg-red-500/15 border border-red-500/30 rounded-lg text-red-400 text-xs flex items-center justify-center gap-2 text-center animate-pulse">
+                  <FaExclamationCircle className="w-4 h-4 shrink-0 text-red-400" />
+                  <span>El grupo no está disponible para esta fecha. Por favor, selecciona otro día.</span>
+                </div>
+              )}
+
               <div>
                 <textarea 
                   required
@@ -903,10 +1034,10 @@ export const PublicLanding = () => {
                 ) : (
                   <button 
                     type="submit" 
-                    disabled={bookingStatus === 'submitting'}
-                    className={`border border-current px-10 py-3 text-xs tracking-[0.3em] uppercase transition-all duration-300 ${btnHover} ${bookingStatus === 'submitting' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={bookingStatus === 'submitting' || isDateUnavailable}
+                    className={`border border-current px-10 py-3 text-xs tracking-[0.3em] uppercase transition-all duration-300 ${btnHover} ${bookingStatus === 'submitting' || isDateUnavailable ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
-                    {bookingStatus === 'submitting' ? 'Enviando...' : 'Enviar Petición'}
+                    {bookingStatus === 'submitting' ? 'Enviando...' : isDateUnavailable ? 'No Disponible en Esta Fecha' : 'Enviar Petición'}
                   </button>
                 )}
               </div>

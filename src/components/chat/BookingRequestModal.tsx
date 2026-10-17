@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiCalendar, FiClock, FiUser, FiPhone, FiMail, FiMessageSquare, FiCheck, FiX, FiCheckCircle } from 'react-icons/fi';
 import { db } from '../../firebase/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import type { BookingRequest } from '../../hooks/useBookingRequests';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -9,35 +9,55 @@ import { es } from 'date-fns/locale';
 interface BookingRequestModalProps {
   requests: BookingRequest[];
   isOpen: boolean;
+  onMarkAsRead?: (id: string) => void;
   onClose: () => void;
 }
 
 export const BookingRequestModal: React.FC<BookingRequestModalProps> = ({
   requests,
   isOpen,
+  onMarkAsRead,
   onClose
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  if (!isOpen || requests.length === 0) return null;
-
-  const currentRequest = requests[Math.min(currentIndex, requests.length - 1)];
+  const currentRequest = (requests && requests.length > 0)
+    ? requests[Math.min(currentIndex, requests.length - 1)]
+    : null;
   const contact = currentRequest?.externalContact;
+
+  // Al abrir el modal con una solicitud, marcarla automáticamente como leída
+  // (Este hook debe ejecutarse SIEMPRE antes de cualquier return condicional)
+  useEffect(() => {
+    if (isOpen && currentRequest?.id && onMarkAsRead) {
+      onMarkAsRead(currentRequest.id);
+    }
+  }, [isOpen, currentRequest?.id, onMarkAsRead]);
+
+  if (!isOpen || !currentRequest) return null;
 
   const handleAccept = async () => {
     if (!currentRequest) return;
     setProcessingId(currentRequest.id);
     try {
+      const dateKey = currentRequest.date ? currentRequest.date.split('T')[0] : null;
+      const musId = currentRequest.musicianId;
+
       // Al confirmar la propuesta externa, pasa a status 'confirmed', fijándose en su calendario
       await updateDoc(doc(db, 'events', currentRequest.id), {
-        status: 'confirmed'
+        status: 'confirmed',
+        readByMusician: true
       });
-      if (requests.length <= 1) {
-        onClose();
-      } else {
-        setCurrentIndex(prev => Math.max(0, prev - 1));
+
+      // Marcar explícitamente el día en el calendario del músico como booked_full
+      if (musId && dateKey) {
+        await updateDoc(doc(db, 'users', musId), {
+          [`calendar.${dateKey}`]: 'booked_full'
+        });
       }
+
+      onClose();
     } catch (err) {
       console.error(err);
       alert('Error al aceptar la solicitud');
@@ -51,14 +71,26 @@ export const BookingRequestModal: React.FC<BookingRequestModalProps> = ({
     if (!window.confirm('¿Seguro que deseas descartar esta solicitud de contratación?')) return;
     setProcessingId(currentRequest.id);
     try {
+      const dateKey = currentRequest.date ? currentRequest.date.split('T')[0] : null;
+      const musId = currentRequest.musicianId;
+
       await updateDoc(doc(db, 'events', currentRequest.id), {
-        status: 'rejected'
+        status: 'rejected',
+        readByMusician: true
       });
-      if (requests.length <= 1) {
-        onClose();
-      } else {
-        setCurrentIndex(prev => Math.max(0, prev - 1));
+
+      // Asegurar que si el día estaba en el calendario, se elimine
+      if (musId && dateKey) {
+        const userRef = doc(db, 'users', musId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists() && userSnap.data().calendar) {
+          const cal = { ...userSnap.data().calendar };
+          delete cal[dateKey];
+          await updateDoc(userRef, { calendar: cal });
+        }
       }
+
+      onClose();
     } catch (err) {
       console.error(err);
       alert('Error al descartar la solicitud');
@@ -207,24 +239,34 @@ export const BookingRequestModal: React.FC<BookingRequestModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-black/60 border-t border-white/10 flex flex-col sm:flex-row gap-2.5">
-          <button
-            type="button"
-            disabled={processingId === currentRequest.id}
-            onClick={handleAccept}
-            className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gold hover:bg-yellow-500 text-black font-bold text-xs uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-gold/20 disabled:opacity-50"
-          >
-            <FiCheckCircle className="w-4 h-4" />
-            {processingId === currentRequest.id ? 'Guardando...' : 'Aceptar en mi Calendario'}
-          </button>
+        <div className="p-4 bg-black/60 border-t border-white/10 flex flex-col gap-2.5">
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <button
+              type="button"
+              disabled={processingId === currentRequest.id}
+              onClick={handleAccept}
+              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-gold hover:bg-yellow-500 text-black font-bold text-xs uppercase tracking-widest rounded-lg transition-colors shadow-lg shadow-gold/20 disabled:opacity-50"
+            >
+              <FiCheckCircle className="w-4 h-4" />
+              {processingId === currentRequest.id ? 'Guardando...' : 'Aceptar en mi Calendario'}
+            </button>
+
+            <button
+              type="button"
+              disabled={processingId === currentRequest.id}
+              onClick={handleDecline}
+              className="flex items-center justify-center gap-1.5 py-3 px-4 border border-white/15 hover:border-red-500/50 hover:bg-red-950/20 text-white/50 hover:text-red-400 font-semibold text-xs uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50"
+            >
+              <FiX className="w-4 h-4" /> Descartar
+            </button>
+          </div>
 
           <button
             type="button"
-            disabled={processingId === currentRequest.id}
-            onClick={handleDecline}
-            className="flex items-center justify-center gap-1.5 py-3 px-4 border border-white/15 hover:border-red-500/50 hover:bg-red-950/20 text-white/50 hover:text-red-400 font-semibold text-xs uppercase tracking-wider rounded-lg transition-colors disabled:opacity-50"
+            onClick={onClose}
+            className="text-white/40 hover:text-gold text-[11px] uppercase tracking-wider py-1 text-center transition-colors"
           >
-            <FiX className="w-4 h-4" /> Descartar
+            Decidir más tarde (Guardar en Mis Ofertas)
           </button>
         </div>
 

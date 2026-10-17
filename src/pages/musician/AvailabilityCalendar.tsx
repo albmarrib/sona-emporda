@@ -22,6 +22,8 @@ export const AvailabilityCalendar = () => {
   const { activeSosCount, activeCollabCount } = useSosAlerts();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedManageDate, setSelectedManageDate] = useState<string | null>(null);
+  const [confirmCancelDate, setConfirmCancelDate] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [eventToView, setEventToView] = useState<any | null>(null);
   const { findOrCreateChat, sendMessage } = useChat();
 
@@ -40,20 +42,8 @@ export const AvailabilityCalendar = () => {
     const dateKey = format(date, dateFormat);
     const currentStatus = calendar[dateKey];
     
-    // Si ya hay un bolo confirmado ('booked_full' o 'booked_partial')
-    if (currentStatus === 'booked_full' || currentStatus === 'booked_partial') {
-      setSelectedManageDate(dateKey);
-      return;
-    }
-
-    // Toggle normal: Libre (null) <-> No Disponible (unavailable)
-    let newStatus: DayStatus | null = 'unavailable';
-    if (currentStatus === 'unavailable') {
-      newStatus = null;
-    } else {
-      if (!window.confirm(`¿Estás seguro de que quieres marcar el día ${format(date, 'd', { locale: es })} de ${format(date, 'MMMM', { locale: es })} como No Disponible?`)) return;
-    }
-
+    // Toggle directo: Libre (null) <-> No Disponible (unavailable)
+    const newStatus: DayStatus | null = (currentStatus === 'unavailable' || currentStatus === 'booked_full') ? null : 'unavailable';
     await updateDayStatus(dateKey, newStatus);
   };
 
@@ -155,13 +145,23 @@ export const AvailabilityCalendar = () => {
             const status = calendar[dateKey];
             const isToday = isSameDay(day, new Date());
 
-            // Find confirmed events to display count
+            // Eventos confirmados para el músico (solo con status confirmed o published oficial)
             const myEvents = events.filter(e => e.musicianId === (currentUser?.uid || ""));
-            const confirmedEventsToday = myEvents.filter(e => e.date.split('T')[0] === dateKey && (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId));
+            const confirmedEventsToday = myEvents.filter(e => 
+              e.date && e.date.split('T')[0] === dateKey && 
+              (e.status === 'confirmed' || (e.status === 'published' && e.venueId !== 'external_booking'))
+            );
             
-            const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === dateKey);
-            const isConfirmedEvent = eventOnThisDay && (eventOnThisDay.status === 'confirmed' || (eventOnThisDay.status === 'published' && eventOnThisDay.musicianId) || !eventOnThisDay.venueId);
-            const isPendingNegotiation = eventOnThisDay && !isConfirmedEvent && (eventOnThisDay.status === 'pending_musician' || eventOnThisDay.status === 'musician_accepted');
+            const eventOnThisDay = myEvents.find(e => e.date && e.date.split('T')[0] === dateKey);
+            const isConfirmedEvent = eventOnThisDay && (
+              eventOnThisDay.status === 'confirmed' || 
+              (eventOnThisDay.status === 'published' && eventOnThisDay.venueId !== 'external_booking')
+            );
+            const isPendingNegotiation = eventOnThisDay && !isConfirmedEvent && (
+              eventOnThisDay.status === 'pending_musician' || 
+              eventOnThisDay.status === 'musician_accepted'
+            );
+            const effectiveStatus = (confirmedEventsToday.length > 0 && status !== 'booked_partial') ? 'booked_full' : status;
 
             return (
               <div 
@@ -169,14 +169,16 @@ export const AvailabilityCalendar = () => {
                 onClick={() => {
                   if (isPendingNegotiation && eventOnThisDay) {
                     navigate(`/musician/offers`);
+                  } else if (confirmedEventsToday.length > 0) {
+                    setSelectedManageDate(dateKey);
                   } else {
                     toggleDayStatus(day);
                   }
                 }}
                 className={`aspect-[4/5] p-1 md:p-2 border transition-colors cursor-pointer flex flex-col justify-between overflow-hidden relative
-                  ${getStatusColor(status)}
+                  ${getStatusColor(effectiveStatus)}
                   ${isToday ? 'ring-1 md:ring-2 ring-white ring-inset' : ''}
-                  ${(status === 'booked_full' || status === 'booked_partial') || isPendingNegotiation ? 'hover:border-gold hover:text-gold transition-all group' : ''}
+                  ${(effectiveStatus === 'booked_full' || effectiveStatus === 'booked_partial') || isPendingNegotiation ? 'hover:border-gold hover:text-gold transition-all group' : ''}
                 `}
               >
                 {isPendingNegotiation && (
@@ -252,7 +254,10 @@ export const AvailabilityCalendar = () => {
                 Gestión del Día
               </h3>
               <button 
-                onClick={() => setSelectedManageDate(null)}
+                onClick={() => {
+                  setSelectedManageDate(null);
+                  setConfirmCancelDate(null);
+                }}
                 className="text-white/40 hover:text-white transition-colors"
               >
                 <FiX className="w-5 h-5" />
@@ -261,7 +266,10 @@ export const AvailabilityCalendar = () => {
 
             {(() => {
               const myEvents = events.filter(e => e.musicianId === currentUser?.uid);
-              const eventOnThisDay = myEvents.find(e => e.date.split('T')[0] === selectedManageDate);
+              const eventOnThisDay = myEvents.find(e => {
+                const d = e.date ? e.date.split('T')[0] : '';
+                return d === selectedManageDate;
+              });
               const currentStatus = calendar[selectedManageDate];
               
               if (!eventOnThisDay) {
@@ -335,37 +343,70 @@ export const AvailabilityCalendar = () => {
 
                   <div className="h-px bg-white/10 my-2"></div>
 
-                  <button 
-                    onClick={async () => {
-                      if (!window.confirm('¿Estás seguro de cancelar tu actuación? Se avisará automáticamente al local.')) return;
-                      try {
-                        await updateDoc(doc(db, 'events', eventOnThisDay.id), {
-                          status: 'musician_cancelled',
-                          musicianId: null,
-                          musicianName: null,
-                          applicants: arrayRemove(currentUser!.uid),
-                          cancelledByMusicianId: currentUser!.uid,
-                          cancelledByMusicianName: userData?.stageName || 'Un músico'
-                        });
+                  {confirmCancelDate === selectedManageDate ? (
+                    <div className="bg-red-950/40 border border-red-500/50 p-4 rounded flex flex-col gap-3 animate-in fade-in">
+                      <p className="text-white text-xs font-semibold text-center leading-relaxed">
+                        ¿Seguro que deseas anular tu actuación? Se liberará la fecha en tu calendario.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={isCancelling}
+                          onClick={async () => {
+                            setIsCancelling(true);
+                            try {
+                              const updatePayload: any = {
+                                status: 'musician_cancelled',
+                                musicianId: null,
+                                musicianName: null,
+                                cancelledByMusicianId: currentUser?.uid || '',
+                                cancelledByMusicianName: userData?.stageName || 'Un músico'
+                              };
+                              if (currentUser?.uid && Array.isArray(eventOnThisDay.applicants)) {
+                                updatePayload.applicants = arrayRemove(currentUser.uid);
+                              }
+                              await updateDoc(doc(db, 'events', eventOnThisDay.id), updatePayload);
 
-                        if (eventOnThisDay.venueId && eventOnThisDay.venueId !== 'external_booking') {
-                          const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
-                          const formattedDate = format(new Date(eventOnThisDay.date), "d 'de' MMMM", { locale: es });
-                          const cancelMsg = `Hola, lamentablemente no podré actuar en el evento "${eventOnThisDay.title}" del ${formattedDate}. Mi actuación queda anulada.`;
-                          await sendMessage(chatId, cancelMsg);
-                        }
-                        
-                        await updateDayStatus(selectedManageDate, null);
-                        setSelectedManageDate(null);
-                      } catch (err) {
-                        console.error(err);
-                        alert("Error al cancelar la actuación.");
-                      }
-                    }}
-                    className="w-full bg-red-900/30 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white font-bold uppercase tracking-widest text-[10px] py-3 transition-colors"
-                  >
-                    Cancelar mi Actuación
-                  </button>
+                              // Notificación por chat (no bloqueante)
+                              if (eventOnThisDay.venueId && eventOnThisDay.venueId !== 'external_booking') {
+                                try {
+                                  const chatId = await findOrCreateChat(eventOnThisDay.venueId, eventOnThisDay.id);
+                                  const formattedDate = format(new Date(eventOnThisDay.date), "d 'de' MMMM", { locale: es });
+                                  const cancelMsg = `Hola, lamentablemente no podré actuar en el evento "${eventOnThisDay.title}" del ${formattedDate}. Mi actuación queda anulada.`;
+                                  await sendMessage(chatId, cancelMsg);
+                                } catch (chatErr) {
+                                  console.warn("Could not send chat message on cancellation:", chatErr);
+                                }
+                              }
+                            } catch (err) {
+                              console.error('Error al cancelar actuación:', err);
+                            } finally {
+                              await updateDayStatus(selectedManageDate, null);
+                              setSelectedManageDate(null);
+                              setConfirmCancelDate(null);
+                              setIsCancelling(false);
+                            }
+                          }}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold uppercase tracking-wider text-[10px] py-2.5 transition-colors disabled:opacity-50"
+                        >
+                          {isCancelling ? 'Cancelando...' : 'Sí, Cancelar'}
+                        </button>
+                        <button
+                          disabled={isCancelling}
+                          onClick={() => setConfirmCancelDate(null)}
+                          className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold uppercase tracking-wider text-[10px] py-2.5 transition-colors"
+                        >
+                          Volver
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setConfirmCancelDate(selectedManageDate)}
+                      className="w-full bg-red-900/30 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white font-bold uppercase tracking-widest text-[10px] py-3 transition-colors"
+                    >
+                      Cancelar mi Actuación
+                    </button>
+                  )}
                 </div>
               );
             })()}

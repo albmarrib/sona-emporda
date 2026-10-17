@@ -19,11 +19,18 @@ export const DirectOffers = () => {
     try {
       if (action === 'accept') {
         const offer = offers.find(o => o.id === id);
-        const newStatus = offer?.venueId === 'external_booking' ? 'confirmed' : 'musician_accepted';
+        const dateKey = offer?.date ? offer.date.split('T')[0] : null;
+        const musId = offer?.musicianId || currentUser?.uid;
         
         await updateDoc(doc(db, 'events', id), {
-          status: newStatus
+          status: 'confirmed'
         });
+
+        if (musId && dateKey) {
+          await updateDoc(doc(db, 'users', musId), {
+            [`calendar.${dateKey}`]: 'booked_full'
+          });
+        }
       } else {
         const offer = offers.find(o => o.id === id);
         const declinedId = offer?.musicianId || currentUser?.uid;

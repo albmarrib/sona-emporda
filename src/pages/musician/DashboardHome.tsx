@@ -19,10 +19,10 @@ export const DashboardHome = () => {
   const [showPastEvents, setShowPastEvents] = useState(false);
   const { activeSosCount, activeCollabCount } = useSosAlerts();
 
-  // Solo mostramos en el Dashboard los bolos realmente CONFIRMADOS o los de relleno (mock)
+  // Solo mostramos en el Dashboard los bolos realmente CONFIRMADOS
   const myEvents = events.filter(event => 
     (event.musicianId === currentUser?.uid || (event.musicianId && event.musicianId.startsWith('musician-'))) &&
-    (event.status === 'confirmed' || (event.status === 'published' && event.musicianId) || !event.venueId)
+    (event.status === 'confirmed' || (event.status === 'published' && event.musicianId && event.venueId !== 'external_booking'))
   );
   
   // Filtrar según el toggle

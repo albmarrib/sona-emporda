@@ -5,6 +5,7 @@ import { EventCard } from "../../components/public/EventCard";
 import { EventCalendar } from "../../components/public/EventCalendar";
 import { VenueList } from "../../components/public/VenueList";
 import { LoadingScreen } from "../../components/shared/LoadingScreen";
+import { InlineSearchBar } from "../../components/public/InlineSearchBar";
 import { useEvents } from "../../hooks/useEvents";
 import { useAuth } from "../../contexts/AuthContext";
 import { InstallPWAModal } from "../../components/public/InstallPWAModal";
@@ -18,14 +19,13 @@ type ViewMode = "LISTA" | "CALENDARIO" | "LUGARES";
 export const Home = () => {
   const { events, loading: eventsLoading, error } = useEvents();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   
-  // Estados para filtro de Músicos
+  // Filtros unificados en barra inline (la web de fondo permanece 100% visible)
+  const [selectedVibe, setSelectedVibe] = useState<string>("");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState<boolean>(false);
   const [selectedMusician, setSelectedMusician] = useState<string | null>(null);
-  const [isMusicianDropdownOpen, setIsMusicianDropdownOpen] = useState(false);
-  const [musicianSearchTerm, setMusicianSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   const [isStandalone, setIsStandalone] = useState(false);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -38,6 +38,19 @@ export const Home = () => {
   
   const viewParam = searchParams.get("view") as ViewMode;
   const activeView: ViewMode = ["LISTA", "CALENDARIO", "LUGARES"].includes(viewParam) ? viewParam : "LISTA";
+
+  // Auto-abrir búsqueda si viene ?search=open (ej. desde el botón de la cabecera en otra página)
+  useEffect(() => {
+    if (searchParams.get("search") === "open") {
+      setIsSearchOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("search");
+      setSearchParams(next, { replace: true });
+      setTimeout(() => {
+        document.getElementById("search-panel")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     // Auto-redirect authenticated users to their dashboard on load
@@ -73,19 +86,38 @@ export const Home = () => {
   // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
   const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');
 
-  // Extraer músicos únicos para el filtro
+  // Extraer lista de músicos ordenada alfabéticamente
   const uniqueMusicians = useMemo(() => {
     const musicians = confirmedEvents
       .map(e => e.musicianName)
       .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
-    return Array.from(new Set(musicians)).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(musicians)).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }, [confirmedEvents]);
 
-  const filteredMusiciansList = useMemo(() => {
-    if (!musicianSearchTerm.trim()) return uniqueMusicians;
-    const term = musicianSearchTerm.toLowerCase();
-    return uniqueMusicians.filter(m => m.toLowerCase().includes(term));
-  }, [uniqueMusicians, musicianSearchTerm]);
+  // Contar filtros activos
+  const activeFiltersCount =
+    (selectedMusician ? 1 : 0) +
+    (selectedVibe ? 1 : 0) +
+    (showFavoritesOnly ? 1 : 0) +
+    (searchQuery.trim() ? 1 : 0);
+
+  // Botón "Todos": limpia todo y vuelve a mostrar toda la programación
+  const handleResetAll = () => {
+    setSelectedVibe("");
+    setShowFavoritesOnly(false);
+    setSelectedMusician(null);
+    setSearchQuery("");
+  };
+
+  const handleToggleSearch = () => {
+    const nextState = !isSearchOpen;
+    setIsSearchOpen(nextState);
+    if (nextState) {
+      setTimeout(() => {
+        document.getElementById("programacion")?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    }
+  };
 
   useEffect(() => {
     if (heroEvents.length <= 1) return;
@@ -107,23 +139,40 @@ export const Home = () => {
     );
   }
 
-  // El código de los hooks de carouselIndex fue movido arriba
-
   const currentHeroEvent = heroEvents[carouselIndex];
   
-  // Filtrar el resto de eventos para la lista
+  // Filtrar eventos en tiempo real abajo en la lista
   const filteredEvents = confirmedEvents
     .filter(e => {
+      // 1. Filtro Favoritos
       if (showFavoritesOnly && !isFavorite(e.id)) return false;
+      // 2. Filtro Músico
       if (selectedMusician && e.musicianName !== selectedMusician) return false;
-      if (selectedVibes.length === 0) return true;
-      return (e.vibes || []).some((v: any) => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
+      // 3. Filtro Estilo / Tipo de evento
+      if (selectedVibe && !(e.vibes || []).some((v: any) => v.toUpperCase().includes(selectedVibe.toUpperCase()))) {
+        return false;
+      }
+      // 4. Búsqueda por texto (nombre de evento, local o músico)
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchTitle = (e.title || '').toLowerCase().includes(q);
+        const matchMusician = (e.musicianName || '').toLowerCase().includes(q);
+        const matchVenue = (e.venueName || '').toLowerCase().includes(q);
+        const matchLocation = (e.venueLocation || e.location || '').toLowerCase().includes(q);
+        if (!matchTitle && !matchMusician && !matchVenue && !matchLocation) return false;
+      }
+      return true;
     });
 
   return (
     <div className="min-h-screen bg-black text-white">
       <InstallPWAModal />
-      <Header />
+      
+      {/* Header con botón Buscar integrado */}
+      <Header 
+        onOpenSearch={handleToggleSearch}
+        activeFiltersCount={activeFiltersCount}
+      />
 
       <main>
         {/* Hero Event Carousel (Destacado) */}
@@ -234,14 +283,19 @@ export const Home = () => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-12">
           
-          <div className="flex flex-col gap-6 mb-8 border-b border-white/10 pb-6">
+          <div id="programacion" className="flex flex-col gap-4 mb-8 border-b border-white/10 pb-6 scroll-mt-24">
             
             {/* Header de la sección */}
-            <div className="flex flex-row items-center justify-between gap-6 relative">
+            <div className="flex flex-row items-center justify-between gap-4">
               {activeView === "LISTA" ? (
-                <h2 className="text-2xl md:text-4xl font-serif text-white">
-                  Programación
-                </h2>
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-2xl md:text-4xl font-serif text-white">
+                    Programación
+                  </h2>
+                  <span className="text-xs text-white/40 uppercase tracking-widest font-mono">
+                    ({filteredEvents.length} {filteredEvents.length === 1 ? 'concierto' : 'conciertos'})
+                  </span>
+                </div>
               ) : (
                 <button
                   onClick={() => setActiveView("LISTA")}
@@ -251,186 +305,114 @@ export const Home = () => {
                 </button>
               )}
               
-              {/* Botones de Filtro */}
-              <div className="flex flex-row items-center gap-3">
-                
-                {/* Botón Artistas */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setIsMusicianDropdownOpen(!isMusicianDropdownOpen);
-                      if (!isMusicianDropdownOpen) setIsFilterOpen(false); // cerrar el otro
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-[10px] uppercase tracking-[0.2em] transition-all duration-500 rounded-sm ${
-                      selectedMusician
-                        ? "bg-white text-black font-bold shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
-                        : "border border-white/20 text-white hover:border-white/60 hover:bg-white/5"
-                    }`}
-                  >
-                    <User className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">
-                      {selectedMusician ? selectedMusician.length > 15 ? `${selectedMusician.substring(0, 15)}...` : selectedMusician : "Artistas"}
-                    </span>
-                    <span className="sm:hidden">
-                      {selectedMusician ? "1" : "Art"}
-                    </span>
-                  </button>
-
-                  {isMusicianDropdownOpen && (
-                    <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 z-50 bg-[#0a0a0a] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 w-64 md:w-72 rounded-sm flex flex-col max-h-[350px]">
-                      
-                      <div className="p-3 border-b border-white/10 flex items-center gap-2 bg-black/40">
-                        <Search className="w-4 h-4 text-white/40" />
-                        <input 
-                          type="text" 
-                          placeholder="Buscar artista..." 
-                          value={musicianSearchTerm}
-                          onChange={(e) => setMusicianSearchTerm(e.target.value)}
-                          className="w-full bg-transparent border-none focus:outline-none text-white text-xs placeholder:text-white/30"
-                        />
-                        {musicianSearchTerm && (
-                          <button onClick={() => setMusicianSearchTerm("")} className="text-white/40 hover:text-white">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
-                        <button
-                          onClick={() => {
-                            setSelectedMusician(null);
-                            setIsMusicianDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
-                        >
-                          <div className={`w-3 h-3 rounded-full flex-shrink-0 border flex items-center justify-center transition-all mr-3 ${!selectedMusician ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
-                            {!selectedMusician && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
-                          </div>
-                          <span className={`text-xs transition-colors ${!selectedMusician ? "text-gold font-bold" : "text-white/60 group-hover:text-white"}`}>
-                            Todos los artistas
-                          </span>
-                        </button>
-                        
-                        {filteredMusiciansList.length === 0 ? (
-                          <div className="px-4 py-6 text-center text-white/30 text-xs italic">
-                            No se encontraron artistas
-                          </div>
-                        ) : (
-                          filteredMusiciansList.map(musician => (
-                            <button
-                              key={musician}
-                              onClick={() => {
-                                setSelectedMusician(musician);
-                                setIsMusicianDropdownOpen(false);
-                              }}
-                              className="w-full flex items-center px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
-                            >
-                              <div className={`w-3 h-3 rounded-full flex-shrink-0 border flex items-center justify-center transition-all mr-3 ${selectedMusician === musician ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
-                                {selectedMusician === musician && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
-                              </div>
-                              <span className={`text-xs transition-colors truncate ${selectedMusician === musician ? "text-white font-bold" : "text-white/60 group-hover:text-white"}`}>
-                                {musician}
-                              </span>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Botón de Filtros Unificado */}
-                <div className="relative">
-                  <button
-                    onClick={() => {
-                      setIsFilterOpen(!isFilterOpen);
-                      if (!isFilterOpen) setIsMusicianDropdownOpen(false);
-                    }}
-                    className={`flex items-center gap-3 px-5 py-2.5 text-[10px] uppercase tracking-[0.2em] transition-all duration-500 rounded-sm ${
-                      selectedVibes.length > 0
-                        ? "bg-gold text-black shadow-[0_0_15px_rgba(197,160,89,0.3)]" 
-                        : "border border-white/20 text-white hover:border-white/60 hover:bg-white/5"
-                    }`}
-                  >
-                    <span className={selectedVibes.length > 0 ? "font-bold" : ""}>
-                      Filtros {selectedVibes.length > 0 && `(${selectedVibes.length})`}
-                    </span>
-                    <svg className="w-3 h-3 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                  </button>
-
-                  {isFilterOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50 bg-[#0a0a0a] border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 w-48 rounded-sm">
-                  <div className="flex flex-col py-2">
-                    {/* Botón Favoritos */}
-                    <button
-                      onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors group border-b border-white/5 mb-1"
-                    >
-                      <div className={`w-3 h-3 rounded-sm flex-shrink-0 border flex items-center justify-center transition-all ${showFavoritesOnly ? "border-red-500 bg-red-500/20" : "border-white/20 group-hover:border-white/40"}`}>
-                        {showFavoritesOnly && <Heart className="w-2.5 h-2.5 text-red-500 fill-red-500" />}
-                      </div>
-                      <span className={`text-[10px] uppercase tracking-widest transition-colors ${showFavoritesOnly ? "text-red-500 font-bold" : "text-white/60 group-hover:text-white"}`}>
-                        Favoritos
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedVibes([])}
-                      className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
-                    >
-                      <div className={`w-3 h-3 rounded-sm flex-shrink-0 border flex items-center justify-center transition-all ${selectedVibes.length === 0 ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
-                        {selectedVibes.length === 0 && <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
-                      </div>
-                      <span className={`text-[10px] uppercase tracking-widest transition-colors ${selectedVibes.length === 0 ? "text-gold font-bold" : "text-white/60 group-hover:text-white"}`}>
-                        Todos
-                      </span>
-                    </button>
-                    
-                    {VIBES.map(vibe => {
-                      const isSelected = selectedVibes.includes(vibe);
-                      return (
-                        <button
-                          key={vibe}
-                          onClick={() => {
-                            if (isSelected) {
-                              setSelectedVibes(selectedVibes.filter(v => v !== vibe));
-                            } else {
-                              setSelectedVibes([...selectedVibes, vibe]);
-                            }
-                          }}
-                          className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/5 transition-colors group"
-                        >
-                          <div className={`w-3 h-3 rounded-sm flex-shrink-0 border flex items-center justify-center transition-all duration-300 ${isSelected ? "border-gold bg-gold" : "border-white/20 group-hover:border-white/40"}`}>
-                            {isSelected && (
-                              <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <span className={`text-[10px] uppercase tracking-widest transition-colors ${isSelected ? "text-white font-bold" : "text-white/60 group-hover:text-white"}`}>
-                            {vibe}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  <div className="p-2 border-t border-white/5 bg-black/40">
-                    <button 
-                      onClick={() => setIsFilterOpen(false)}
-                      className="w-full bg-gold text-black text-[9px] uppercase tracking-[0.2em] font-bold py-2.5 rounded-sm hover:bg-white hover:shadow-[0_0_15px_rgba(255,255,255,0.2)] transition-all duration-300"
-                    >
-                      Aplicar Filtros
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* Botón Buscar / Filtrar que abre o cierra la barra inline */}
+              <button
+                onClick={handleToggleSearch}
+                className={`flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition-all rounded-sm cursor-pointer ${
+                  isSearchOpen || activeFiltersCount > 0 
+                    ? 'bg-gold text-black font-bold shadow-md' 
+                    : 'border border-white/20 text-white/80 hover:text-white hover:border-white/50 hover:bg-white/5'
+                }`}
+                title={isSearchOpen ? "Ocultar panel de búsqueda" : "Abrir buscador y filtros"}
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">
+                  {isSearchOpen ? 'Cerrar Buscador' : (activeFiltersCount > 0 ? `Filtros (${activeFiltersCount})` : 'Buscar')}
+                </span>
+                <span className="sm:hidden">
+                  {isSearchOpen ? 'Cerrar' : (activeFiltersCount > 0 ? `(${activeFiltersCount})` : 'Buscar')}
+                </span>
+              </button>
             </div>
+
+            {/* Barra de búsqueda y filtros inline: la web permanece visible y filtra en vivo */}
+            <InlineSearchBar
+              isOpen={isSearchOpen}
+              onClose={() => setIsSearchOpen(false)}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              musicians={uniqueMusicians}
+              selectedMusician={selectedMusician}
+              onSelectMusician={setSelectedMusician}
+              vibes={VIBES}
+              selectedVibe={selectedVibe}
+              onSelectVibe={setSelectedVibe}
+              showFavoritesOnly={showFavoritesOnly}
+              onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              onResetAll={handleResetAll}
+              totalFilteredEvents={filteredEvents.length}
+              totalConfirmedEvents={confirmedEvents.length}
+            />
+
+            {/* Badges de filtros activos si la barra está cerrada pero hay filtros */}
+            {!isSearchOpen && activeFiltersCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 animate-in fade-in duration-200">
+                <span className="text-[10px] uppercase tracking-wider text-white/40 mr-1">Filtros activos:</span>
+                
+                {selectedMusician && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs text-white">
+                    <User className="w-3 h-3 text-gold" />
+                    <span>{selectedMusician}</span>
+                    <button 
+                      onClick={() => setSelectedMusician(null)} 
+                      className="hover:text-red-400 ml-1"
+                      title="Quitar artista"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {selectedVibe && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold/10 border border-gold/30 rounded-full text-xs text-gold">
+                    <span>{selectedVibe}</span>
+                    <button 
+                      onClick={() => setSelectedVibe("")}
+                      className="hover:text-red-400 ml-1"
+                      title="Quitar estilo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {showFavoritesOnly && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-xs text-red-400">
+                    <Heart className="w-3 h-3 fill-red-400" />
+                    <span>Favoritos</span>
+                    <button 
+                      onClick={() => setShowFavoritesOnly(false)}
+                      className="hover:text-white ml-1"
+                      title="Quitar filtro de favoritos"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {searchQuery.trim() && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs text-white">
+                    <Search className="w-3 h-3 text-white/50" />
+                    <span>"{searchQuery}"</span>
+                    <button 
+                      onClick={() => setSearchQuery("")}
+                      className="hover:text-red-400 ml-1"
+                      title="Quitar término de búsqueda"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                <button
+                  onClick={handleResetAll}
+                  className="text-[11px] text-white/40 hover:text-red-400 underline ml-2 transition-colors cursor-pointer"
+                >
+                  Todos (Limpiar)
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-        </div>
           
           {/* Main Content Area based on View */}
           <section className="min-h-[40vh]">
@@ -442,28 +424,48 @@ export const Home = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-20 border border-white/5">
-                  <p className="text-white/40 text-xs uppercase tracking-widest">
-                    No hay eventos programados en esta categoría.
+                <div className="text-center py-20 border border-white/5 space-y-3">
+                  <p className="text-white/60 text-sm tracking-wide">
+                    No se han encontrado conciertos con los filtros seleccionados.
                   </p>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={handleResetAll}
+                      className="inline-block border border-gold text-gold hover:bg-gold hover:text-black transition-colors px-4 py-2 text-xs uppercase tracking-widest font-bold cursor-pointer"
+                    >
+                      Mostrar Todos los Conciertos
+                    </button>
+                  )}
                 </div>
               )
             )}
 
             {activeView === "CALENDARIO" && (
-              <EventCalendar events={confirmedEvents} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
+              <EventCalendar 
+                events={filteredEvents} 
+                selectedVibes={selectedVibe ? [selectedVibe] : []}
+                showFavorites={showFavoritesOnly}
+                selectedMusician={selectedMusician}
+              />
             )}
 
             {activeView === "LUGARES" && (
-              <VenueList events={confirmedEvents} selectedVibes={selectedVibes} showFavorites={showFavoritesOnly} selectedMusician={selectedMusician} />
+              <VenueList 
+                events={confirmedEvents} 
+                selectedVibes={selectedVibe ? [selectedVibe] : []}
+                showFavorites={showFavoritesOnly}
+                selectedMusician={selectedMusician}
+              />
             )}
           </section>
         </div>
       </main>
       
-      {/* Footer Minimalista */}
+      {/* Footer Minimalista con Identidad de Marca */}
       <footer className="border-t border-white/10 py-12 text-center mt-20 relative">
-        <div className="text-gold font-serif text-2xl mb-4">Sona Empordà</div>
+        <div className="text-2xl mb-4 font-sans font-bold tracking-widest select-none">
+          <span className="text-white">SONA</span><span className="text-gold font-serif font-normal">Empordà</span>
+        </div>
         <p className="text-white/30 text-[10px] uppercase tracking-widest mb-6">
           © {new Date().getFullYear()} Todos los derechos reservados.
         </p>

@@ -91,7 +91,7 @@ export const useEvents = (includeDrafts = false, includePrivate = false) => {
       isMounted = false;
       unsubscribe();
     };
-  }, [includeDrafts]);
+  }, [includeDrafts, includePrivate]);
 
   return { events, loading, error };
 };
