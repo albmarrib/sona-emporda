@@ -1,28 +1,25 @@
 import { useState, useEffect } from 'react';
-import { FiSearch, FiMic, FiFilter, FiMapPin, FiStar, FiPlayCircle, FiMessageSquare, FiCheckCircle, FiX } from 'react-icons/fi';
-// mock data removed
+import { FiSearch, FiMapPin, FiStar, FiCheckCircle, FiX } from 'react-icons/fi';
 import { EPKModal } from '../../components/shared/EPKModal';
 import { db } from '../../firebase/firebase';
 import { collection, addDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../hooks/useSettings';
 
-
+// In-memory cache so switching tabs on mobile or desktop shows all musicians instantly without refetch delay
+let cachedMusicians: any[] = [];
 
 export const ArtistSearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [aiInput, setAiInput] = useState('');
-  const [aiMessages, setAiMessages] = useState<{sender: 'user' | 'ai', text: string}[]>([]);
-  const [isChatMode, setIsChatMode] = useState(false);
+  const [genreFilter, setGenreFilter] = useState('Todos');
   const [contacted, setContacted] = useState<string[]>([]);
   const { currentUser } = useAuth();
   const [selectedArtist, setSelectedArtist] = useState<any | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [genreFilter, setGenreFilter] = useState('Todos');
 
   const { settings } = useSettings();
 
-  const [realMusicians, setRealMusicians] = useState<any[]>([]);
+  const [realMusicians, setRealMusicians] = useState<any[]>(cachedMusicians);
+  const [loadingMusicians, setLoadingMusicians] = useState(cachedMusicians.length === 0);
 
   useEffect(() => {
     const q = query(collection(db, 'users'), where('role', '==', 'musician'));
@@ -43,9 +40,12 @@ export const ArtistSearch = () => {
           baseLocation: data.baseLocation || ''
         };
       });
+      cachedMusicians = musicians;
       setRealMusicians(musicians);
+      setLoadingMusicians(false);
     }, (error) => {
       console.error("Error fetching real musicians", error);
+      setLoadingMusicians(false);
     });
 
     return () => unsubscribe();
@@ -56,7 +56,7 @@ export const ArtistSearch = () => {
   const filteredResults = combinedMusicians.filter(artist => {
     const matchesSearch = artist.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           artist.mainGenre.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGenre = genreFilter === 'Todos' || artist.mainGenre === genreFilter;
+    const matchesGenre = genreFilter === 'Todos' || artist.mainGenre.toLowerCase() === genreFilter.toLowerCase();
     return matchesSearch && matchesGenre;
   });
 
@@ -76,7 +76,7 @@ export const ArtistSearch = () => {
         venueId: currentUser?.uid || 'venue-123',
         musicianId: artist.id
       });
-      setContacted([...contacted, artist.id]);
+      setContacted(prev => [...prev, artist.id]);
       setSelectedArtist(null);
     } catch (e) {
       console.error(e);
@@ -85,200 +85,148 @@ export const ArtistSearch = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl min-h-[calc(100vh-12rem)] pb-20">
+    <div className="flex flex-col gap-6 max-w-5xl px-4 sm:px-6 py-4 pb-28">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-        <div className="flex items-center justify-between w-full md:w-auto">
-          <h1 className="text-xl md:text-2xl font-serif text-white uppercase tracking-widest truncate">Búsqueda</h1>
-        </div>
-
-        <div className="flex items-center gap-2 bg-black border border-white/10 p-1 rounded-sm">
-          <button 
-            onClick={() => setIsChatMode(true)}
-            className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${isChatMode ? 'bg-gold text-black' : 'text-white/60 hover:text-white'}`}
-          >
-            Agente IA
-          </button>
-          <button 
-            onClick={() => setIsChatMode(false)}
-            className={`px-4 py-2 text-[10px] uppercase tracking-widest font-bold transition-colors ${!isChatMode ? 'bg-gold text-black' : 'text-white/60 hover:text-white'}`}
-          >
-            Buscador Clásico
-          </button>
-        </div>
+      {/* Header */}
+      <div className="border-b border-white/10 pb-4">
+        <h1 className="text-xl md:text-2xl font-serif text-white uppercase tracking-widest">
+          Músicos
+        </h1>
       </div>
 
-      {isChatMode ? (
-        <div className="flex-1 flex flex-col bg-zinc-950 border border-white/10 overflow-hidden relative">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-gold/5 via-transparent to-transparent pointer-events-none"></div>
-          
-          <div className="flex-1 p-6 md:p-8 overflow-y-auto flex flex-col gap-6">
-            
-            <div className="flex gap-4 max-w-2xl">
-              <div className="w-8 h-8 rounded-full bg-gold/20 border border-gold/50 flex items-center justify-center shrink-0">
-                <FiSearch className="text-gold w-4 h-4" />
-              </div>
-              <div className="bg-white/5 border border-white/10 p-4 rounded-r-xl rounded-bl-xl">
-                <p className="text-sm text-white/80 leading-relaxed">
-                  Hola. Soy tu <strong>Agente de Booking IA</strong> de Sona Empordà. Conozco la disponibilidad, el caché y el estilo de todos los músicos de la plataforma.
-                  <br/><br/>
-                  ¿Qué estás buscando para tu local? (Ej: *"Necesito un grupo de rumba animado para este sábado por la tarde, presupuesto 400€"*).
-                </p>
-              </div>
-            </div>
-
-            {/* Chat Messages */}
-            {aiMessages.map((msg, idx) => (
-              <div key={idx} className={`flex gap-4 max-w-2xl ${msg.sender === 'user' ? 'self-end flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.sender === 'user' ? 'bg-white/10 border border-white/20' : 'bg-gold/20 border border-gold/50'}`}>
-                  {msg.sender === 'user' ? <span className="text-[10px] text-white/50">TÚ</span> : <FiSearch className="text-gold w-4 h-4" />}
-                </div>
-                <div className={`p-4 ${msg.sender === 'user' ? 'bg-gold/10 border border-gold/20 rounded-l-xl rounded-br-xl' : 'bg-white/5 border border-white/10 rounded-r-xl rounded-bl-xl'}`}>
-                  <p className="text-sm text-white leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                </div>
-              </div>
-            ))}
-
+      <div className="flex-1 flex flex-col gap-5">
+        {/* Search & Genre Filter Bar */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search Input with Clear Button */}
+          <div className="flex-1 relative">
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 w-4 h-4" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nombre, estilo..." 
+              className="w-full bg-zinc-950 border border-white/10 py-3 pl-11 pr-10 text-sm text-white focus:border-gold focus:outline-none transition-colors"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white transition-colors"
+                title="Borrar búsqueda"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
-          <div className="p-4 border-t border-white/10 bg-black">
-            <div className="relative flex items-center">
-              <input 
-                type="text" 
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                placeholder="Escribe tu petición aquí..." 
-                className="w-full bg-white/5 border border-white/10 py-4 pl-4 pr-16 text-sm text-white focus:border-gold focus:outline-none focus:bg-white/10 transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && aiInput.trim() !== '') {
-                    const newMsg = { sender: 'user' as const, text: aiInput };
-                    setAiMessages(prev => [...prev, newMsg]);
-                    setAiInput('');
-                    
-                    // Simulate AI response
-                    setTimeout(() => {
-                      setAiMessages(prev => [...prev, { 
-                        sender: 'ai', 
-                        text: "He recibido tu petición. Como Agente de Booking IA, en el futuro podré contactar directamente con los músicos que encajen en esta descripción y gestionar las negociaciones por ti.\\n\\nSi deseas buscar manualmente, puedes usar la pestaña 'Buscador Clásico' de forma independiente." 
-                      }]);
-                    }, 1000);
-                  }
-                }}
-              />
-              <button className="absolute right-4 text-white/50 hover:text-gold transition-colors">
-                <FiMic className="w-5 h-5" />
-              </button>
-            </div>
+          {/* Direct Genre Dropdown */}
+          <div className="w-full sm:w-56 shrink-0 relative">
+            <select 
+              value={genreFilter} 
+              onChange={e => setGenreFilter(e.target.value)} 
+              className="w-full bg-zinc-950 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none cursor-pointer transition-colors"
+            >
+              <option value="Todos" className="bg-zinc-950 text-white">Todos los géneros</option>
+              {settings.genres.map(genre => (
+                <option key={genre} value={genre} className="bg-zinc-950 text-white">{genre}</option>
+              ))}
+            </select>
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col gap-6">
-          {/* Classic Search Header */}
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-              <input 
-                type="text" 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Buscar por nombre, género o instrumento..." 
-                className="w-full bg-zinc-950 border border-white/10 py-3 pl-12 pr-4 text-sm text-white focus:border-gold focus:outline-none"
-              />
-            </div>
-            <button onClick={() => setShowFilters(true)} className="flex items-center justify-center gap-2 bg-zinc-950 border border-white/10 px-6 py-3 text-[10px] uppercase tracking-widest text-white hover:text-gold transition-colors">
-              <FiFilter /> Filtros Avanzados
+
+        {/* Results counter & active filter indicator */}
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-white/40">
+          <span>{filteredResults.length} músico{filteredResults.length !== 1 ? 's' : ''} disponible{filteredResults.length !== 1 ? 's' : ''}</span>
+          {(searchQuery || genreFilter !== 'Todos') && (
+            <button 
+              onClick={() => { setSearchQuery(''); setGenreFilter('Todos'); }} 
+              className="text-gold hover:underline flex items-center gap-1 lowercase tracking-normal"
+            >
+              <FiX className="w-3 h-3" /> restablecer filtros
+            </button>
+          )}
+        </div>
+
+        {/* Results Grid */}
+        {loadingMusicians && filteredResults.length === 0 ? (
+          <div className="py-16 flex flex-col items-center justify-center gap-3 text-white/50">
+            <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs uppercase tracking-widest text-gold/80">Cargando músicos...</p>
+          </div>
+        ) : filteredResults.length === 0 ? (
+          <div className="py-16 text-center border border-white/5 bg-zinc-950/50 p-8 rounded-sm">
+            <p className="text-white/60 text-sm mb-2">No se encontraron músicos con los filtros actuales.</p>
+            <button 
+              onClick={() => { setSearchQuery(''); setGenreFilter('Todos'); }}
+              className="text-xs text-gold uppercase tracking-widest hover:underline mt-2 inline-block font-bold"
+            >
+              Ver todos los músicos
             </button>
           </div>
-
-          <div className="flex gap-2 text-[10px] uppercase tracking-widest text-white/40 mb-2">
-            Resultados: {filteredResults.length} músicos encontrados
-          </div>
-
-          {/* Results Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-y-auto pb-8">
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 pb-8">
             {filteredResults.map(artist => {
               const isContacted = contacted.includes(artist.id);
               return (
-              <div key={artist.id} className="bg-zinc-950 border border-white/10 flex flex-col hover:border-white/30 transition-colors group">
-                <div className="h-48 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
-                  <img src={artist.profileImageUrl} alt={artist.stageName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  <div className="absolute bottom-4 left-4 z-20">
-                    <h3 className="text-2xl font-serif text-white">{artist.stageName}</h3>
-                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold mt-1">
-                      <FiMapPin /> {artist.baseLocation || 'Sin ubicación'}
+                <div 
+                  key={artist.id} 
+                  onClick={() => setSelectedArtist(artist)}
+                  className="bg-zinc-950 border border-white/10 flex flex-col hover:border-gold/50 cursor-pointer active:scale-[0.99] transition-all group rounded-sm overflow-hidden shadow-lg select-none"
+                >
+                  <div className="h-44 sm:h-48 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent z-10"></div>
+                    <img 
+                      src={artist.profileImageUrl} 
+                      alt={artist.stageName} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    />
+                    <div className="absolute bottom-3 left-4 z-20">
+                      <h3 className="text-xl sm:text-2xl font-serif text-white group-hover:text-gold transition-colors">
+                        {artist.stageName}
+                      </h3>
+                      <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gold/90 mt-0.5">
+                        <FiMapPin /> {artist.baseLocation || 'Empordà'}
+                      </div>
                     </div>
-                  </div>
-                  <button className="absolute bottom-4 right-4 z-20 bg-gold text-black p-3 rounded-full hover:bg-white transition-colors shadow-lg">
-                    <FiPlayCircle className="w-6 h-6" />
-                  </button>
-                </div>
-                
-                <div className="p-6 flex flex-col gap-4 flex-1">
-                  <div className="flex flex-wrap gap-2">
-                    {[artist.mainGenre].map((g: string) => (
-                      <span key={g} className="bg-white/5 border border-white/10 px-2 py-1 text-[10px] uppercase tracking-widest text-white/70">
-                        {g}
-                      </span>
-                    ))}
                   </div>
                   
-                  <p className="text-sm text-white/60 line-clamp-2 leading-relaxed">
-                    {(artist as any).shortBio || 'Sin biografía disponible.'}
-                  </p>
-
-                  <div className="mt-auto pt-4 border-t border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-1 text-gold">
-                      <FiStar className="w-4 h-4 fill-gold" />
-                      <span className="font-bold text-sm ml-1">{artist.rating.toFixed(1)}</span>
-                      <span className="text-white/40 text-[10px]">({artist.reviewsCount})</span>
+                  <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
+                    <div className="flex flex-wrap gap-2">
+                      {[artist.mainGenre].map((g: string) => (
+                        <span key={g} className="bg-white/5 border border-white/10 px-2 py-1 text-[10px] uppercase tracking-widest text-white/70">
+                          {g}
+                        </span>
+                      ))}
                     </div>
-                    {isContacted ? (
-                      <span className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-green-500">
-                        <FiCheckCircle /> Contactado
-                      </span>
-                    ) : (
-                      <button onClick={() => setSelectedArtist(artist)} className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-white hover:text-gold transition-colors">
-                        <FiMessageSquare /> Ver EPK y Contactar
-                      </button>
-                    )}
+                    
+                    <p className="text-sm text-white/60 line-clamp-2 leading-relaxed">
+                      {(artist as any).shortBio || (artist as any).description || 'Músico registrado en Sona Empordà.'}
+                    </p>
+
+                    <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-gold">
+                        <FiStar className="w-4 h-4 fill-gold" />
+                        <span className="font-bold text-sm ml-1">{artist.rating.toFixed(1)}</span>
+                        <span className="text-white/40 text-[10px]">({artist.reviewsCount})</span>
+                      </div>
+                      
+                      {isContacted ? (
+                        <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-bold text-green-500">
+                          <FiCheckCircle className="w-3.5 h-3.5" /> Contactado
+                        </span>
+                      ) : (
+                        <span className="text-[10px] uppercase tracking-widest text-gold/80 group-hover:text-gold font-bold flex items-center gap-1 transition-colors">
+                          Ver EPK →
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )})}
+              );
+            })}
           </div>
+        )}
 
-        </div>
-      )}
-
-      {/* Filter Modal */}
-      {showFilters && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/10 p-6 md:p-8 max-w-sm w-full shadow-2xl relative">
-            <button onClick={() => setShowFilters(false)} className="absolute top-4 right-4 text-white/50 hover:text-white">
-              <FiX className="w-6 h-6" />
-            </button>
-            <h2 className="text-2xl font-serif text-white mb-6">Filtros Avanzados</h2>
-            
-            <div className="flex flex-col gap-4 mb-8">
-              <label className="text-[10px] uppercase tracking-widest text-white/50">Género</label>
-              <select value={genreFilter} onChange={e => setGenreFilter(e.target.value)} className="bg-white/5 border border-white/10 p-3 text-sm text-white focus:outline-none focus:border-gold">
-                <option value="Todos" className="bg-zinc-950 text-white">Todos</option>
-                {settings.genres.map(genre => (
-                  <option key={genre} value={genre} className="bg-zinc-950 text-white">{genre}</option>
-                ))}
-              </select>
-
-              <label className="text-[10px] uppercase tracking-widest text-white/50 mt-4">Caché Máximo</label>
-              <input type="range" className="w-full accent-gold" />
-            </div>
-
-            <button onClick={() => setShowFilters(false)} className="w-full bg-gold text-black font-bold uppercase tracking-widest text-[10px] py-4 hover:bg-white transition-colors">
-              Aplicar Filtros
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* EPK Modal */}
       {selectedArtist && (

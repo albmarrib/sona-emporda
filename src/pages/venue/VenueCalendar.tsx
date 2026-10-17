@@ -111,19 +111,54 @@ export const VenueCalendar = () => {
   const dateKey = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
 
   const isMusicianBooked = (musicianId: string, dateStr: string) => {
-    return events.some(e => 
-      e.musicianId === musicianId && 
-      (e.status === 'published' || !e.status) && 
-      format(parseISO(e.date), 'yyyy-MM-dd') === dateStr
-    );
+    return events.some(e => {
+      if (e.musicianId !== musicianId) return false;
+      const activeStatuses = ['confirmed', 'published', 'pending_musician', 'musician_accepted'];
+      if (!activeStatuses.includes(e.status) && e.status) return false;
+      if (e.status === 'cancelled' || e.status === 'rejected' || e.status === 'musician_cancelled') return false;
+      if (!e.date) return false;
+      try {
+        const eDateStr = typeof e.date === 'string' && e.date.length >= 10 ? e.date.slice(0, 10) : format(parseISO(e.date), 'yyyy-MM-dd');
+        return eDateStr === dateStr;
+      } catch {
+        return false;
+      }
+    });
   };
-  const implicitlyAvailableStrict = dateKey ? combinedMusicians.filter(m => (m.calendar[dateKey] === undefined || m.calendar[dateKey] === 'free' || m.calendar[dateKey] === 'booked_partial') && !isMusicianBooked(m.id, dateKey) && !selectedDayEvent?.applicants?.includes(m.id)) : [];
+
+  const isMusicianAvailableOnDate = (m: any, dateStr: string) => {
+    const calStatus = m.calendar?.[dateStr];
+
+    // Explicitly blocked/occupied in musician's own calendar
+    if (calStatus === 'booked_full' || calStatus === 'unavailable' || calStatus === 'booked') {
+      return false;
+    }
+
+    // Has an active booking/event in the platform
+    const isBooked = isMusicianBooked(m.id, dateStr);
+    if (isBooked) {
+      // Only available if they explicitly allow partial booking / doblete
+      return calStatus === 'booked_partial';
+    }
+
+    return true;
+  };
+
+  const implicitlyAvailableStrict = dateKey ? combinedMusicians.filter(m => 
+    isMusicianAvailableOnDate(m, dateKey) && 
+    !selectedDayEvent?.applicants?.includes(m.id) &&
+    m.id !== selectedDayEvent?.cancelledByMusicianId &&
+    !selectedDayEvent?.declinedBy?.includes(m.id)
+  ) : [];
   
   const applicantsList = selectedDayEvent?.applicants 
     ? combinedMusicians.filter(m => selectedDayEvent.applicants?.includes(m.id))
     : [];
   
-  const searchResults = searchQuery ? implicitlyAvailableStrict.filter(a => a.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || a.mainGenre.toLowerCase().includes(searchQuery.toLowerCase())) : [];
+  const searchResults = searchQuery ? implicitlyAvailableStrict.filter(a => 
+    a.stageName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    a.mainGenre.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
 
 
   return (
@@ -456,11 +491,20 @@ export const VenueCalendar = () => {
                   <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
                   <input 
                     type="text" 
-                    placeholder="Filtrar músicos por nombre o género..."
+                    placeholder="Filtrar músicos disponibles por nombre o género..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 py-3 pl-10 pr-4 text-sm text-white focus:border-gold focus:outline-none"
+                    className="w-full bg-white/5 border border-white/10 py-3 pl-10 pr-10 text-sm text-white focus:border-gold focus:outline-none"
                   />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white"
+                      title="Borrar filtro"
+                    >
+                      <FiX className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -471,23 +515,18 @@ export const VenueCalendar = () => {
                     Resultados de la búsqueda ({searchResults.length})
                   </div>
                   {searchResults.length === 0 ? (
-                    <p className="text-white/30 text-xs italic">No hay coincidencias.</p>
+                    <p className="text-white/30 text-xs italic">No hay músicos disponibles que coincidan con la búsqueda.</p>
                   ) : (
                     searchResults
                       .filter(artist => artist.id !== selectedDayEvent?.cancelledByMusicianId)
                       .map(artist => {
-                      const status = artist.calendar[dateKey || ''] || 'free';
-                      const isBooked = dateKey ? isMusicianBooked(artist.id, dateKey) : false;
+                      const calStatus = artist.calendar[dateKey || ''] || 'free';
                       let badge = 'Agenda Libre';
-                      let isWarning = false;
-                      if (status === 'available' && !isBooked) badge = '¡Ganas de tocar!';
-                      if (status === 'booked' || status === 'unavailable' || isBooked) {
-                        badge = '⚠ Ocupado / No Disponible';
-                        isWarning = true;
-                      }
+                      if (calStatus === 'booked_partial') badge = 'Acepta Doblete';
+                      else if (calStatus === 'available') badge = '¡Ganas de tocar!';
                       const isDeclined = selectedDayEvent?.declinedBy?.includes(artist.id) || false;
                       return (
-                        <ArtistCard key={`srch-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : badge} isWarning={isWarning || isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
+                        <ArtistCard key={`srch-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : badge} isWarning={isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
                       );
                     })
                   )}
@@ -526,9 +565,13 @@ export const VenueCalendar = () => {
                       implicitlyAvailableStrict
                         .filter(artist => artist.id !== selectedDayEvent?.cancelledByMusicianId)
                         .map(artist => {
+                        const calStatus = artist.calendar[dateKey || ''] || 'free';
+                        let badge = 'Agenda Libre';
+                        if (calStatus === 'booked_partial') badge = 'Acepta Doblete';
+                        else if (calStatus === 'available') badge = '¡Ganas de tocar!';
                         const isDeclined = selectedDayEvent?.declinedBy?.includes(artist.id) || false;
                         return (
-                          <ArtistCard key={`imp-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : "Agenda Libre"} isWarning={isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
+                          <ArtistCard key={`imp-${artist.id}`} artist={artist} badge={isDeclined ? "HA DECLINADO" : badge} isWarning={isDeclined} isDeclined={isDeclined} onSelect={() => setSelectedArtist(artist)} />
                         );
                       })
                     )}

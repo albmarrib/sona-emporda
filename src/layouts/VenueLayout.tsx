@@ -60,6 +60,7 @@ const VenueSwipeWrapper = ({ children }: { children: ReactNode }) => {
   return (
     <m.div
       drag="x"
+      dragDirectionLock
       dragElastic={{ left: 0.07, right: 0.07 }}
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={handleDragEnd}
@@ -222,7 +223,7 @@ export const VenueLayout = () => {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.15 }}
-                      className="h-full w-full"
+                      className="min-h-full w-full flex flex-col"
                     >
                       {outlet}
                     </motion.div>

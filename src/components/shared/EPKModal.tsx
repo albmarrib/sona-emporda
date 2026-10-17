@@ -34,8 +34,11 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
   }, [dateKey, venueOpenEvents, selectedEventId]);
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-black border border-white/10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overscroll-none">
+      <div 
+        className="bg-black border border-white/10 max-w-2xl w-full max-h-[88vh] overflow-y-auto overscroll-y-contain shadow-2xl relative rounded-sm"
+        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+      >
         <button onClick={onClose} className="absolute top-4 right-4 text-white bg-black/50 p-2 rounded-full hover:bg-gold hover:text-black transition-colors z-30">
           <span className="text-xl font-bold px-2 py-1 leading-none"><FiX /></span>
         </button>
@@ -48,7 +51,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
           </div>
         </div>
 
-        <div className="p-6 md:p-8 flex flex-col gap-6">
+        <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 pb-14 sm:pb-8">
           
               {isApplicantForEventId ? (
                 <>
