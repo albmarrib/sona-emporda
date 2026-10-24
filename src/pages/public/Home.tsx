@@ -232,12 +232,26 @@ export const Home = () => {
                     {event.sponsorTier && event.sponsorTier > 0 && <FiAward className="w-4 h-4" />}
                     {(event.sponsorTier && event.sponsorTier > 0) ? 'Patrocinado' : 'Destacado'}
                   </span>
-                  <h2 className="text-4xl md:text-6xl font-serif text-white mb-4 max-w-4xl leading-tight drop-shadow-xl">
+                  {/* 1. Nombre del evento tal cual estaba */}
+                  <h2 className="text-4xl md:text-6xl font-serif text-white mb-2 max-w-4xl leading-tight drop-shadow-xl">
                     {event.title}
                   </h2>
-                  <p className="text-white/60 text-xs md:text-sm uppercase tracking-widest mb-8 max-w-xl">
-                    {event.venueName} — {event.venueLocation}
+
+                  {/* 2. Justo debajo el nombre del local tal cual estaba */}
+                  <p className="text-white/60 text-xs md:text-sm uppercase tracking-widest mb-4 max-w-xl">
+                    {event.venueName}
                   </p>
+
+                  {/* 3. Músico o grupo */}
+                  {event.musicianName && event.musicianName.trim().toLowerCase() !== 'banda por confirmar' ? (
+                    <p className="text-2xl md:text-4xl font-serif text-gold font-bold tracking-wide drop-shadow-lg mb-8 text-center leading-tight">
+                      {event.musicianName}
+                    </p>
+                  ) : (
+                    <p className="text-xs md:text-sm text-white/40 mb-8 italic text-center">
+                      Banda por confirmar
+                    </p>
+                  )}
                   <div className="flex items-center gap-4">
                     <Link 
                       to={`/event/${event.id}`}
