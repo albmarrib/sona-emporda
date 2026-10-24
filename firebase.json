@@ -6,6 +6,7 @@
     "source": "functions"
   },
   "hosting": {
+    "site": "sona-emporda",
     "public": "dist",
     "ignore": [
       "firebase.json",

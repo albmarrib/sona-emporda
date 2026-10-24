@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
-import { FiList, FiSearch, FiCalendar, FiLifeBuoy, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiList, FiSearch, FiCalendar, FiLifeBuoy, FiLogOut, FiSettings, FiMessageSquare } from 'react-icons/fi';
 import { useEffect, useState } from 'react';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
 import { TutorialSlides } from '../components/shared/TutorialSlides';
@@ -11,16 +11,10 @@ import { Info } from 'lucide-react';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
 import { PushNotificationBanner } from '../components/chat/PushNotificationBanner';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
-import { SwipeWrapper } from '../components/musician/SwipeWrapper';
+import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 
 /**
  * Rutas de las 3 vistas principales del local.
- * Reciben SwipeWrapper en móvil y ocupan todo el espacio disponible.
- *
- * IMPORTANTE: SwipeWrapper lee useLocation() internamente, así que funciona
- * con cualquier array de rutas que le pasemos. Sin embargo, el componente
- * actual está parametrizado para las rutas del músico. Por eso creamos el
- * VenueSwipeWrapper inline aquí con las rutas correctas.
  */
 const VENUE_HUB_ROUTES = [
   '/venue/calendar',
@@ -28,47 +22,11 @@ const VENUE_HUB_ROUTES = [
   '/venue/dashboard',
 ];
 
-// Mini wrapper idéntico a SwipeWrapper pero con las rutas del local
 import { type ReactNode } from 'react';
-import { useNavigate as useNav } from 'react-router-dom';
-import { motion as m } from 'framer-motion';
 
-const SWIPE_THRESHOLD = 50;
-const SWIPE_VELOCITY  = 250;
-
+// Wrapper pasivo para evitar bloqueos del scroll táctil en móvil
 const VenueSwipeWrapper = ({ children }: { children: ReactNode }) => {
-  const nav      = useNav();
-  const { pathname } = useLocation();
-
-  const idx = VENUE_HUB_ROUTES.findIndex(r => pathname === r || pathname.startsWith(r + '/'));
-  if (idx === -1) return <>{children}</>;
-
-  const handleDragEnd = (
-    _e: MouseEvent | TouchEvent | PointerEvent,
-    info: { offset: { x: number }; velocity: { x: number } },
-  ) => {
-    const ox = info.offset.x;
-    const vx = info.velocity.x;
-    if ((ox < -SWIPE_THRESHOLD || vx < -SWIPE_VELOCITY) && idx < VENUE_HUB_ROUTES.length - 1) {
-      nav(VENUE_HUB_ROUTES[idx + 1]);
-    }
-    if ((ox > SWIPE_THRESHOLD || vx > SWIPE_VELOCITY) && idx > 0) {
-      nav(VENUE_HUB_ROUTES[idx - 1]);
-    }
-  };
-
-  return (
-    <m.div
-      drag="x"
-      dragDirectionLock
-      dragElastic={{ left: 0.07, right: 0.07 }}
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={handleDragEnd}
-      style={{ touchAction: 'pan-y', height: '100%', width: '100%' }}
-    >
-      {children}
-    </m.div>
-  );
+  return <>{children}</>;
 };
 
 export const VenueLayout = () => {
@@ -106,6 +64,15 @@ export const VenueLayout = () => {
     { name: 'Perfil',    path: '/venue/profile',   icon: <FiSettings className="w-5 h-5" /> },
   ];
 
+  const desktopNavItems = [
+    { name: 'Agenda',    path: '/venue/calendar',  icon: <FiCalendar className="w-5 h-5" /> },
+    { name: 'Músicos',   path: '/venue/search',    icon: <FiSearch className="w-5 h-5" /> },
+    { name: 'Eventos',   path: '/venue/dashboard', icon: <FiList className="w-5 h-5" /> },
+    { name: 'Mensajes',  path: '/venue/messages',  icon: <FiMessageSquare className="w-5 h-5" /> },
+    { name: 'SOS',       path: '/venue/sos',       icon: <FiLifeBuoy className="w-5 h-5" /> },
+    { name: 'Perfil',    path: '/venue/profile',   icon: <FiSettings className="w-5 h-5" /> },
+  ];
+
   /** ¿Estamos en una de las 3 vistas principales en móvil? */
   const isHubRoute = VENUE_HUB_ROUTES.some(
     r => pathname === r || pathname.startsWith(r + '/'),
@@ -128,7 +95,7 @@ export const VenueLayout = () => {
         </div>
 
         <nav className="flex-1 py-8 px-4 flex flex-col gap-2">
-          {navItems.map((item) => {
+          {desktopNavItems.map((item) => {
             const isActive = pathname === item.path || (item.path !== '/venue' && pathname.startsWith(item.path));
             return (
               <Link
@@ -225,7 +192,9 @@ export const VenueLayout = () => {
                       transition={{ duration: 0.15 }}
                       className="min-h-full w-full flex flex-col"
                     >
-                      {outlet}
+                      <ErrorBoundary fallbackTitle="Error al cargar la página">
+                        {outlet}
+                      </ErrorBoundary>
                     </motion.div>
                   </AnimatePresence>
                 </div>
@@ -243,7 +212,9 @@ export const VenueLayout = () => {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.18 }}
                   >
-                    {outlet}
+                    <ErrorBoundary fallbackTitle="Error al cargar la página">
+                      {outlet}
+                    </ErrorBoundary>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -252,7 +223,7 @@ export const VenueLayout = () => {
 
           {/* DESKTOP — layout clásico */}
           <div className="hidden md:block flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full">
+            <div className={`p-4 sm:p-6 ${pathname === '/venue/messages' ? 'md:p-4' : 'md:p-12'} max-w-6xl mx-auto min-h-full`}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
@@ -262,7 +233,9 @@ export const VenueLayout = () => {
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="w-full min-h-full"
                 >
-                  {outlet}
+                  <ErrorBoundary fallbackTitle="Error al cargar la página">
+                    {outlet}
+                  </ErrorBoundary>
                 </motion.div>
               </AnimatePresence>
             </div>

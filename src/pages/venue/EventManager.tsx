@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiPlus, FiClock, FiCheckCircle, FiUpload, FiEye, FiEyeOff, FiSearch, FiEdit2, FiTrash2 } from 'react-icons/fi';
 import { db, storage } from '../../firebase/firebase';
-import { collection, query, onSnapshot, addDoc, deleteDoc, doc, updateDoc, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, deleteDoc, doc, updateDoc, where, deleteField } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../hooks/useSettings';
 import { PushNotificationBanner } from '../../components/chat/PushNotificationBanner';
 import { EventFormModal } from '../../components/shared/EventFormModal';
+import { useChat } from '../../hooks/useChat';
 
 export const EventManager = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -23,6 +24,7 @@ export const EventManager = () => {
   const navigate = useNavigate();
   
   const { userData, currentUser } = useAuth();
+  const { findOrCreateChat, sendMessage } = useChat();
   
   const [initialEventData, setInitialEventData] = useState<any>(null);
 
@@ -53,6 +55,36 @@ export const EventManager = () => {
 
   const handleDeleteEvent = async (id: string) => {
     try {
+      const eventToCancel = events.find((e: any) => e.id === id);
+      if (eventToCancel && eventToCancel.musicianId && (eventToCancel.status === 'confirmed' || eventToCancel.status === 'published')) {
+        try {
+          const musicianIdToNotify = eventToCancel.musicianId;
+          const chatId = await findOrCreateChat(musicianIdToNotify, eventToCancel.id);
+          let eventDateStr = 'próximamente';
+          if (eventToCancel.date) {
+            try {
+              eventDateStr = format(parseISO(eventToCancel.date), "dd 'de' MMMM", { locale: es });
+              if (eventToCancel.time) eventDateStr += ` a las ${eventToCancel.time}h`;
+            } catch {
+              eventDateStr = eventToCancel.date;
+            }
+          }
+          const vName = userData?.name || 'El local';
+          const cancelMsg = `Hola ${eventToCancel.musicianName || ''}. Te informamos de que ${vName} ha cancelado el evento "${eventToCancel.title}" programado para el ${eventDateStr}. Tu actuación para esta fecha queda anulada.`;
+          await sendMessage(chatId, cancelMsg);
+
+          // Liberar fecha en el calendario del músico si estaba bloqueada
+          if (eventToCancel.date) {
+            const dateKey = eventToCancel.date.split('T')[0];
+            await updateDoc(doc(db, 'users', musicianIdToNotify), {
+              [`calendar.${dateKey}`]: deleteField()
+            }).catch(() => {});
+          }
+        } catch (chatErr) {
+          console.warn("Could not notify musician on delete:", chatErr);
+        }
+      }
+
       await deleteDoc(doc(db, 'events', id));
       setEventToDelete(null);
     } catch (e) {
@@ -68,6 +100,28 @@ export const EventManager = () => {
     if (!window.confirm(`¿Estás seguro de confirmar a ${event.musicianName} para este evento? Se publicará oficialmente.`)) return;
     try {
       await updateDoc(doc(db, 'events', event.id), { status: 'confirmed' });
+
+      if (event.musicianId) {
+        try {
+          let evtDate = '';
+          if (event.date) {
+            try {
+              evtDate = format(parseISO(event.date), "dd 'de' MMMM", { locale: es });
+              if (event.time) {
+                evtDate += ` a las ${event.time}h`;
+              }
+            } catch {
+              evtDate = event.date;
+            }
+          }
+          const vName = userData?.name || 'el local';
+          const acceptMessage = `¡Hola ${event.musicianName || ''}! Te confirmamos que ${vName} ha confirmado oficialmente tu actuación para el evento "${event.title}"${evtDate ? ` el ${evtDate}` : ''}. Ya está todo programado, la fecha ha quedado reservada en el calendario y el evento está publicado en la web. ¡Muchas gracias y nos vemos pronto!`;
+          const chatId = await findOrCreateChat(event.musicianId, event.id);
+          await sendMessage(chatId, acceptMessage);
+        } catch (chatErr) {
+          console.error("Error al enviar mensaje de confirmación al chat:", chatErr);
+        }
+      }
     } catch (e) {
       console.error(e);
       alert('Error confirmando evento.');
@@ -111,7 +165,7 @@ export const EventManager = () => {
   });
 
   return (
-    <div className="flex flex-col gap-8 max-w-5xl relative">
+    <div className="flex flex-col gap-8 max-w-5xl relative px-4 sm:px-6 py-4 pb-36 md:pb-32">
       <PushNotificationBanner />
       
       <div className="flex items-center justify-between border-b border-white/10 pb-4">
@@ -200,7 +254,7 @@ export const EventManager = () => {
                 </div>
               </div>
 
-             <div className="flex items-center gap-1.5 w-full sm:w-auto mt-2 sm:mt-0 shrink-0 justify-end">
+             <div className="flex items-center gap-2 sm:gap-1.5 w-full sm:w-auto mt-2 sm:mt-0 shrink-0 justify-end">
                  {isPast ? (
                    <>
                      <button 
@@ -208,28 +262,28 @@ export const EventManager = () => {
                          setEventToEvaluate(event);
                          setIsRatingModalOpen(true);
                        }}
-                       className="p-1.5 border border-white/20 text-gold hover:bg-gold hover:text-black rounded-sm transition-colors"
+                       className="p-2 sm:p-1.5 border border-white/20 text-gold hover:bg-gold hover:text-black rounded-sm transition-colors"
                        title="Evaluar Artista"
                      >
                        <FiCheckCircle className="w-3.5 h-3.5" />
                      </button>
-                     <button onClick={() => setEventToDelete(event.id)} className="p-1.5 border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 rounded-sm transition-colors" title="Borrar Evento">
+                     <button onClick={() => setEventToDelete(event.id)} className="p-2 sm:p-1.5 border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 rounded-sm transition-colors" title="Borrar Evento">
                        <FiTrash2 className="w-3.5 h-3.5" />
                      </button>
                    </>
                  ) : (
                    <>
                      {event.status === 'musician_accepted' && (
-                       <button onClick={() => handleConfirmEvent(event)} className="p-1.5 bg-blue-600 text-white hover:bg-blue-500 rounded-sm transition-colors" title="Confirmar Oficialmente">
+                       <button onClick={() => handleConfirmEvent(event)} className="p-2 sm:p-1.5 bg-blue-600 text-white hover:bg-blue-500 rounded-sm transition-colors" title="Confirmar Oficialmente">
                          <FiCheckCircle className="w-3.5 h-3.5" />
                        </button>
                      )}
                      {event.status !== 'musician_accepted' && (
-                       <button onClick={() => openEditModal(event)} className="p-1.5 border border-white/20 text-white/70 hover:text-gold hover:border-gold rounded-sm transition-colors" title="Editar">
+                       <button onClick={() => openEditModal(event)} className="p-2 sm:p-1.5 border border-white/20 text-white/70 hover:text-gold hover:border-gold rounded-sm transition-colors" title="Editar">
                          <FiEdit2 className="w-3.5 h-3.5" />
                        </button>
                      )}
-                     <button onClick={() => setEventToDelete(event.id)} className="p-1.5 border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 rounded-sm transition-colors" title="Cancelar Evento">
+                     <button onClick={() => setEventToDelete(event.id)} className="p-2 sm:p-1.5 border border-white/20 text-white/50 hover:text-red-500 hover:border-red-500 rounded-sm transition-colors" title="Cancelar Evento">
                        <FiTrash2 className="w-3.5 h-3.5" />
                      </button>
                    </>

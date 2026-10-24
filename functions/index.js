@@ -105,8 +105,8 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatId}/messages/{messa
         Urgency: "high"
       },
       notification: {
-        badge: "https://sona-emporda.web.app/pwa-icon.png",
-        icon: "https://sona-emporda.web.app/pwa-icon.png",
+        badge: "https://www.sonaemporda.com/pwa-icon.png",
+        icon: "https://www.sonaemporda.com/pwa-icon.png",
       }
     },
     data: {

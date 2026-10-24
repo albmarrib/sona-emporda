@@ -1,7 +1,7 @@
 import { FiX, FiStar, FiCalendar, FiCheckCircle, FiMessageSquare, FiPhone, FiMail, FiGlobe, FiInstagram } from 'react-icons/fi';
 import { FaWhatsapp } from 'react-icons/fa';
 import { db } from '../../firebase/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useEvents } from '../../hooks/useEvents';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -70,6 +70,47 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                             musicianId: artist.id,
                             musicianName: artist.stageName
                           });
+
+                          // Enviar mensaje automático al chat con el músico
+                          try {
+                            let eventTitle = '';
+                            let evtDate = '';
+                            const eventObj = events.find(e => e.id === isApplicantForEventId);
+                            if (eventObj) {
+                              eventTitle = eventObj.title || '';
+                              if (eventObj.date) {
+                                try {
+                                  evtDate = format(parseISO(eventObj.date), "dd 'de' MMMM", { locale: es });
+                                  if (eventObj.time) evtDate += ` a las ${eventObj.time}h`;
+                                } catch {
+                                  evtDate = eventObj.date;
+                                }
+                              }
+                            } else {
+                              const snap = await getDoc(doc(db, 'events', isApplicantForEventId));
+                              if (snap.exists()) {
+                                const d = snap.data();
+                                eventTitle = d.title || '';
+                                if (d.date) {
+                                  try {
+                                    evtDate = format(parseISO(d.date), "dd 'de' MMMM", { locale: es });
+                                    if (d.time) evtDate += ` a las ${d.time}h`;
+                                  } catch {
+                                    evtDate = d.date;
+                                  }
+                                }
+                              }
+                            }
+
+                            const venueName = userData?.name || currentUser?.email || 'el local';
+                            const acceptMessage = `¡Hola ${artist.stageName}! Te confirmamos que ${venueName} ha aceptado tu postulación para actuar en "${eventTitle || 'nuestro evento'}"${evtDate ? ` el ${evtDate}` : ''}. Tu actuación ha sido confirmada oficialmente, la fecha ha quedado reservada en el calendario y el evento ya está publicado en la web. ¡Muchas gracias y nos vemos pronto!`;
+
+                            const chatId = await findOrCreateChat(artist.id, isApplicantForEventId);
+                            await sendMessage(chatId, acceptMessage);
+                          } catch (chatErr) {
+                            console.error('Error al enviar mensaje de aceptación al chat:', chatErr);
+                          }
+
                           onClose();
                           if (onContacted) onContacted();
                         } catch (e) {

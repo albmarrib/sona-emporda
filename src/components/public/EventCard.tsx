@@ -22,7 +22,7 @@ export const EventCard = ({ event }: EventCardProps) => {
   return (
     <article 
       onClick={() => isCancelled ? null : navigate(`/event/${event.id}`)}
-      className={`group relative flex flex-col md:flex-row gap-6 border-b border-white/10 py-10 transition-colors duration-500 ${isCancelled ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}`}
+      className={`group relative flex flex-col md:flex-row gap-6 border-b border-white/10 py-10 transition-colors duration-500 overflow-hidden ${isCancelled ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:bg-white/5 cursor-pointer'}`}
     >
       {isCancelled && (
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white font-bold text-2xl md:text-4xl px-8 py-2 border-y-4 border-black -rotate-12 z-30 shadow-2xl tracking-[0.2em] whitespace-nowrap">

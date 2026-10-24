@@ -400,10 +400,32 @@ export const VenueCalendar = () => {
                       <button 
                         onClick={async () => {
                           if(window.confirm('¿Quieres confirmar este evento? Se hará oficial y se publicará en la web.')) {
-                            import('firebase/firestore').then(({ doc, updateDoc }) => {
-                              updateDoc(doc(db, 'events', selectedDayEvent.id), {
+                            import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+                              await updateDoc(doc(db, 'events', selectedDayEvent.id), {
                                 status: 'confirmed'
                               });
+
+                              if (selectedDayEvent.musicianId) {
+                                try {
+                                  let evtDate = '';
+                                  if (selectedDayEvent.date) {
+                                    try {
+                                      evtDate = format(parseISO(selectedDayEvent.date), "dd 'de' MMMM", { locale: es });
+                                      if (selectedDayEvent.time) {
+                                        evtDate += ` a las ${selectedDayEvent.time}h`;
+                                      }
+                                    } catch {
+                                      evtDate = selectedDayEvent.date;
+                                    }
+                                  }
+                                  const vName = userData?.name || 'el local';
+                                  const acceptMessage = `¡Hola ${selectedDayEvent.musicianName || ''}! Te confirmamos que ${vName} ha confirmado oficialmente tu actuación para el evento "${selectedDayEvent.title}"${evtDate ? ` el ${evtDate}` : ''}. Ya está todo programado, la fecha ha quedado reservada en el calendario y el evento está publicado en la web. ¡Muchas gracias y nos vemos pronto!`;
+                                  const chatId = await findOrCreateChat(selectedDayEvent.musicianId, selectedDayEvent.id);
+                                  await sendMessage(chatId, acceptMessage);
+                                } catch (chatErr) {
+                                  console.error("Error al enviar mensaje de confirmación al chat:", chatErr);
+                                }
+                              }
                             });
                           }
                         }}
@@ -466,6 +488,14 @@ export const VenueCalendar = () => {
                                 const eventDateStr = selectedDayEvent.date ? format(parseISO(selectedDayEvent.date), "d 'de' MMMM", { locale: es }) : 'próximamente';
                                 const cancelMsg = `Hola, lamentamos informarte que hemos tenido que cancelar tu actuación para el evento "${selectedDayEvent.title}" del ${eventDateStr}.`;
                                 await sendMessage(chatId, cancelMsg);
+
+                                if (selectedDayEvent.date) {
+                                  const dateKey = selectedDayEvent.date.split('T')[0];
+                                  const { deleteField } = await import('firebase/firestore');
+                                  await updateDoc(doc(db, 'users', musicianIdToNotify), {
+                                    [`calendar.${dateKey}`]: deleteField()
+                                  }).catch(() => {});
+                                }
                               }
                             });
                           } catch(e) {

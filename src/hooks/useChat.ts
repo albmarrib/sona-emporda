@@ -3,16 +3,22 @@ import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, getDocs }
 import { db } from '../firebase/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import type { ChatRoom } from '../types/chat';
+import { getSafeTimeMs } from '../utils/dateUtils';
 
 export const useChat = () => {
   const { currentUser } = useAuth();
   const [chats, setChats] = useState<ChatRoom[]>([]);
+  const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadByChat, setUnreadByChat] = useState<Record<string, number>>({});
 
   // Subscribe to user's chats
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setChats([]);
+      setLoading(false);
+      return;
+    }
 
     const q = query(
       collection(db, 'chats'),
@@ -20,15 +26,30 @@ export const useChat = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chatsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ChatRoom[];
+      const chatsData = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        let updatedAt = data.updatedAt;
+        if (typeof updatedAt?.toDate === 'function') {
+          updatedAt = updatedAt.toDate().toISOString();
+        } else if (updatedAt?.seconds !== undefined) {
+          updatedAt = new Date(updatedAt.seconds * 1000).toISOString();
+        }
+        return {
+          id: docSnap.id,
+          ...data,
+          participants: Array.isArray(data.participants) ? data.participants : [],
+          updatedAt: updatedAt || new Date().toISOString()
+        };
+      }) as ChatRoom[];
       
-      // Sort by updatedAt descending locally since we can't easily compound index array-contains with orderBy without creating indexes manually
-      chatsData.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      // Sort by updatedAt descending locally and safely
+      chatsData.sort((a, b) => getSafeTimeMs(b.updatedAt) - getSafeTimeMs(a.updatedAt));
       
       setChats(chatsData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error subscribing to chats:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -36,13 +57,16 @@ export const useChat = () => {
 
   // Global unread count calculation
   useEffect(() => {
-    if (!currentUser || chats.length === 0) return;
+    if (!currentUser || chats.length === 0) {
+      setUnreadCount(0);
+      setUnreadByChat({});
+      return;
+    }
 
     const unreadMap = new Map<string, number>();
 
     const unsubscribes = chats.map(chat => {
       const messagesRef = collection(db, `chats/${chat.id}/messages`);
-      // Simpler query to avoid composite index issues, filter senderId locally if needed
       const q = query(
         messagesRef,
         where('read', '==', false)
@@ -64,12 +88,16 @@ export const useChat = () => {
 
         // Actualizar el icono de la app (PWA Badging API)
         if ('setAppBadge' in navigator) {
-          if (total > 0) {
-            navigator.setAppBadge(total).catch(console.error);
-          } else {
-            navigator.clearAppBadge().catch(console.error);
-          }
+          try {
+            if (total > 0) {
+              navigator.setAppBadge(total).catch(() => {});
+            } else {
+              navigator.clearAppBadge().catch(() => {});
+            }
+          } catch {}
         }
+      }, (err) => {
+        console.warn(`Unread onSnapshot warning for chat ${chat.id}:`, err);
       });
     });
 
@@ -165,6 +193,7 @@ export const useChat = () => {
 
   return {
     chats,
+    loading,
     unreadCount,
     unreadByChat,
     findOrCreateChat,

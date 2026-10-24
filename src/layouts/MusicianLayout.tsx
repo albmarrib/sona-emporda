@@ -13,6 +13,7 @@ import { PushNotificationBanner } from '../components/chat/PushNotificationBanne
 import { SwipeWrapper } from '../components/musician/SwipeWrapper';
 import { useState } from 'react';
 import { Info } from 'lucide-react';
+import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 
 /**
  * Rutas de las 3 vistas principales — reciben SwipeWrapper en móvil
@@ -167,7 +168,7 @@ export const MusicianLayout = () => {
           {isHubRoute ? (
             <div className="md:hidden flex-1 min-h-0 pb-16 overflow-hidden">
               <SwipeWrapper>
-                <div className="h-full w-full overflow-y-auto overflow-x-hidden">
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={pathname}
@@ -175,9 +176,11 @@ export const MusicianLayout = () => {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.15 }}
-                      className="h-full w-full"
+                      className="min-h-full w-full flex flex-col"
                     >
-                      {outlet}
+                      <ErrorBoundary fallbackTitle="Error al cargar la página">
+                        {outlet}
+                      </ErrorBoundary>
                     </motion.div>
                   </AnimatePresence>
                 </div>
@@ -198,7 +201,9 @@ export const MusicianLayout = () => {
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.18 }}
                   >
-                    {outlet}
+                    <ErrorBoundary fallbackTitle="Error al cargar la página">
+                      {outlet}
+                    </ErrorBoundary>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -207,7 +212,7 @@ export const MusicianLayout = () => {
 
           {/* DESKTOP — layout clásico, siempre con padding */}
           <div className="hidden md:block flex-1 overflow-y-auto overflow-x-hidden">
-            <div className="p-4 sm:p-6 md:p-12 max-w-6xl mx-auto min-h-full">
+            <div className={`p-4 sm:p-6 ${pathname === '/musician/messages' ? 'md:p-4' : 'md:p-12'} max-w-6xl mx-auto min-h-full`}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={pathname}
@@ -217,7 +222,9 @@ export const MusicianLayout = () => {
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
                   className="w-full min-h-full"
                 >
-                  {outlet}
+                  <ErrorBoundary fallbackTitle="Error al cargar la página">
+                    {outlet}
+                  </ErrorBoundary>
                 </motion.div>
               </AnimatePresence>
             </div>

@@ -83,8 +83,8 @@ export const AvailabilityCalendar = () => {
           <button 
             onClick={() => {
               if (!currentUser) return;
-              const link = `${window.location.origin}/band/${currentUser.uid}/calendar`;
-              const text = `¡Hola! Aquí tenéis el calendario de nuestros bolos y disponibilidad en Sona Empordà: ${link}`;
+              const link = `https://www.sonaemporda.com/band/${currentUser.uid}/calendar`;
+              const text = `¡Hola! Aquí tenéis el calendario de nuestros bolos y disponibilidad en Sona Empordà:\n\n${link}`;
               window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
             }}
             className="flex items-center justify-center bg-white/5 text-white/50 border border-white/10 hover:bg-gold hover:text-black hover:border-gold transition-colors w-7 h-7 md:w-8 md:h-8 rounded-full shrink-0"

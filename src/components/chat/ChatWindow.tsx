@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, orderBy, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/firebase';
 import type { ChatMessage, ChatRoom } from '../../types/chat';
-import { format } from 'date-fns';
+import { formatSafe } from '../../utils/dateUtils';
 import { Send, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../hooks/useChat';
@@ -24,14 +24,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
   const typingTimeoutRef = useRef<any>(null);
   const { events } = useEvents(false, true);
 
-  const currentEvent = chat.eventId ? events.find(e => e.id === chat.eventId) : null;
-  const isVenue = currentEvent && currentEvent.venueId === currentUser?.uid;
+  const currentEvent = chat?.eventId && Array.isArray(events) 
+    ? events.find(e => e.id === chat.eventId) 
+    : null;
+  const isVenue = Boolean(currentEvent && currentEvent.venueId === currentUser?.uid);
   
   // Can confirm if:
   // 1. Current user is the venue
   // 2. Event is not confirmed yet (or at least not confirmed with this specific musician)
   // 3. We know the other participant ID
-  const otherParticipantId = chat.participants.find(p => p !== currentUser?.uid);
+  const otherParticipantId = Array.isArray(chat?.participants)
+    ? chat.participants.find(p => p !== currentUser?.uid)
+    : null;
   
   const canConfirm = isVenue && 
                      currentEvent && 
@@ -39,7 +43,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
                      currentEvent.status !== 'confirmed';
 
   useEffect(() => {
-    if (!chat.id || !currentUser) return;
+    if (!chat?.id || !currentUser) return;
 
     const q = query(
       collection(db, `chats/${chat.id}/messages`),
@@ -47,23 +51,37 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ChatMessage[];
+      const msgs = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        let createdAt = data.createdAt;
+        if (typeof createdAt?.toDate === 'function') {
+          createdAt = createdAt.toDate().toISOString();
+        } else if (createdAt?.seconds !== undefined) {
+          createdAt = new Date(createdAt.seconds * 1000).toISOString();
+        }
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: createdAt || new Date().toISOString()
+        };
+      }) as ChatMessage[];
       
       setMessages(msgs);
       
-      // Mark as read
+      // Mark as read safely
       msgs.forEach(msg => {
         if (!msg.read && msg.senderId !== currentUser.uid) {
-          updateDoc(doc(db, `chats/${chat.id}/messages`, msg.id), { read: true });
+          try {
+            updateDoc(doc(db, `chats/${chat.id}/messages`, msg.id), { read: true }).catch(() => {});
+          } catch {}
         }
       });
+    }, (error) => {
+      console.error(`Error subscribing to messages for chat ${chat.id}:`, error);
     });
 
     return () => unsubscribe();
-  }, [chat.id, currentUser]);
+  }, [chat?.id, currentUser]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -98,8 +116,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
     await sendMessage(chat.id, text);
   };
 
-  const isOtherTyping = Object.keys(chat.typing || {}).some(
-    uid => uid !== currentUser?.uid && chat.typing![uid]
+  const isOtherTyping = Boolean(
+    chat?.typing &&
+    Object.keys(chat.typing).some(
+      uid => uid !== currentUser?.uid && chat.typing![uid]
+    )
   );
 
   return (
@@ -114,7 +135,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
         </button>
         <div>
           <h2 className="text-lg font-bold text-gold">{getOtherParticipantName(chat)}</h2>
-          {chat.eventId && (
+          {chat?.eventId && (
             <span className="text-[10px] uppercase tracking-widest text-white/40">Contexto: Evento Sona Empordà</span>
           )}
         </div>
@@ -166,7 +187,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onBack, getOtherPa
                 <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
               </div>
               <span className="text-[9px] text-white/40 mt-1 px-1">
-                {format(new Date(msg.createdAt), 'HH:mm')}
+                {formatSafe(msg.createdAt, 'HH:mm')}
               </span>
             </div>
           );

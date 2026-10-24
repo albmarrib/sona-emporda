@@ -34,10 +34,10 @@ const VenueProfile = lazy(() => import('./pages/venue/VenueProfile').then(m => (
 const VenueSOSManager = lazy(() => import('./pages/venue/VenueSOSManager').then(m => ({ default: m.VenueSOSManager })));
 const VenueCalendar = lazy(() => import('./pages/venue/VenueCalendar').then(m => ({ default: m.VenueCalendar })));
 
-// Admin panel pages (lazy loaded)
 const AdminLayout = lazy(() => import('./layouts/AdminLayout').then(m => ({ default: m.AdminLayout })));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const Messages = lazy(() => import('./pages/shared/Messages').then(m => ({ default: m.Messages })));
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
 
 function App() {
   return (
@@ -45,8 +45,9 @@ function App() {
       <ScrollToTop />
       <div className="min-h-screen bg-black font-sans text-white">
         <SosAlarm />
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
+        <ErrorBoundary fallbackTitle="Ha ocurrido un problema al cargar la aplicación">
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
             {/* Área Pública */}
             <Route path="/" element={<Home />} />
             <Route path="/:subdomain" element={<PublicLanding />} />
@@ -99,6 +100,7 @@ function App() {
             </Route>
           </Routes>
         </Suspense>
+        </ErrorBoundary>
       </div>
     </Router>
   );

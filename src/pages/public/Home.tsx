@@ -28,6 +28,10 @@ export const Home = () => {
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
 
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showPwaBanner, setShowPwaBanner] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !sessionStorage.getItem('dismissedPwaBanner');
+  });
   const { isFavorite, toggleFavorite } = useFavorites();
   
   const { settings, loading: settingsLoading } = useSettings();
@@ -165,7 +169,7 @@ export const Home = () => {
     });
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white w-full overflow-x-hidden">
       <InstallPWAModal />
       
       {/* Header con botón Buscar integrado */}
@@ -173,6 +177,48 @@ export const Home = () => {
         onOpenSearch={handleToggleSearch}
         activeFiltersCount={activeFiltersCount}
       />
+
+      {/* Banner PWA visible al entrar para que cualquier visitante pueda instalar la app */}
+      {!isStandalone && showPwaBanner && (
+        <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border-b border-gold/30 px-3 sm:px-6 py-2.5 text-white transition-all shadow-lg relative z-40">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden bg-black border border-gold/40 shrink-0 flex items-center justify-center p-0.5 shadow-[0_0_10px_rgba(197,160,89,0.2)]">
+                <img src="/pwa-icon.png" alt="Sona Empordà" className="w-full h-full object-cover rounded-lg" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-semibold text-white truncate flex items-center gap-1.5">
+                  <span>¿Quieres la app en tu móvil?</span>
+                  <span className="hidden sm:inline-block text-[9px] bg-gold/20 text-gold px-1.5 py-0.5 rounded font-mono uppercase tracking-wider font-bold">Gratis</span>
+                </p>
+                <p className="text-[10px] sm:text-xs text-white/60 truncate">
+                  Añade Sona Empordà a tu pantalla de inicio en 1 toque
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => window.dispatchEvent(new Event('open-pwa-modal'))}
+                className="bg-gold hover:bg-white text-black font-bold text-[10px] sm:text-xs uppercase tracking-wider px-3 py-1.5 rounded-md transition-all shadow-sm active:scale-95 cursor-pointer whitespace-nowrap"
+              >
+                Instalar
+              </button>
+              <button
+                onClick={() => {
+                  setShowPwaBanner(false);
+                  sessionStorage.setItem('dismissedPwaBanner', 'true');
+                }}
+                className="text-white/40 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                title="Ocultar aviso"
+                aria-label="Cerrar aviso"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main>
         {/* Hero Event Carousel (Destacado) */}
@@ -300,20 +346,20 @@ export const Home = () => {
           <div id="programacion" className="flex flex-col gap-4 mb-8 border-b border-white/10 pb-6 scroll-mt-24">
             
             {/* Header de la sección */}
-            <div className="flex flex-row items-center justify-between gap-4">
+            <div className="flex flex-row items-center justify-between gap-2 sm:gap-4 flex-wrap">
               {activeView === "LISTA" ? (
-                <div className="flex items-baseline gap-3">
-                  <h2 className="text-2xl md:text-4xl font-serif text-white">
+                <div className="flex items-baseline gap-2 sm:gap-3 flex-wrap min-w-0">
+                  <h2 className="text-xl sm:text-2xl md:text-4xl font-serif text-white whitespace-nowrap">
                     Programación
                   </h2>
-                  <span className="text-xs text-white/40 uppercase tracking-widest font-mono">
+                  <span className="text-[11px] sm:text-xs text-white/40 uppercase tracking-widest font-mono whitespace-nowrap">
                     ({filteredEvents.length} {filteredEvents.length === 1 ? 'concierto' : 'conciertos'})
                   </span>
                 </div>
               ) : (
                 <button
                   onClick={() => setActiveView("LISTA")}
-                  className="flex items-center gap-2 text-gold hover:text-white transition-colors duration-300 text-[10px] uppercase tracking-widest font-bold"
+                  className="flex items-center gap-2 text-gold hover:text-white transition-colors duration-300 text-[10px] uppercase tracking-widest font-bold cursor-pointer"
                 >
                   ← Volver a la Lista
                 </button>
@@ -322,7 +368,7 @@ export const Home = () => {
               {/* Botón Buscar / Filtrar que abre o cierra la barra inline */}
               <button
                 onClick={handleToggleSearch}
-                className={`flex items-center gap-2 px-4 py-2 text-[10px] uppercase tracking-[0.2em] transition-all rounded-sm cursor-pointer ${
+                className={`shrink-0 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-[10px] uppercase tracking-[0.15em] sm:tracking-[0.2em] transition-all rounded-sm cursor-pointer ${
                   isSearchOpen || activeFiltersCount > 0 
                     ? 'bg-gold text-black font-bold shadow-md' 
                     : 'border border-white/20 text-white/80 hover:text-white hover:border-white/50 hover:bg-white/5'

@@ -1,8 +1,7 @@
 import React from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { FiTrash2 } from 'react-icons/fi';
 import type { ChatRoom } from '../../types/chat';
+import { formatSafe } from '../../utils/dateUtils';
 
 interface ChatListProps {
   chats: ChatRoom[];
@@ -46,7 +45,7 @@ export const ChatList: React.FC<ChatListProps> = ({ chats, activeChatId, onSelec
                   ) : null}
                 </div>
                 <span className="text-[10px] text-white/40 shrink-0 mt-0.5">
-                  {chat.updatedAt ? format(new Date(chat.updatedAt), 'd MMM HH:mm', { locale: es }) : ''}
+                  {formatSafe(chat.updatedAt, 'd MMM HH:mm')}
                 </span>
               </div>
               <div className="flex justify-between items-center w-full mt-1">
