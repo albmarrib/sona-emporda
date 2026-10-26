@@ -292,12 +292,12 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
               
               <div className="flex justify-center gap-4">
                 {artist.contactWhatsapp && (
-                  <a href={`https://wa.me/${artist.contactWhatsapp.replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors flex items-center justify-center" title="WhatsApp">
+                  <a href={`https://wa.me/${String(artist.contactWhatsapp).replace(/\+/g, '').replace(/\s/g, '')}`} target="_blank" rel="noopener noreferrer" className="w-12 h-12 rounded-full bg-[#25D366]/20 text-[#25D366] border border-[#25D366]/50 hover:bg-[#25D366] hover:text-white transition-colors flex items-center justify-center" title="WhatsApp">
                     <FaWhatsapp className="w-5 h-5" />
                   </a>
                 )}
                 {artist.contactPhone && (
-                  <a href={`tel:${artist.contactPhone.replace(/\s/g, '')}`} className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center" title="Llamar">
+                  <a href={`tel:${String(artist.contactPhone).replace(/\s/g, '')}`} className="w-12 h-12 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500 hover:text-white transition-colors flex items-center justify-center" title="Llamar">
                     <FiPhone className="w-5 h-5" />
                   </a>
                 )}

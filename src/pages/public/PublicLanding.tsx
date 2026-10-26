@@ -133,7 +133,8 @@ export const PublicLanding = () => {
           resolvedProfile = {
             ...pData,
             id: musId,
-            contactWhatsapp: pData.phone || pData.contactWhatsapp || '',
+            contactWhatsapp: pData.contactWhatsapp ? String(pData.contactWhatsapp) : (pData.phone ? String(pData.phone) : ''),
+            contactPhone: pData.contactPhone ? String(pData.contactPhone) : (pData.phone ? String(pData.phone) : ''),
             instagramUrl: pData.instagramUrl || '',
             contactEmail: pData.contactEmail || ''
           } as MusicianProfile;
@@ -1086,7 +1087,7 @@ export const PublicLanding = () => {
                 </a>
               )}
               {profile?.contactWhatsapp && (
-                <a href={`https://wa.me/${profile.contactWhatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
+                <a href={`https://wa.me/${String(profile.contactWhatsapp).replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:opacity-70 transition-transform hover:scale-110">
                   <FaWhatsapp className="w-8 h-8 text-[#25D366]" />
                 </a>
               )}

@@ -60,13 +60,13 @@ export const EventDetail = () => {
   if (isNaN(dateObj.getTime())) return <div className="text-white text-center p-20">Error: Fecha de evento inválida</div>;
 
   // Contact validation helpers - SOLO se muestran si el perfil del local tiene datos válidos
-  const contactWhatsapp = typeof venueProfile?.contactWhatsapp === 'string' && venueProfile.contactWhatsapp.trim().replace(/\D/g, '').length >= 6 
-    ? venueProfile.contactWhatsapp.trim() 
+  const contactWhatsapp = (typeof venueProfile?.contactWhatsapp === 'string' || typeof venueProfile?.contactWhatsapp === 'number') && String(venueProfile.contactWhatsapp).trim().replace(/\D/g, '').length >= 6 
+    ? String(venueProfile.contactWhatsapp).trim() 
     : null;
 
-  const contactPhone = typeof venueProfile?.contactPhone === 'string' && venueProfile.contactPhone.trim().replace(/\D/g, '').length >= 6 
-    ? venueProfile.contactPhone.trim() 
-    : (typeof venueProfile?.phone === 'string' && venueProfile.phone.trim().replace(/\D/g, '').length >= 6 ? venueProfile.phone.trim() : null);
+  const contactPhone = (typeof venueProfile?.contactPhone === 'string' || typeof venueProfile?.contactPhone === 'number') && String(venueProfile.contactPhone).trim().replace(/\D/g, '').length >= 6 
+    ? String(venueProfile.contactPhone).trim() 
+    : ((typeof venueProfile?.phone === 'string' || typeof venueProfile?.phone === 'number') && String(venueProfile.phone).trim().replace(/\D/g, '').length >= 6 ? String(venueProfile.phone).trim() : null);
 
   const contactEmail = typeof venueProfile?.email === 'string' && venueProfile.email.trim().includes('@') && venueProfile.email.trim().length > 4 
     ? venueProfile.email.trim() 

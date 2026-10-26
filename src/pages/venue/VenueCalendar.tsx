@@ -35,10 +35,11 @@ export const VenueCalendar = () => {
             stageName: data.stageName || data.name || 'Músico Sin Nombre',
             mainGenre: data.genre || 'Varios',
             profileImageUrl: data.profileImageUrl || 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?auto=format&fit=crop&q=80&w=400',
-            rating: data.rating || 5.0,
-            reviewsCount: data.reviewsCount || 1,
+            rating: typeof data.rating === 'number' ? data.rating : 5.0,
+            reviewsCount: typeof data.reviewsCount === 'number' ? data.reviewsCount : (data.reviewsCount || 0),
             calendar: data.calendar || {},
-            contactWhatsapp: data.phone || ''
+            contactWhatsapp: data.contactWhatsapp ? String(data.contactWhatsapp) : (data.phone ? String(data.phone) : ''),
+            contactPhone: data.contactPhone ? String(data.contactPhone) : (data.phone ? String(data.phone) : '')
           };
         });
         setRealMusicians(musicians);

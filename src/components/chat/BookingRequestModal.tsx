@@ -99,7 +99,7 @@ export const BookingRequestModal: React.FC<BookingRequestModalProps> = ({
     }
   };
 
-  const cleanPhone = contact?.phone ? contact.phone.replace(/\D/g, '') : '';
+  const cleanPhone = contact?.phone ? String(contact.phone).replace(/\D/g, '') : '';
   const dateFormatted = currentRequest?.date ? (() => {
     try {
       return format(parseISO(currentRequest.date), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
