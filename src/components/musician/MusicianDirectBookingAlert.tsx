@@ -179,3 +179,4 @@ export const MusicianDirectBookingAlert: React.FC = () => {
     </div>
   );
 };
+

@@ -25,7 +25,7 @@ const DEFAULT_CONFIG: LandingConfig = {
     subtitle: '',
     biography: '',
     ctaText: 'Contratación',
-    ctaTarget: 'contact'
+    ctaTarget: 'booking'
   },
   modules: {
     showLiveDates: true,
@@ -39,6 +39,14 @@ const DEFAULT_CONFIG: LandingConfig = {
     showBookingWidget: true
   }
 };
+
+const CTA_TARGET_OPTIONS = [
+  { value: 'contact', label: 'Contacto' },
+  { value: 'booking', label: 'Contratación' },
+  { value: 'live', label: 'Próximos Directos' },
+  { value: 'music', label: 'Música' },
+  { value: 'about', label: 'Acerca Nuestro' },
+];
 
 export const LandingPageBuilder = () => {
   const { currentUser } = useAuth();
@@ -72,6 +80,19 @@ export const LandingPageBuilder = () => {
     };
     fetchConfig();
   }, [currentUser]);
+
+  const handleCtaTargetChange = (newTarget: string) => {
+    const match = CTA_TARGET_OPTIONS.find(opt => opt.value === newTarget);
+    const prefilledText = match ? match.label : newTarget;
+    setConfig(prev => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        ctaTarget: newTarget,
+        ctaText: prefilledText
+      }
+    }));
+  };
 
   const handleSave = async () => {
     if (!currentUser) return;
@@ -421,27 +442,28 @@ export const LandingPageBuilder = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
+                <label className="block text-xs uppercase tracking-widest text-white/60 mb-2">Enlace Botón Acción</label>
+                <select 
+                  value={config.hero.ctaTarget} 
+                  onChange={(e) => handleCtaTargetChange(e.target.value)}
+                  className="bg-black border border-white/20 px-3 py-2 text-sm w-full focus:border-gold focus:outline-none transition-colors"
+                >
+                  {CTA_TARGET_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-white/40 mt-1">Sección de la web a la que llevará el botón.</p>
+              </div>
+              <div>
                 <label className="block text-xs uppercase tracking-widest text-white/60 mb-2">Texto Botón Acción</label>
                 <input 
                   type="text" 
                   value={config.hero.ctaText} 
                   onChange={(e) => setConfig({...config, hero: {...config.hero, ctaText: e.target.value}})}
+                  placeholder="Ej: Contratación"
                   className="bg-black border border-white/20 px-3 py-2 text-sm w-full focus:border-gold focus:outline-none transition-colors"
                 />
-              </div>
-              <div>
-                <label className="block text-xs uppercase tracking-widest text-white/60 mb-2">Enlace Botón Acción</label>
-                <select 
-                  value={config.hero.ctaTarget} 
-                  onChange={(e) => setConfig({...config, hero: {...config.hero, ctaTarget: e.target.value}})}
-                  className="bg-black border border-white/20 px-3 py-2 text-sm w-full focus:border-gold focus:outline-none transition-colors"
-                >
-                  <option value="contact">Contacto</option>
-                  <option value="booking">Contratación</option>
-                  <option value="live">Próximos Directos</option>
-                  <option value="music">Música</option>
-                  <option value="about">Acerca Nuestro</option>
-                </select>
+                <p className="text-[10px] text-white/40 mt-1">Se autocompleta con el enlace, pero puedes personalizarlo.</p>
               </div>
             </div>
           </div>
