@@ -89,7 +89,7 @@ export const VenueList = ({ events, selectedVibes, showFavorites = false, select
     const matchesDate = isWithinInterval(eventDate, { start: startOfDay(startDate), end: endOfDay(endDate) });
     const matchesVibe = selectedVibes.length === 0 || (event.vibes || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
     const matchesFavorite = showFavorites ? isFavorite(event.id) : true;
-    const matchesMusician = selectedMusician ? event.musicianName === selectedMusician : true;
+    const matchesMusician = selectedMusician ? (event.musicianName || '').trim().toLowerCase() === selectedMusician.trim().toLowerCase() : true;
     return matchesDate && matchesVibe && matchesFavorite && matchesMusician;
   });
 

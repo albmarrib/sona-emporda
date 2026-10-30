@@ -10,7 +10,23 @@ import { es } from 'date-fns/locale';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../contexts/AuthContext';
 
-export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, isApplicantForEventId }: { artist: any, dateKey?: string, currentUser: any, onClose: () => void, onContacted?: () => void, isApplicantForEventId?: string }) => {
+export const EPKModal = ({ 
+  artist, 
+  dateKey, 
+  currentUser, 
+  onClose, 
+  onContacted, 
+  isApplicantForEventId,
+  hideInviteSection = false
+}: { 
+  artist: any, 
+  dateKey?: string, 
+  currentUser: any, 
+  onClose: () => void, 
+  onContacted?: () => void, 
+  isApplicantForEventId?: string,
+  hideInviteSection?: boolean
+}) => {
   const { events } = useEvents(true, true); // true to include drafts
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const navigate = useNavigate();
@@ -124,7 +140,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                     </button>
                   </div>
                 </>
-              ) : (
+              ) : !hideInviteSection ? (
                 <>
                   <h3 className="text-[10px] uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
                     <FiCalendar /> Invitar a un Evento
@@ -208,7 +224,7 @@ export const EPKModal = ({ artist, dateKey, currentUser, onClose, onContacted, i
                 </div>
               )}
                 </>
-              )}
+              ) : null}
             
           <div className="flex gap-2 flex-wrap">
               <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">

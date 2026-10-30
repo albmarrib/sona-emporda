@@ -35,7 +35,7 @@ export const EventCalendar = ({ events, selectedVibes, showFavorites = false, se
   // Filtrar eventos globalmente por vibes, favoritos y músicos
   const filteredEvents = events.filter(e => {
     if (showFavorites && !isFavorite(e.id)) return false;
-    if (selectedMusician && e.musicianName !== selectedMusician) return false;
+    if (selectedMusician && (e.musicianName || '').trim().toLowerCase() !== selectedMusician.trim().toLowerCase()) return false;
     if (selectedVibes.length === 0) return true;
     return (e.vibes || e.tags || []).some(v => selectedVibes.some(selected => v.toUpperCase().includes(selected)));
   });

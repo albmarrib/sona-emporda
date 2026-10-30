@@ -626,6 +626,7 @@ export const VenueCalendar = () => {
           currentUser={currentUser} 
           onClose={() => setSelectedArtist(null)} 
           isApplicantForEventId={selectedArtist.isApplicantForEventId}
+          hideInviteSection={true}
         />
       )}
 

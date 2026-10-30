@@ -90,12 +90,19 @@ export const Home = () => {
   // El carrusel rotará por todos los eventos disponibles, excluyendo los cancelados por el local
   const heroEvents = confirmedEvents.filter(e => e.status !== 'cancelled');
 
-  // Extraer lista de músicos ordenada alfabéticamente
+  // Extraer lista de músicos ordenada alfabéticamente (sin duplicados por mayúsculas/espacios)
   const uniqueMusicians = useMemo(() => {
-    const musicians = confirmedEvents
-      .map(e => e.musicianName)
-      .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
-    return Array.from(new Set(musicians)).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    const map = new Map<string, string>();
+    confirmedEvents.forEach(e => {
+      const name = (e.musicianName || '').trim();
+      if (name) {
+        const key = name.toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, name);
+        }
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }, [confirmedEvents]);
 
   // Contar filtros activos
@@ -151,7 +158,7 @@ export const Home = () => {
       // 1. Filtro Favoritos
       if (showFavoritesOnly && !isFavorite(e.id)) return false;
       // 2. Filtro Músico
-      if (selectedMusician && e.musicianName !== selectedMusician) return false;
+      if (selectedMusician && (e.musicianName || '').trim().toLowerCase() !== selectedMusician.trim().toLowerCase()) return false;
       // 3. Filtro Estilo / Tipo de evento
       if (selectedVibe && !(e.vibes || []).some((v: any) => v.toUpperCase().includes(selectedVibe.toUpperCase()))) {
         return false;
