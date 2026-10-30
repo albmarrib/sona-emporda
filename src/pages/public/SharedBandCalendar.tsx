@@ -113,17 +113,24 @@ export const SharedBandCalendar = () => {
               
               const confirmedEventsToday = events.filter(e => e.date.split('T')[0] === dateKey && (e.status === 'confirmed' || (e.status === 'published' && e.musicianId) || !e.venueId));
               const eventOnThisDay = events.find(e => e.date.split('T')[0] === dateKey);
+              const isPrivateOnThisDay = eventOnThisDay && (
+                eventOnThisDay.type === 'private' || 
+                eventOnThisDay.type === 'external_booking' || 
+                eventOnThisDay.venueId === 'external_booking' || 
+                eventOnThisDay.isPrivate ||
+                (typeof eventOnThisDay.title === 'string' && eventOnThisDay.title.toLowerCase().startsWith('contratación:'))
+              );
 
               return (
                 <div 
                   key={dateKey}
                   onClick={() => {
-                    if (eventOnThisDay) setEventToView(eventOnThisDay);
+                    if (eventOnThisDay && !isPrivateOnThisDay) setEventToView(eventOnThisDay);
                   }}
                   className={`aspect-square p-1 border transition-colors flex flex-col justify-between relative
                     ${getStatusColor(status)}
                     ${isToday ? 'ring-1 ring-white ring-inset' : ''}
-                    ${eventOnThisDay ? 'cursor-pointer hover:border-gold group' : ''}
+                    ${eventOnThisDay && !isPrivateOnThisDay ? 'cursor-pointer hover:border-gold group' : ''}
                   `}
                 >
                   <span className="text-xs md:text-sm font-serif z-10">{format(day, 'd')}</span>

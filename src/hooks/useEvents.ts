@@ -65,7 +65,16 @@ export const useEvents = (includeDrafts = false, includePrivate = false) => {
             eventsList = eventsList.filter(e => e.status !== 'draft');
           }
           if (!includePrivate) {
-            eventsList = eventsList.filter(e => e.type !== 'private' && e.venueId !== 'external_booking');
+            eventsList = eventsList.filter(e => 
+              e.type !== 'private' && 
+              e.type !== 'external_booking' && 
+              e.venueId !== 'external_booking' && 
+              !(e as any).isPrivate &&
+              !(typeof e.title === 'string' && (
+                e.title.toLowerCase().startsWith('contratación:') ||
+                e.title.toLowerCase().includes('evento privado')
+              ))
+            );
           }
           
           // Sort by date ascending

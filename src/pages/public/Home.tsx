@@ -76,10 +76,12 @@ export const Home = () => {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
 
-  // Mostramos solo eventos confirmados, cancelados, o con músico asignado. Ocultamos los que buscan músico y los pasados.
+  // Mostramos solo eventos confirmados, cancelados, o con músico asignado. Ocultamos los que buscan músico, los privados y los pasados.
   const confirmedEvents = events.filter(e => {
     const isPast = e.date ? new Date(e.date).getTime() < new Date().setHours(0,0,0,0) : false;
     if (isPast) return false;
+    if (e.type === 'private' || e.type === 'external_booking' || e.venueId === 'external_booking' || (e as any).isPrivate) return false;
+    if (typeof e.title === 'string' && (e.title.toLowerCase().startsWith('contratación:') || e.title.toLowerCase().includes('evento privado'))) return false;
     
     return e.status === 'confirmed' || 
            e.status === 'cancelled' || 

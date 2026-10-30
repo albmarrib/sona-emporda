@@ -23,7 +23,8 @@ export const DirectOffers = () => {
         const musId = offer?.musicianId || currentUser?.uid;
         
         await updateDoc(doc(db, 'events', id), {
-          status: 'confirmed'
+          status: 'confirmed',
+          ...(offer?.venueId === 'external_booking' || offer?.type === 'external_booking' || offer?.isPrivate ? { isPrivate: true, type: 'external_booking' } : {})
         });
 
         if (musId && dateKey) {
