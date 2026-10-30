@@ -7,7 +7,7 @@ import type { LandingConfig } from '../../types/landing';
 import type { MusicianProfile, SonaEvent } from '../../types';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock, FaChevronLeft, FaChevronRight, FaExclamationCircle } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp, FaEnvelope, FaYoutube, FaSpotify, FaBars, FaTimes, FaLock, FaChevronLeft, FaChevronRight, FaExclamationCircle, FaPlay } from 'react-icons/fa';
 
 const TIME_SLOTS = [
   '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -44,7 +44,7 @@ export const PublicLanding = () => {
 
   // Estados para la sección multimedia (audio / vídeo)
   const [activeMediaTab, setActiveMediaTab] = useState<'spotify' | 'youtube'>('youtube');
-  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [cinemaVideoIndex, setCinemaVideoIndex] = useState<number | null>(null);
 
   // Estados y refs para navegación horizontal en pantalla completa
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -234,6 +234,35 @@ export const PublicLanding = () => {
 
     return hasEvent;
   }, [bookingForm.date, profile?.calendar, bandEvents]);
+
+  // Parse Youtube IDs
+  const ytIds = useMemo(() => {
+    if (!config?.modules) return [];
+    const parseYoutubeId = (input: string) => {
+      if (!input) return null;
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = input.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : input;
+    };
+    const rawIds = config.modules.youtubeVideoIds || [config.modules.youtubeVideoId];
+    return rawIds.filter(Boolean).map(parseYoutubeId).filter(Boolean) as string[];
+  }, [config?.modules?.youtubeVideoIds, config?.modules?.youtubeVideoId]);
+
+  // Control de teclado para el visor de cine (Escape para cerrar, Flechas para cambiar de vídeo)
+  useEffect(() => {
+    if (cinemaVideoIndex === null) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCinemaVideoIndex(null);
+      } else if (e.key === 'ArrowLeft' && ytIds.length > 1) {
+        setCinemaVideoIndex(prev => (prev !== null && prev > 0 ? prev - 1 : ytIds.length - 1));
+      } else if (e.key === 'ArrowRight' && ytIds.length > 1) {
+        setCinemaVideoIndex(prev => (prev !== null && prev < ytIds.length - 1 ? prev + 1 : 0));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cinemaVideoIndex, ytIds.length]);
 
   // Transición suave entre pantallas en modo horizontal
   const goToSectionIndex = (index: number) => {
@@ -462,15 +491,6 @@ export const PublicLanding = () => {
     }
   };
 
-  // Parse Youtube ID
-  const parseYoutubeId = (input: string) => {
-    if (!input) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = input.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : input;
-  };
-  const ytIds = (config.modules.youtubeVideoIds || [config.modules.youtubeVideoId]).filter(Boolean).map(parseYoutubeId).filter(Boolean);
-
   // Parse Spotify URL
   const parseSpotifyUrl = (input: string) => {
     if (!input) return null;
@@ -583,7 +603,7 @@ export const PublicLanding = () => {
           id="top" 
           className={`relative min-h-screen flex items-center justify-center pt-24 pb-12 px-6 overflow-hidden ${
             isHorizontalLayout 
-              ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10" 
+              ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 md:pb-32" 
               : "w-full"
           }`}
         >
@@ -652,7 +672,7 @@ export const PublicLanding = () => {
             id="about" 
             className={`scroll-mt-24 py-32 px-8 flex items-center justify-center relative overflow-hidden ${bgColor} ${
               isHorizontalLayout 
-                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10" 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 md:pb-32" 
                 : "w-full"
             }`}
           >
@@ -685,7 +705,7 @@ export const PublicLanding = () => {
             id="music" 
             className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
               isHorizontalLayout 
-                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 md:pb-32 md:pt-16 md:overflow-y-auto" 
                 : "w-full"
             }`}
           >
@@ -719,7 +739,7 @@ export const PublicLanding = () => {
 
             {/* Píldoras de selección (Audio vs Vídeo) sólo si tiene ambos */}
             {config.modules.showSpotify && spotifyUrl && config.modules.showYoutube && ytIds.length > 0 && (
-              <div className="inline-flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/15 rounded-full mb-12 shadow-xl">
+              <div className="inline-flex items-center gap-1 p-1 bg-black/40 backdrop-blur-md border border-white/15 rounded-full mb-10 shadow-xl">
                 <button
                   type="button"
                   onClick={() => setActiveMediaTab('youtube')}
@@ -747,58 +767,61 @@ export const PublicLanding = () => {
               </div>
             )}
 
-            {/* Panel de VÍDEOS (Formato Cine + Miniaturas) */}
+            {/* Panel de VÍDEOS (Opción 1: Tarjetas Cinemáticas con apertura en Lightbox Sala de Cine) */}
             {config.modules.showYoutube && ytIds.length > 0 && (activeMediaTab === 'youtube' || (!config.modules.showSpotify || !spotifyUrl)) && (
               <div className="w-full flex flex-col items-center animate-in fade-in duration-300">
-                {/* Reproductor Principal Estilo Cine */}
-                <div className="w-full max-w-4xl bg-black/60 backdrop-blur-xl border border-white/15 rounded-2xl overflow-hidden shadow-2xl shadow-black/80">
-                  <div className="w-full aspect-video">
-                    <iframe 
-                      key={ytIds[activeVideoIndex] || ytIds[0]}
-                      width="100%" 
-                      height="100%" 
-                      loading="lazy"
-                      src={`https://www.youtube.com/embed/${ytIds[activeVideoIndex] || ytIds[0]}?vq=hd1080&rel=0&modestbranding=1`} 
-                      title="Vídeo de la banda" 
-                      frameBorder="0" 
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                      allowFullScreen
-                      className="w-full h-full"
-                    ></iframe>
-                  </div>
+                <div className={`w-full ${
+                  ytIds.length === 1 
+                    ? 'max-w-2xl' 
+                    : ytIds.length === 2 
+                      ? 'grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl' 
+                      : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-5xl'
+                }`}>
+                  {ytIds.map((id, index) => (
+                    <div
+                      key={`cinema-card-${id}-${index}`}
+                      onClick={() => setCinemaVideoIndex(index)}
+                      className="group relative aspect-video rounded-2xl overflow-hidden border border-white/15 hover:border-gold/70 shadow-2xl shadow-black/80 cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-gold/10"
+                    >
+                      {/* Portada del vídeo en alta resolución */}
+                      <img 
+                        src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`} 
+                        alt={`Vídeo ${index + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+
+                      {/* Capa de atmósfera oscura elegante */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/30 group-hover:via-black/20 transition-colors duration-300" />
+
+                      {/* Botón Play central con efecto luminoso */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black/60 backdrop-blur-md border border-white/30 text-white flex items-center justify-center pl-1 group-hover:scale-110 group-hover:bg-gold group-hover:text-black group-hover:border-gold shadow-2xl transition-all duration-300">
+                          <FaPlay className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </div>
+                      </div>
+
+                      {/* Pie de la tarjeta */}
+                      <div className="absolute bottom-0 inset-x-0 p-4 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-white/20 text-[10px] uppercase tracking-widest font-mono text-gold font-semibold">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span className="text-white/85 font-medium tracking-wide group-hover:text-white transition-colors">
+                            Ver Vídeo
+                          </span>
+                        </div>
+                        <span className="text-[10px] tracking-widest uppercase text-white/50 group-hover:text-gold transition-colors font-semibold">
+                          Sala Cine
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Tira de Miniaturas si hay más de 1 vídeo */}
-                {ytIds.length > 1 && (
-                  <div className="mt-6 flex items-center justify-center gap-3 flex-wrap max-w-4xl">
-                    {ytIds.map((id, index) => {
-                      const isSelected = index === activeVideoIndex;
-                      return (
-                        <button
-                          key={`thumb-${id}-${index}`}
-                          type="button"
-                          onClick={() => setActiveVideoIndex(index)}
-                          className={`relative group rounded-lg overflow-hidden border-2 transition-all duration-200 cursor-pointer ${
-                            isSelected 
-                              ? 'border-gold scale-105 shadow-lg shadow-gold/20' 
-                              : 'border-white/20 hover:border-white/60 opacity-60 hover:opacity-100'
-                          }`}
-                        >
-                          <img 
-                            src={`https://img.youtube.com/vi/${id}/mqdefault.jpg`} 
-                            alt={`Vídeo ${index + 1}`}
-                            className="w-24 sm:w-28 h-14 sm:h-16 object-cover" 
-                          />
-                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isSelected ? 'opacity-0' : 'group-hover:opacity-0'}`}>
-                            <span className="text-[10px] font-bold tracking-wider uppercase text-white bg-black/70 px-1.5 py-0.5 rounded">
-                              {index + 1}
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                <p className="mt-4 text-center text-xs tracking-widest uppercase text-white/40 font-light">
+                  Haz clic en cualquier vídeo para reproducirlo a pantalla completa
+                </p>
               </div>
             )}
 
@@ -839,7 +862,7 @@ export const PublicLanding = () => {
             id="live" 
             className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
               isHorizontalLayout 
-                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 md:pb-32 md:pt-16 md:overflow-y-auto" 
                 : "w-full"
             }`}
           >
@@ -904,7 +927,7 @@ export const PublicLanding = () => {
             id="booking" 
             className={`scroll-mt-24 relative min-h-screen flex flex-col items-center justify-center py-24 px-6 overflow-y-auto custom-scrollbar ${
               isHorizontalLayout 
-                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 overflow-hidden" 
+                ? "md:w-screen md:min-w-[100vw] md:h-screen md:shrink-0 md:border-r md:border-white/10 md:pb-32 md:pt-16 md:overflow-y-auto" 
                 : "w-full"
             }`}
           >
@@ -1147,6 +1170,107 @@ export const PublicLanding = () => {
           >
             <FaChevronRight className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Lightbox / Modal Cine para Vídeos de YouTube */}
+      {cinemaVideoIndex !== null && ytIds[cinemaVideoIndex] && (
+        <div 
+          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-4 sm:p-8 animate-in fade-in duration-300"
+          onClick={() => setCinemaVideoIndex(null)}
+        >
+          {/* Barra superior del reproductor de cine */}
+          <div 
+            className="w-full max-w-5xl flex items-center justify-between mb-3 px-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-[0.25em] text-gold font-bold">
+                Sala de Cine
+              </span>
+              {ytIds.length > 1 && (
+                <span className="text-xs font-mono text-white/60 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/15">
+                  {cinemaVideoIndex + 1} / {ytIds.length}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCinemaVideoIndex(null)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs uppercase tracking-widest font-medium transition-all cursor-pointer border border-white/15"
+              title="Cerrar (Esc)"
+            >
+              <span>Cerrar</span>
+              <FaTimes className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Marco del vídeo en 16:9 */}
+          <div 
+            className="relative w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden border border-white/20 shadow-2xl shadow-gold/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <iframe
+              key={ytIds[cinemaVideoIndex]}
+              src={`https://www.youtube.com/embed/${ytIds[cinemaVideoIndex]}?autoplay=1&rel=0&modestbranding=1`}
+              title={`Vídeo ${cinemaVideoIndex + 1}`}
+              className="w-full h-full"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
+
+            {/* Controles de anterior/siguiente dentro del modal */}
+            {ytIds.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCinemaVideoIndex(prev => (prev !== null && prev > 0 ? prev - 1 : ytIds.length - 1));
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 hover:bg-gold hover:text-black text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer shadow-xl backdrop-blur-sm"
+                  title="Vídeo anterior"
+                >
+                  <FaChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCinemaVideoIndex(prev => (prev !== null && prev < ytIds.length - 1 ? prev + 1 : 0));
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 hover:bg-gold hover:text-black text-white border border-white/20 flex items-center justify-center transition-all cursor-pointer shadow-xl backdrop-blur-sm"
+                  title="Vídeo siguiente"
+                >
+                  <FaChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Selector de puntos si hay varios vídeos */}
+          {ytIds.length > 1 && (
+            <div 
+              className="mt-4 flex items-center justify-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {ytIds.map((_, idx) => (
+                <button
+                  key={`cine-dot-${idx}`}
+                  type="button"
+                  onClick={() => setCinemaVideoIndex(idx)}
+                  className={`transition-all rounded-full h-2 cursor-pointer ${
+                    cinemaVideoIndex === idx 
+                      ? 'w-8 bg-gold' 
+                      : 'w-2 bg-white/30 hover:bg-white/60'
+                  }`}
+                  title={`Ir al vídeo ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
