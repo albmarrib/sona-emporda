@@ -12,12 +12,10 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export const EPKModal = ({ 
   artist, 
-  dateKey, 
   currentUser, 
   onClose, 
   onContacted, 
-  isApplicantForEventId,
-  hideInviteSection = false
+  isApplicantForEventId
 }: { 
   artist: any, 
   dateKey?: string, 
@@ -28,26 +26,9 @@ export const EPKModal = ({
   hideInviteSection?: boolean
 }) => {
   const { events } = useEvents(true, true); // true to include drafts
-  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const navigate = useNavigate();
   const { findOrCreateChat, sendMessage } = useChat();
   const { userData } = useAuth();
-
-  const venueOpenEvents = events.filter(e => 
-    (e.venueId === currentUser?.uid || e.venueName === currentUser?.email) && 
-    (e.status === 'published' || e.status === 'draft') && 
-    !e.musicianId
-  );
-
-  // Auto-select event if dateKey matches
-  useEffect(() => {
-    if (dateKey && venueOpenEvents.length > 0) {
-      const matchingEvent = venueOpenEvents.find(e => e.date && e.date.startsWith(dateKey));
-      if (matchingEvent && !selectedEventId) {
-        setSelectedEventId(matchingEvent.id);
-      }
-    }
-  }, [dateKey, venueOpenEvents, selectedEventId]);
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 overscroll-none">
@@ -69,8 +50,8 @@ export const EPKModal = ({
 
         <div className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 pb-14 sm:pb-8">
           
-              {isApplicantForEventId ? (
-                <>
+              {isApplicantForEventId && (
+                <div>
                   <h3 className="text-[10px] uppercase tracking-widest text-green-400 mb-3 flex items-center gap-2">
                     <FiStar /> Ha postulado para este bolo
                   </h3>
@@ -134,97 +115,13 @@ export const EPKModal = ({
                           alert('Error al aceptar la postulación.');
                         }
                       }}
-                      className="w-full bg-green-500 hover:bg-green-400 text-black font-extrabold uppercase tracking-widest text-[14px] py-5 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] flex items-center justify-center gap-3"
+                      className="w-full bg-green-500 hover:bg-green-400 text-black font-extrabold uppercase tracking-widest text-[14px] py-5 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)] hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] flex items-center justify-center gap-3 cursor-pointer"
                     >
                       <FiCheckCircle className="w-6 h-6" /> ¡CONFIRMAR BANDA PARA ESTE EVENTO!
                     </button>
                   </div>
-                </>
-              ) : !hideInviteSection ? (
-                <>
-                  <h3 className="text-[10px] uppercase tracking-widest text-gold mb-3 flex items-center gap-2">
-                    <FiCalendar /> Invitar a un Evento
-                  </h3>
-                  
-                  {venueOpenEvents.length === 0 ? (
-                <div className="bg-white/5 border border-white/10 p-4 text-sm text-white/50 text-center">
-                  No tienes eventos publicados o en borrador buscando músicos. Crea uno en tu calendario primero.
-                </div>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <select 
-                    value={selectedEventId}
-                    onChange={(e) => setSelectedEventId(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 py-3 px-4 text-sm text-white focus:border-gold focus:outline-none"
-                  >
-                    <option value="" className="bg-black">-- Selecciona un evento --</option>
-                    {venueOpenEvents.map(evt => (
-                      <option key={evt.id} value={evt.id} className="bg-black">
-                        {evt.title} ({evt.date})
-                      </option>
-                    ))}
-                  </select>
-
-                  <button 
-                    disabled={!selectedEventId}
-                    onClick={async () => {
-                      if (!selectedEventId) return;
-                      
-                      const selectedEvt = venueOpenEvents.find(e => e.id === selectedEventId);
-                      let evtDate = 'próximamente';
-                      if (selectedEvt?.date) {
-                        try {
-                          evtDate = format(parseISO(selectedEvt.date), "dd 'de' MMMM 'a las' HH:mm", { locale: es });
-                        } catch (e) {
-                          // fallback
-                          evtDate = selectedEvt.date;
-                        }
-                      }
-
-                      const confirmMsg = `¿Estás seguro de invitar a ${artist.stageName} a tu evento "${selectedEvt?.title}"?`;
-                      if (!window.confirm(confirmMsg)) return;
-
-                      try {
-                        // Update the existing event
-                        await updateDoc(doc(db, 'events', selectedEventId), {
-                          status: 'pending_musician',
-                          musicianId: artist.id,
-                          musicianName: artist.stageName
-                        });
-                        
-                        onClose();
-                        if (onContacted) onContacted();
-
-                        // Create chat and send auto message
-                        const venueName = userData?.name || currentUser?.email || 'un local';
-                        
-                        let template = userData?.customInviteMessage;
-                        if (template) {
-                          template = template.replace('[Músico]', artist.stageName).replace('[Local]', venueName).replace('[Evento]', selectedEvt?.title || '');
-                        } else {
-                          template = `Hola ${artist.stageName}, te escribo de ${venueName} porque quería ver si podrías actuar en el evento "${selectedEvt?.title}" el ${evtDate}. Te acabo de enviar la invitación por el sistema de Sona-Empordà de forma que debería aparecer directamente en tu calendario donde puedes acceder para revisar los datos y confirmar si te interesa o rechazarla si no es el caso. En cualquier caso podemos comentar por este chat cualquier detalle o cuestión que tengáis al respecto. Muchas gracias por vuestra atención.`;
-                        }
-                        
-                        const chatId = await findOrCreateChat(artist.id, selectedEventId);
-                        await sendMessage(chatId, template);
-                        
-                        navigate('/venue/messages', { state: { chatId } });
-
-                      } catch (e) {
-                        console.error(e);
-                        alert('Error al invitar al músico.');
-                      }
-                    }}
-                    className={`w-full font-bold uppercase tracking-widest text-[12px] py-4 transition-colors flex items-center justify-center gap-2 ${
-                      selectedEventId ? 'bg-gold text-black hover:bg-white' : 'bg-white/10 text-white/30 cursor-not-allowed'
-                    }`}
-                  >
-                    <FiMessageSquare className="w-5 h-5" /> Invitar y Abrir Chat
-                  </button>
                 </div>
               )}
-                </>
-              ) : null}
             
           <div className="flex gap-2 flex-wrap">
               <span className="bg-white/5 border border-white/10 px-3 py-1 text-[10px] uppercase tracking-widest text-white/70">
