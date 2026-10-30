@@ -5,6 +5,7 @@ import { auth } from '../firebase/firebase';
 import { signOut } from 'firebase/auth';
 import { FiList, FiUser, FiCalendar, FiLifeBuoy, FiLogOut, FiBriefcase, FiLayout } from 'react-icons/fi';
 import { FloatingChatButton } from '../components/chat/FloatingChatButton';
+import { MusicianDirectBookingAlert } from '../components/musician/MusicianDirectBookingAlert';
 import { InviteColleagues } from '../components/shared/InviteColleagues';
 import { useMusicianProfile } from '../hooks/useMusicianProfile';
 import { OnboardingWizard } from '../components/shared/OnboardingWizard';
@@ -262,6 +263,7 @@ export const MusicianLayout = () => {
 
       <FloatingChatButton />
       <PushNotificationBanner />
+      <MusicianDirectBookingAlert />
     </div>
   );
 };

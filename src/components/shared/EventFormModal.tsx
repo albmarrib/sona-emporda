@@ -5,7 +5,8 @@ import { collection, query, onSnapshot, addDoc, doc, updateDoc, where } from 'fi
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../hooks/useSettings';
-import { format } from 'date-fns';
+import { useChat } from '../../hooks/useChat';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface EventFormModalProps {
@@ -19,6 +20,7 @@ interface EventFormModalProps {
 export const EventFormModal = ({ isOpen, onClose, editingEventId, initialEventData, onSuccess }: EventFormModalProps) => {
   const { userData, currentUser } = useAuth();
   const { settings } = useSettings();
+  const { findOrCreateChat, sendMessage } = useChat();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,10 +153,52 @@ export const EventFormModal = ({ isOpen, onClose, editingEventId, initialEventDa
         venueId: currentUser?.uid,
       };
       
+      let savedEventId = editingEventId;
+      const isNewMusicianAssignment = Boolean(
+        newEvent.musicianId && 
+        (!editingEventId || initialEventData?.musicianId !== newEvent.musicianId)
+      );
+
+      const eventPayload: any = {
+        ...eventData,
+        ...(newEvent.musicianId ? {
+          directMusicianNotice: true,
+          notifiedMusicianId: newEvent.musicianId,
+          musicianDismissedNotice: false,
+          venueConfirmedDirectly: true,
+          directConfirmedAt: new Date().toISOString()
+        } : {})
+      };
+
       if (editingEventId) {
-        await updateDoc(doc(db, 'events', editingEventId), eventData);
+        await updateDoc(doc(db, 'events', editingEventId), eventPayload);
       } else {
-        await addDoc(collection(db, 'events'), { ...eventData, status: 'published', createdAt: new Date().toISOString() });
+        const docRef = await addDoc(collection(db, 'events'), { 
+          ...eventPayload, 
+          status: 'published', 
+          createdAt: new Date().toISOString() 
+        });
+        savedEventId = docRef.id;
+      }
+
+      // Notificar automáticamente al músico por chat si ha sido asignado directamente
+      if (isNewMusicianAssignment && newEvent.musicianId && savedEventId) {
+        try {
+          const vName = userData?.name || currentUser?.email || 'El local';
+          let formattedDate = newEvent.date;
+          try {
+            formattedDate = format(parseISO(`${newEvent.date}T${newEvent.time}`), "EEEE d 'de' MMMM", { locale: es });
+          } catch {
+            formattedDate = newEvent.date;
+          }
+
+          const noticeMessage = `¡Hola ${newEvent.musicianName}! ${vName} ha programado un nuevo concierto contigo: "${newEvent.title}" para el ${formattedDate}${newEvent.time ? ` a las ${newEvent.time}h` : ''}.\n\nTu fecha ha quedado bloqueada automáticamente en tu agenda de Sona Empordà y el evento ya está publicado en la web. Si deseas revisar los datos, permitir doblete o cancelarlo, puedes gestionarlo desde tu sección "Agenda". ¡Mucho éxito en el bolo!`;
+
+          const chatId = await findOrCreateChat(newEvent.musicianId, savedEventId);
+          await sendMessage(chatId, noticeMessage);
+        } catch (chatErr) {
+          console.warn("Could not send automated chat notice to musician:", chatErr);
+        }
       }
       
       if (onSuccess) onSuccess();
